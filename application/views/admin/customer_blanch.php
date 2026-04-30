@@ -82,8 +82,8 @@ $branch_customer_pdf_url = !empty($blanch->blanch_id)
                     <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                       <?php if ($customers->customer_status == 'open'): ?>
                         <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-teal-100 text-teal-800 rounded-full dark:bg-teal-500/10 dark:text-teal-500">Active</span>
-                      <?php elseif ($customers->customer_status == 'close'): ?>
-                        <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-red-100 text-red-800 rounded-full dark:bg-red-500/10 dark:text-red-500">Blocked</span>
+                        <?php elseif ($customers->customer_status == 'close'): ?>
+                          <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-red-100 text-red-800 rounded-full dark:bg-red-500/10 dark:text-red-500">Done</span>
                       <?php else: ?>
                         <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full dark:bg-gray-500/10 dark:text-gray-300"><?php echo htmlspecialchars(ucfirst($customers->customer_status), ENT_QUOTES, 'UTF-8'); ?></span>
                       <?php endif; ?>
