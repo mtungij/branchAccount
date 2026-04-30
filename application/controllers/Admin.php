@@ -930,13 +930,6 @@ $sqldata="UPDATE `tbl_ac_company` SET `comp_balance`= '$total_remain' WHERE  `tr
 
 
 	public function modify_blanch($blanch_id){
-        $can_edit_branch = ($this->session->userdata('role') === 'admin')
-            || (function_exists('has_permission') && (has_permission('Register New Branch', 'can_edit') || has_permission('Branches', 'can_edit')));
-        if (!$can_edit_branch) {
-            $this->session->set_flashdata('error', 'You do not have permission to edit branches.');
-            return redirect('admin/blanch');
-        }
-
 		$this->form_validation->set_rules('region_id','Region','required');
 		$this->form_validation->set_rules('blanch_name','blanch name','required');
 		$this->form_validation->set_rules('blanch_no','blanch','required');
@@ -989,13 +982,6 @@ public function download_branches_pdf()
 
 
 	public function delete_blanch($blanch_id){
-        $can_delete_branch = ($this->session->userdata('role') === 'admin')
-            || (function_exists('has_permission') && (has_permission('Register New Branch', 'can_delete') || has_permission('Branches', 'can_delete')));
-        if (!$can_delete_branch) {
-            $this->session->set_flashdata('error', 'You do not have permission to delete branches.');
-            return redirect('admin/blanch');
-        }
-
 		$this->load->model('queries');
 		if($this->queries->remove_blanch($blanch_id));
 		  $this->session->set_flashdata('massage','Data Deleted successfully');
@@ -7117,13 +7103,6 @@ public function previous_transfor(){
 
 
  public function view_blanch_customer($blanch_id){
-    $can_view_branch_customer = ($this->session->userdata('role') === 'admin')
-        || (function_exists('has_permission') && (has_permission('Register New Branch', 'can_view') || has_permission('Branches', 'can_view')));
-    if (!$can_view_branch_customer) {
-        $this->session->set_flashdata('error', 'You do not have permission to view branch customers.');
-        return redirect('admin/blanch');
-    }
-
  	$this->load->model('queries');
  	$customer_blanch = $this->queries->get_allcutomerBlanch($blanch_id);
  	$blanch = $this->queries->view_blanchDetail($blanch_id);
@@ -7134,13 +7113,6 @@ public function previous_transfor(){
  }
 
  public function download_blanch_customer_pdf($blanch_id){
-    $can_view_branch_customer = ($this->session->userdata('role') === 'admin')
-        || (function_exists('has_permission') && (has_permission('Register New Branch', 'can_view') || has_permission('Branches', 'can_view')));
-    if (!$can_view_branch_customer) {
-        $this->session->set_flashdata('error', 'You do not have permission to download branch customers.');
-        return redirect('admin/blanch');
-    }
-
     $this->load->model('queries');
 
     $customer_blanch = $this->queries->get_allcutomerBlanch($blanch_id);
