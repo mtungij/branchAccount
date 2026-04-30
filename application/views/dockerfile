@@ -1,0 +1,28 @@
+docker run -it -d \
+  --label traefik.http.routers.bajosamicrofinance.rule=Host\(\`bajosamicrofinance.online\`\) \
+  --label traefik.http.routers.bajosamicrofinance.tls.certresolver=lets-encrypt \
+  --label traefik.http.routers.bajosamicrofinance.tls=true \
+  --label traefik.http.routers.bajosamicrofinance.service=bajosamicrofinance-credit-http \
+  --label traefik.http.services.bajosamicrofinance-credit-http.loadbalancer.server.port=80 \
+  --name bajosamicrofinance \
+  --network web \
+  --restart always \
+  --expose 80 \
+mikoposoft/loan-pocket:latest
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

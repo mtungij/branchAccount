@@ -1,0 +1,817 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import "tailwindcss";
+
+/* Use manual class-based dark mode so JS toggle works across all views */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@plugin "@tailwindcss/forms";
+
+@theme {
+  --font-poppins: "Poppins", sans-serif; 
+}
+
+.input-select-preline { /* For Preline Selects, JS does the main styling */
+  /* Basic fallback styles */
+  @apply py-2.5 px-4 pe-9 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300;
+}
+.input-text-preline {
+@apply py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600;
+}
+.label-sm-dt { @apply block text-sm font-medium mb-1 dark:text-gray-300; }
+.th-dt { @apply py-3 px-6 text-start; }
+.th-dt span { @apply text-xs font-semibold uppercase text-gray-500 dark:text-gray-400; }
+.sort-icon-dt { @apply size-3.5 fill-current text-gray-400 dark:text-gray-500 ms-1; }
+.td-dt { @apply px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200; }
+.btn-action-sm { @apply py-1.5 px-2.5 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700; }
+/* Removed .dropdown-menu-sm as it contained Preline classes */
+.dropdown-header-sm { @apply block py-2 px-3 text-xs font-medium uppercase text-gray-400 dark:text-gray-500; }
+.dropdown-item-sm { @apply flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300; }
+.icon-sm { @apply shrink-0 size-4; }
+.modal-content-dt { @apply flex flex-col bg-white border shadow-sm rounded-xl pointer-events-auto dark:bg-gray-800 dark:border-gray-700; }
+.modal-header-dt { @apply flex justify-between items-center py-3 px-4 border-b dark:border-gray-700; }
+.modal-title-dt { @apply font-bold text-gray-800 dark:text-white; }
+.btn-close-modal-dt { @apply flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700; }
+.modal-close-icon-dt { @apply shrink-0 size-4; }
+.modal-footer-dt { @apply mt-6 flex justify-end items-center gap-x-2 py-3 px-4 border-t dark:border-gray-700; }
+.btn-primary-sm { @apply py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent disabled:opacity-50 disabled:pointer-events-none; }
+.btn-secondary-sm { @apply py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700; }
+.dt-empty-message { @apply py-10 px-5 flex flex-col justify-center items-center text-center; }
+.dt-paging-controls { @apply py-3 px-4 border-t border-gray-200 dark:border-gray-700 hidden; }
+.btn-ghost-dt { @apply min-w-10 h-10 inline-flex justify-center items-center text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:focus:bg-gray-700 dark:hover:bg-gray-700; }
+.input-search-dt { @apply py-2 px-3 ps-9 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600; }
+
+
+/* States */
+@custom-variant hs-success {
+
+  &.success {
+    @slot;
+  }
+
+  .success & {
+    @slot;
+  }
+}
+
+@custom-variant hs-error {
+
+  &.error {
+    @slot;
+  }
+
+  .error & {
+    @slot;
+  }
+}
+
+/* Preline */
+@custom-variant hs-accordion-active {
+  &.hs-accordion.active {
+    @slot;
+  }
+
+  .hs-accordion.active>& {
+    @slot;
+  }
+
+  .hs-accordion.active>.hs-accordion-toggle & {
+    @slot;
+  }
+
+  .hs-accordion.active>.hs-accordion-heading>.hs-accordion-toggle & {
+    @slot;
+  }
+
+  &.hs-accordion-toggle {
+
+    .hs-accordion.active>& {
+      @slot;
+    }
+  }
+
+  &.hs-accordion-toggle {
+
+    .hs-accordion.active>.hs-accordion-heading>& {
+      @slot;
+    }
+  }
+
+  &.hs-accordion-force-active {
+    .hs-accordion.active & {
+      @slot;
+    }
+  }
+}
+
+@custom-variant hs-accordion-selected {
+  &.selected {
+    .hs-accordion & {
+      @slot;
+    }
+  }
+}
+
+@custom-variant hs-accordion-outside-active {
+  &.active {
+    @slot;
+  }
+}
+
+@custom-variant hs-carousel-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-carousel-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-carousel-dragging {
+
+  &.dragging {
+    @slot;
+  }
+
+  .dragging & {
+    @slot;
+  }
+}
+
+@custom-variant hs-collapse-open {
+
+  &.hs-collapse.open {
+    @slot;
+  }
+
+  &.hs-collapse-toggle.open {
+    @slot;
+  }
+
+  .hs-collapse.open & {
+    @slot;
+  }
+
+  .hs-collapse-toggle.open & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-has-value {
+
+  &.has-value {
+    @slot;
+  }
+
+  .has-value & {
+    @slot;
+  }
+}
+
+@custom-variant hs-combo-box-selected {
+
+  &.selected {
+    @slot;
+  }
+
+  .selected & {
+    @slot;
+  }
+}
+
+
+
+@custom-variant hs-combo-box-tab-active {
+  &.active {
+    @slot;
+  }
+}
+
+
+/* Apexcharts */
+@custom-variant hs-apexcharts-tooltip-dark {
+  &.dark {
+    @slot;
+  }
+}
+
+/* Sortable.js */
+@custom-variant hs-dragged {
+  &.dragged {
+    @slot;
+  }
+}
+
+/* Toastify */
+@custom-variant hs-toastify-on {
+
+  &.toastify.on {
+    @slot;
+  }
+
+  .toastify.on & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-datatable-ordering-asc {
+
+  &.dt-ordering-asc {
+    @slot;
+  }
+
+  .dt-ordering-asc & {
+    @slot;
+  }
+}
+
+@custom-variant hs-datatable-ordering-desc {
+
+  &.dt-ordering-desc {
+    @slot;
+  }
+
+  .dt-ordering-desc & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-vc-date-today {
+  &[data-vc-date-today] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover {
+  &[data-vc-date-hover] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover-first {
+
+  &[data-vc-date-hover='first'] {
+    @slot;
+  }
+
+  [data-vc-date-hover='first'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-hover-last {
+
+  &[data-vc-date-hover='last'] {
+    @slot;
+  }
+
+  [data-vc-date-hover='last'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-selected {
+  &[data-vc-date-selected] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-middle {
+
+  &[data-vc-date-selected='middle'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='middle'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-first {
+
+  &[data-vc-date-selected='first'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='first'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-selected-last {
+
+  &[data-vc-date-selected='last'] {
+    @slot;
+  }
+
+  [data-vc-date-selected='last'] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-weekend {
+  &[data-vc-date-weekend] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-week-day-off {
+  &[data-vc-week-day-off] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-month-prev {
+  &[data-vc-date-month='prev'] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-date-month-next {
+  &[data-vc-date-month='next'] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-calendar-hidden {
+
+  &[data-vc-calendar-hidden] {
+    @slot;
+  }
+
+  [data-vc-calendar-hidden] & {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-months-month-selected {
+  &[data-vc-months-month-selected] {
+    @slot;
+  }
+}
+
+@custom-variant hs-vc-years-year-selected {
+  &[data-vc-years-year-selected] {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-dropdown-open {
+  &.hs-dropdown-menu.open {
+    @slot;
+  }
+
+  .hs-dropdown.open>& {
+    @slot;
+  }
+
+  .hs-dropdown.open>.hs-dropdown-toggle & {
+    @slot;
+  }
+
+  .hs-dropdown.open>.hs-dropdown-menu>& {
+    @slot;
+  }
+}
+
+@custom-variant hs-dropdown-item-disabled {
+  .hs-dropdown.open>.hs-dropdown-menu &.disabled {
+    @slot;
+  }
+}
+
+@custom-variant hs-dropdown-item-checked {
+  .hs-dropdown.open .hs-dropdown-menu [aria-checked='true'] & {
+    @slot;
+  }
+
+  .hs-dropdown.open .hs-dropdown-menu &[aria-checked='true'] {
+    @slot;
+  }
+}
+
+@custom-variant hs-file-upload-complete {
+
+  &.complete {
+    @slot;
+  }
+
+  .complete & {
+    @slot;
+  }
+}
+
+@custom-variant hs-input-number-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-layout-splitter-dragging {
+
+  &.dragging {
+    @slot;
+  }
+
+  .dragging & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-prev-limit-reached {
+
+  &.prev-limit-reached {
+    @slot;
+  }
+
+  .prev-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-next-limit-reached {
+
+  &.next-limit-reached {
+    @slot;
+  }
+
+  .next-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-prev-pre-limit-reached {
+
+  &.prev-pre-limit-reached {
+    @slot;
+  }
+
+  .prev-pre-limit-reached & {
+    @slot;
+  }
+}
+
+@custom-variant hs-layout-splitter-next-pre-limit-reached {
+
+  &.next-pre-limit-reached {
+    @slot;
+  }
+
+  .next-pre-limit-reached & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-overlay-open {
+
+  &.open {
+    @slot;
+  }
+
+  .open & {
+    @slot;
+  }
+}
+
+@custom-variant hs-overlay-layout-open {
+
+  &.hs-overlay-body-open {
+    @slot;
+  }
+
+  .hs-overlay-body-open & {
+    @slot;
+  }
+}
+
+@custom-variant hs-overlay-backdrop-open {
+
+  &.hs-overlay-backdrop {
+    @slot;
+  }
+
+  .hs-overlay-backdrop & {
+    @slot;
+  }
+}
+
+@custom-variant hs-pin-input-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-range-slider-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-removing {
+  &.hs-removing {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-scroll-nav-active {
+
+  &.active {
+    @slot;
+  }
+}
+
+@custom-variant hs-scroll-nav-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-scrollspy-active {
+  &.active {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-selected {
+
+  &.selected {
+    @slot;
+  }
+
+  .selected & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-select-opened {
+  &.opened {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-stepper-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-success {
+
+  &.success {
+    @slot;
+  }
+
+  .success & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-completed {
+
+  &.completed {
+    @slot;
+  }
+
+  .completed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-error {
+
+  &.error {
+    @slot;
+  }
+
+  .error & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-processed {
+
+  &.processed {
+    @slot;
+  }
+
+  .processed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-disabled {
+
+  &.disabled {
+    @slot;
+  }
+
+  .disabled & {
+    @slot;
+  }
+}
+
+@custom-variant hs-stepper-skipped {
+
+  &.skipped {
+    @slot;
+  }
+
+  .skipped & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-password-active {
+
+  &.active {
+    @slot;
+  }
+
+  .active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password {
+
+  &.passed {
+    @slot;
+  }
+
+  .passed & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password-accepted {
+
+  &.accepted {
+    @slot;
+  }
+
+  .accepted & {
+    @slot;
+  }
+}
+
+@custom-variant hs-strong-password-active {
+  &.active {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-tab-active {
+
+  &[data-hs-tab].active {
+    @slot;
+  }
+
+  [data-hs-tab].active & {
+    @slot;
+  }
+}
+
+@custom-variant hs-default-mode-active {
+  .default & {
+    @slot;
+  }
+}
+
+@custom-variant hs-dark-mode-active {
+  .dark & {
+    @slot;
+  }
+}
+
+@custom-variant hs-auto-mode-active {
+  .auto & {
+    @slot;
+  }
+}
+
+
+@custom-variant hs-tooltip-shown {
+  &.hs-tooltip-content.show {
+    @slot;
+  }
+
+  .hs-tooltip.show & {
+    @slot;
+  }
+}
+
+@custom-variant hs-tree-view-selected {
+
+  &[data-hs-tree-view-item].selected {
+    @slot;
+  }
+
+  [data-hs-tree-view-item].selected>& {
+    @slot;
+  }
+}
+
+@custom-variant hs-tree-view-disabled {
+
+  &[data-hs-tree-view-item].disabled {
+    @slot;
+  }
+
+  [data-hs-tree-view-item].disabled>& {
+    @slot;
+  }
+}
+
+
+.dt-layout-row:has(.dt-search),
+.dt-layout-row:has(.dt-length),
+.dt-layout-row:has(.dt-paging) {
+  display: none !important;
+}
+/* Optional: CSS for scrollable body if you use that feature */
+.dt-scroll-body thead {
+  display: none !important;
+}

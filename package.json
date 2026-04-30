@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "@tailwindcss/cli": "^4.1.4",
+    "croppr": "^2.3.1",
+    "datatables.net-buttons": "^3.2.3",
+    "datatables.net-dt": "^2.3.1",
+    "jquery": "^3.7.1",
+    "jszip": "^3.10.1",
+    "pdfmake": "^0.2.20",
+    "preline": "^3.0.1",
+    "vanilla-calendar-pro": "^3.0.4"
+  },
+  "scripts": {
+    "watch": "npx @tailwindcss/cli -i ./public/css/input.css -o ./public/css/output.css --watch",
+    "server": "php -S localhost:8000"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "tailwindcss": "^4.1.8"
+  }
+}
