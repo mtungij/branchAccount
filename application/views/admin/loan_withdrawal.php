@@ -183,16 +183,17 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
     <?php endforeach; ?>
 
     <!-- Totals Row -->
- <!-- Totals Row -->
-<tr class="bg-gray-200 dark:bg-gray-800 font-extrabold text-lg">
-    <td colspan="5" class="px-4 py-3 dark:text-white text-right"><?php echo $this->lang->line('total'); ?></td>
-    <td class="px-4 py-3 text-green-700 dark:text-green-400"><?= number_format($total_loan_aprove); ?></td>
-    <td class="px-4 py-3 text-blue-700 dark:text-blue-400"><?= number_format($total_loan_int); ?></td>
+<tr class="bg-gray-100 dark:bg-gray-700 font-bold text-sm border-t-2 border-gray-400 dark:border-gray-500">
+    <td colspan="5" class="px-4 py-3 dark:text-white text-right font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-200">
+        <?php echo $this->lang->line('total'); ?>
+    </td>
+    <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_loan_aprove); ?></td>
+    <td class="px-4 py-3 text-blue-700 dark:text-blue-300 font-extrabold"><?= number_format($total_loan_int); ?></td>
     <td></td>
-    <td class="px-4 py-3 text-purple-700 dark:text-purple-400"><?= number_format($total_restoration); ?></td>
-    <td colspan="3"></td>
-    <td class="px-4 py-3 text-green-700 dark:text-green-400"><?= number_format($total_paid_all); ?></td>
-    <td class="px-4 py-3 text-red-700 dark:text-red-400"><?= number_format($total_remain_all); ?></td>
+    <td class="px-4 py-3 text-purple-700 dark:text-purple-300 font-extrabold"><?= number_format($total_restoration); ?></td>
+    <td colspan="4"></td>
+    <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_paid_all); ?></td>
+    <td class="px-4 py-3 text-red-700 dark:text-red-300 font-extrabold"><?= number_format($total_remain_all); ?></td>
     <td></td>
     <td></td>
 </tr>
@@ -202,6 +203,7 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
 </tbody>
 
                 </table>
+
 				<div id="hs-basic-modal" class="hs-overlay hs-overlay-open:opacity-100 hs-overlay-open:duration-500 hidden size-full fixed top-0 start-0 z-80 opacity-0 overflow-x-hidden transition-all overflow-y-auto pointer-events-none" role="dialog" tabindex="-1" aria-labelledby="hs-basic-modal-label">
   <div class="sm:max-w-lg sm:w-full m-3 sm:mx-auto">
     <div class="flex flex-col bg-white border border-gray-200 shadow-2xs rounded-xl pointer-events-auto dark:bg-neutral-800 dark:border-neutral-700 dark:shadow-neutral-700/70">

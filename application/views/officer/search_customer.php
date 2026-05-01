@@ -125,7 +125,7 @@ $comp_id = $comp_id ?? null;
                     <img id="customerPassportPreview" class="w-32 h-32 mx-auto rounded-full object-cover border-4 border-green-400" src="<?= $customer_passport_src ?>" alt="Customer Passport">
                     <?php if (!empty($customer) && !empty($customer->customer_id)): ?>
                     <div class="mt-3 text-center">
-                        <input type="file" id="customerPassportInput" accept="image/*" capture="environment" class="hidden">
+                        <input type="file" id="customerPassportInput"  capture="environment" class="hidden">
                         <button type="button" id="customerPassportTrigger"
                            class="inline-flex items-center justify-center py-2 px-3 text-xs font-semibold rounded-md bg-cyan-600 hover:bg-cyan-700 text-white transition">
                             Update/Upload Passport
@@ -326,7 +326,6 @@ $comp_id = $comp_id ?? null;
         </div>
         <div id="passportUploadSection" class="<?php echo $has_passport ? 'hidden' : ''; ?>">
             <input type="file" id="sponsorPassportInput" accept="image/*"
-                   capture="environment"
                    class="block w-full text-sm text-gray-700 file:mr-4 file:py-2.5 file:px-4 file:rounded-md 
                           file:border-0 file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100 
                           dark:file:bg-gray-700 dark:file:text-gray-300">

@@ -801,35 +801,62 @@ $this->load->model('queries');
 
             $this->session->set_flashdata("massage",'Daily Allowance approved for '.count($employees_data).' employee(s)');
         } else {
-            // Requires manager approval: insert as pending, do NOT deduct balance
-            // Validate amount does not exceed account balance
+            // Auto-approve: insert as accepted and deduct balance immediately
             $blanch_account = $this->queries->get_blanch_balance_expenses($blanch_id,$trans_id);
             $balance_blanch = $blanch_account->blanch_capital;
             if ($req_amount > $balance_blanch) {
                 $this->session->set_flashdata("error",'Requested amount exceeds account balance. Existed balance is '.number_format($balance_blanch));
                 return redirect("oficer/expnses_requisition_form");
             }
-            $this->insert_expenses_request($comp_id,$blanch_id,$ex_id,$req_description,$req_amount,$trans_id,'open');
+            $this->insert_expenses_request($comp_id,$blanch_id,$ex_id,$req_description,$req_amount,$trans_id,'accept');
+
+            // Deduct balance from branch account
+            $remain = $balance_blanch - $req_amount;
+            $this->update_blanch_account_balance($comp_id,$blanch_id,$trans_id,$remain);
+
+            $this->queries->save_cash_inhand_balance(
+                $comp_id,
+                $blanch_id,
+                $trans_id,
+                $this->session->userdata('empl_id'),
+                $remain,
+                date('Y-m-d')
+            );
+
+            $expense_info = isset($expense_info) ? $expense_info : $this->queries->get_expenses_byId($ex_id);
+            $expense_name = isset($expense_info->ex_name) ? $expense_info->ex_name : 'N/A';
+
+            $this->queries->record_account_balance_movement(array(
+                'comp_id' => $comp_id,
+                'blanch_id' => $blanch_id,
+                'trans_id' => $trans_id,
+                'reference_type' => 'expense_accepted',
+                'reference_id' => null,
+                'movement_date' => date('Y-m-d'),
+                'amount_out' => $req_amount,
+                'balance_before' => $balance_blanch,
+                'balance_after' => $remain,
+                'description' => $expense_name . ': ' . $req_description,
+                'created_by' => $this->session->userdata('empl_id'),
+            ));
 
             // Send SMS notification to admins
             $empl_id = $this->session->userdata('empl_id');
             $empl_data = $this->queries->get_employee_data($empl_id);
             $blanch_data = $this->queries->get_blanchData($blanch_id);
-            $expense_info = isset($expense_info) ? $expense_info : $this->queries->get_expenses_byId($ex_id);
-            $expense_name = isset($expense_info->ex_name) ? $expense_info->ex_name : 'N/A';
 
-            $message = "Habari! Kuna maombi ya matumizi katika tawi la " . $blanch_data->blanch_name . ".\n"
+            $message = "Habari! Matumizi yameidhinishwa katika tawi la " . $blanch_data->blanch_name . ".\n"
                      . "Aina: " . $expense_name . "\n"
                      . "Kiasi: TZS " . number_format($req_amount, 0) . "\n"
                      . "Maelezo: " . $req_description . "\n"
-                     . "Aliyeomba: " . $empl_data->empl_name;
+                     . "Aliyeidhinisha: " . $empl_data->empl_name;
 
             $admins_numbers = $this->queries->get_admin_numbers();
             foreach ($admins_numbers as $admin) {
                 $this->sendsms($admin->phone_number, $message);
             }
 
-            $this->session->set_flashdata("massage",'Requisition submitted, awaiting manager approval');
+            $this->session->set_flashdata("massage",'Expense approved successfully');
         }
         return redirect("oficer/expnses_requisition_form");
          }
@@ -2620,12 +2647,16 @@ public function customer(){
 
         $this->load->model('queries');
         $check = $this->queries->check_name($f_name, $m_name, $l_name, $blanch_id, $comp_id);
+        $existing_phone_customer = $this->queries->find_customer_by_phone($comp_id, $phone_no);
         $company_data = $this->queries->get_companyData($comp_id);
         $comp_phone = $company_data->comp_phone;
 
         if ($check == TRUE) {
             $this->session->set_flashdata('error', 'This customer Already Registered');
             return redirect('oficer/customer');
+        } elseif (!empty($existing_phone_customer)) {
+          $this->session->set_flashdata('error', 'This phone number is already registered.');
+          return redirect('oficer/customer_details/' . $existing_phone_customer->customer_id);
         } elseif ($check == FALSE) {
             $customer_id = $this->queries->insert_customer($data);
             if ($customer_id > 0) {
@@ -3974,6 +4005,12 @@ private function upload_file($field_name, $new_name_prefix)
 
 
       public function loan_applicationForm($customer_id){
+        if (!isset($_SESSION)) {
+            session_start();
+        }
+
+        $_SESSION['loan_form_token'] = bin2hex(random_bytes(32));
+
         $this->load->model('queries');
         $blanch_id = $this->session->userdata('blanch_id');
         $empl_id = $this->session->userdata('empl_id');
@@ -4029,7 +4066,8 @@ private function upload_file($field_name, $new_name_prefix)
         'reject_skip' => $reject_skip,
         'formular' => $formular,
         'loan_fee_category' => $loan_fee_category,
-        'empl_blanch' => $empl_blanch
+        'empl_blanch' => $empl_blanch,
+        'loan_form_token' => $_SESSION['loan_form_token']
     ]);
     }
 
@@ -4040,6 +4078,18 @@ private function upload_file($field_name, $new_name_prefix)
       $this->load->helper(['form', 'string']);
       $this->load->library('form_validation');
       $this->load->model('queries');
+
+      if (!isset($_SESSION)) {
+          session_start();
+      }
+
+      $post_token = $this->input->post('loan_form_token');
+      if (!$post_token || $post_token !== ($_SESSION['loan_form_token'] ?? null)) {
+          $this->session->set_flashdata('error', 'Invalid or duplicate loan form submission.');
+          return redirect('oficer/loan_applicationForm/' . $customer_id);
+      }
+
+      unset($_SESSION['loan_form_token']);
   
       // Set validation rules
       $this->form_validation->set_rules('comp_id', 'Company', 'required');
@@ -4062,6 +4112,19 @@ private function upload_file($field_name, $new_name_prefix)
   
       // Collect form data
       $data = $this->input->post();
+        unset($data['loan_form_token']);
+
+        if ($this->queries->has_pending_loans($customer_id)) {
+          $existing_open_loan = $this->queries->get_loanOpen_skip($customer_id);
+          $this->session->set_flashdata('error', 'This customer already has a pending loan.');
+
+          if (!empty($existing_open_loan) && !empty($existing_open_loan->loan_id)) {
+            return redirect('oficer/collelateral_session/' . $existing_open_loan->loan_id);
+          }
+
+          return redirect('oficer/loan_applicationForm/' . $customer_id);
+        }
+
       $data['loan_code'] = random_string('numeric', 14);
       $data['created_by'] = $this->session->userdata('user_id');
   
@@ -4109,7 +4172,8 @@ private function upload_file($field_name, $new_name_prefix)
   Afisa aliyesajili ni $employee_name. Kiasi cha mkopo kilichoombwa ni TZS " . number_format($how_loan, 0);
   
       // Phone numbers to notify
-  $admins_numbers = $this->queries->get_admin_numbers();
+    $admins_numbers = $this->queries->get_admin_numbers();
+      $phone_numbers = [];
         foreach ($admins_numbers as $admin) {
     $phone_numbers[] = $admin->phone_number; // hakika hakuna validation, tuzichukue raw
 }
@@ -4117,10 +4181,6 @@ private function upload_file($field_name, $new_name_prefix)
             foreach ($phone_numbers as $phone) {
                 $this->sendsms($phone, $message);
             }
-  
-      foreach ($phone_numbers as $phone) {
-          $this->sendsms($phone, $message);
-      }
   
       // Redirect with success message
       $this->session->set_flashdata('massage', 'Loan application created successfully!');
@@ -4207,6 +4267,12 @@ $admins_numbers = $this->queries->get_admin_numbers();
 
 
         public function collelateral_session($loan_id){
+      if (!isset($_SESSION)) {
+        session_start();
+      }
+
+      $_SESSION['collateral_form_token'] = bin2hex(random_bytes(32));
+
     $this->load->model('queries');
     $blanch_id = $this->session->userdata('blanch_id');
     $empl_id = $this->session->userdata('empl_id');
@@ -4265,13 +4331,26 @@ $admins_numbers = $this->queries->get_admin_numbers();
         'loan_attach'=>$loan_attach,
         'privillage'=>$privillage,
         'collateral'=>$collateral,
-        'manager'=>$manager
+      'manager'=>$manager,
+      'collateral_form_token' => $_SESSION['collateral_form_token']
     ]);
 }
 
 
        public function create_colateral($loan_id)
 {
+      if (!isset($_SESSION)) {
+        session_start();
+      }
+
+      $post_token = $this->input->post('collateral_form_token');
+      if (!$post_token || $post_token !== ($_SESSION['collateral_form_token'] ?? null)) {
+        $this->session->set_flashdata('error', 'Invalid or duplicate collateral form submission.');
+        return redirect('oficer/collelateral_session/' . $loan_id);
+      }
+
+      unset($_SESSION['collateral_form_token']);
+
  
     // Prepare data array for database if you want to save info
     $data = [

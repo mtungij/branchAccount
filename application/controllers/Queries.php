@@ -471,11 +471,42 @@ public function get_customerDataLOANform($customer_id){
 }
 
 public function insert_customerData($data){
+	$customer_id = isset($data['customer_id']) ? (int) $data['customer_id'] : 0;
+	if ($customer_id <= 0) {
+		return false;
+	}
+
+	$latest_row = $this->db
+		->select('id')
+		->where('customer_id', $customer_id)
+		->order_by('id', 'DESC')
+		->limit(1)
+		->get('tbl_sub_customer')
+		->row();
+
+	if (!empty($latest_row)) {
+		return $this->db->where('id', $latest_row->id)->update('tbl_sub_customer', $data);
+	}
+
 	return $this->db->insert('tbl_sub_customer',$data);
 }
 
 public function get_allcutomer($comp_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.comp_id = '$comp_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
+		LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.comp_id = '$comp_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
@@ -496,19 +527,55 @@ public function get_allcutomer($comp_id){
 	}
 
 	public function get_cutomerBlanchData($blanch_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id JOIN tbl_account_type at ON at.account_id = sc.account_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.blanch_id = '$blanch_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		JOIN tbl_account_type at ON at.account_id = sc.account_id
+		JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.blanch_id = '$blanch_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
 	public function get_customer_blanch($blanch_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.blanch_id = '$blanch_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
+		LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.blanch_id = '$blanch_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
 	public function get_customers_by_officer($empl_id) {
 		return $this->db->query("
 			SELECT * FROM tbl_customer c
-			LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id
+			LEFT JOIN (
+				SELECT sc1.*
+				FROM tbl_sub_customer sc1
+				JOIN (
+					SELECT customer_id, MAX(id) AS latest_id
+					FROM tbl_sub_customer
+					GROUP BY customer_id
+				) latest_sc ON latest_sc.latest_id = sc1.id
+			) sc ON sc.customer_id = c.customer_id
 			LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
 			LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
 			WHERE c.empl_id = ?

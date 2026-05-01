@@ -302,6 +302,9 @@ $lang['tt_today_penalty_paid'] = 'Total penalties paid today from customers with
 $lang['top_5_employees_by_deposit'] = 'Top 5 Employees by Deposit';
 $lang['top_10_branches_by_deposit'] = 'Top 10 Branches by Deposit';
 $lang['total_deposit_tzs'] = 'Total Deposit (TZS)';
+$lang['monthly_withdraw_vs_paid'] = 'Monthly Loan Withdraw vs Paid';
+$lang['monthly_loan_withdraw'] = 'Loan Withdraw';
+$lang['monthly_loan_paid'] = 'Loan Paid';
 $lang['user'] = 'User';
 
 $lang['quick_filter'] = 'Quick Filter';

@@ -40,6 +40,9 @@ $txt_total_paid_today = $lang_line('total_paid_today', 'Total Paid Today');
 $txt_overdue_vs_paid_today = $lang_line('overdue_vs_paid_today', 'Overdue vs Paid Overdue Today');
 $txt_all_overdue_loans = $lang_line('all_overdue_loans', 'All Overdue Loans');
 $txt_paid_overdue_today = $lang_line('paid_overdue_today', 'Paid Overdue Today');
+$txt_monthly_withdraw_vs_paid = $lang_line('monthly_withdraw_vs_paid', 'Monthly Loan Withdraw vs Paid');
+$txt_monthly_loan_withdraw = $lang_line('monthly_loan_withdraw', 'Loan Withdraw');
+$txt_monthly_loan_paid = $lang_line('monthly_loan_paid', 'Loan Paid');
 $txt_all_branches = $lang_line('all_branches', 'All Branches');
 $txt_switch_branch = $lang_line('switch_branch', 'Badili Tawi');
 
@@ -142,7 +145,7 @@ $admin_link = function ($path) use ($selected_blanch_id) {
 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
 
   <!-- 1️⃣ Due Today (Within Agreement) -->
-<a href="<?= $admin_link('admin/today_recevable_loan'); ?>" class="block">
+<a href="<?= base_url('admin/today_recevable_loan'); ?>" class="block">
   <div class="flex flex-col bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-white border border-transparent rounded-2xl shadow-xl p-5 transition-transform transform hover:scale-[1.02] hover:shadow-2xl mb-4">
       <div class="flex items-center justify-between">
         <p class="text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
@@ -220,22 +223,6 @@ $admin_link = function ($path) use ($selected_blanch_id) {
   <!-- 4️⃣ Expired Agreements -->
 
 
-</div>
-
-<!-- Expected vs Paid Today Pie Chart -->
-<div class="mt-4 bg-white rounded-2xl shadow-xl p-6">
-  <h2 class="text-xl font-bold text-gray-700 mb-4">📊 <?php echo $txt_expected_vs_paid_today; ?></h2>
-  <div class="max-w-md mx-auto">
-    <canvas id="expectedVsPaidPieChart" height="140"></canvas>
-  </div>
-</div>
-
-<!-- Overdue vs Paid Overdue Today Pie Chart -->
-<div class="mt-4 bg-white rounded-2xl shadow-xl p-6">
-  <h2 class="text-xl font-bold text-gray-700 mb-4">📉 <?php echo $txt_overdue_vs_paid_today; ?></h2>
-  <div class="max-w-md mx-auto">
-    <canvas id="overdueVsPaidPieChart" height="140"></canvas>
-  </div>
 </div>
 
 <!-- ====================== -->
@@ -335,8 +322,9 @@ $admin_link = function ($path) use ($selected_blanch_id) {
 
 </div>
 
-<!-- <div class="grid grid-cols-2 gap-4"> -->
-    <!-- 3️⃣ Paid Expiring Today -->
+<!-- Additional Cards Section -->
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mt-6">
+  <!-- Today Penalty Paid -->
 <a href="<?= $admin_link('admin/income_dashboard') ?>" class="block">
   <div class="flex flex-col bg-gradient-to-br from-blue-400 via-blue-500 to-cyan-600 text-white border border-transparent rounded-2xl shadow-xl p-5 transition-transform transform hover:scale-[1.02] hover:shadow-2xl mb-4">
     
@@ -423,6 +411,7 @@ $admin_link = function ($path) use ($selected_blanch_id) {
     </div>
   </div>
 </a>
+</div>
 
   <!-- 3️⃣ Paid Expiring Today -->
 <a href="<?= $admin_link('admin/loan_withdrawal') ?>" class="block">
@@ -454,6 +443,25 @@ $admin_link = function ($path) use ($selected_blanch_id) {
 
 
 
+<!-- ====================== -->
+<!-- Graphs Section -->
+<!-- ====================== -->
+<div class="mt-10 grid grid-cols-1 xl:grid-cols-2 gap-6">
+  <div class="bg-white rounded-2xl shadow-xl p-6">
+    <h2 class="text-xl font-bold text-gray-700 mb-4">📊 <?php echo $txt_expected_vs_paid_today; ?></h2>
+    <div class="max-w-md mx-auto">
+      <canvas id="expectedVsPaidPieChart" height="140"></canvas>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-xl p-6">
+    <h2 class="text-xl font-bold text-gray-700 mb-4">📉 <?php echo $txt_overdue_vs_paid_today; ?></h2>
+    <div class="max-w-md mx-auto">
+      <canvas id="overdueVsPaidPieChart" height="140"></canvas>
+    </div>
+  </div>
+</div>
+
 <!-- 🚀 Top 5 Depositors Bar Chart -->
 <div class="mt-10 bg-white rounded-2xl shadow-xl p-6">
   <h2 class="text-xl font-bold text-gray-700 mb-4">🏆 <?php echo $txt_top_5_employees_by_deposit; ?></h2>
@@ -466,11 +474,21 @@ $admin_link = function ($path) use ($selected_blanch_id) {
   <canvas id="topBranchDepositsChart" height="120"></canvas>
 </div>
 
+<!-- 📊 Monthly Loan Withdraw vs Paid -->
+<div class="mt-6 bg-white rounded-2xl shadow-xl p-6">
+  <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
+    <h2 class="text-xl font-bold text-gray-700"><?php echo $txt_monthly_withdraw_vs_paid; ?></h2>
+    <span class="text-sm text-gray-500"><?php echo htmlspecialchars($selected_blanch_name, ENT_QUOTES, 'UTF-8'); ?></span>
+  </div>
+  <canvas id="monthlyLoanWithdrawVsPaidChart" height="120"></canvas>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script>
   const topBranchLabels = <?php echo json_encode(array_map(function($row){ return $row->blanch_name; }, $top_branch_deposits ?? [])); ?>;
   const topBranchValues = <?php echo json_encode(array_map(function($row){ return (float) $row->total_deposit; }, $top_branch_deposits ?? [])); ?>;
+  const monthlyLoanChart = <?php echo json_encode($monthly_loan_chart ?? []); ?>;
 
   if (window.Chart && window.ChartDataLabels) {
     Chart.register(ChartDataLabels);
@@ -560,6 +578,74 @@ $admin_link = function ($path) use ($selected_blanch_id) {
       }
     }
   });
+
+  const monthlyLoanCanvas = document.getElementById('monthlyLoanWithdrawVsPaidChart');
+  if (monthlyLoanCanvas) {
+    const monthlyLabels = monthlyLoanChart.map(function(item) {
+      return item.label;
+    });
+    const monthlyWithdrawValues = monthlyLoanChart.map(function(item) {
+      return Number(item.withdraw || 0);
+    });
+    const monthlyPaidValues = monthlyLoanChart.map(function(item) {
+      return Number(item.paid || 0);
+    });
+
+    new Chart(monthlyLoanCanvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: monthlyLabels,
+        datasets: [{
+          label: '<?php echo addslashes($txt_monthly_loan_withdraw); ?>',
+          data: monthlyWithdrawValues,
+          borderColor: '#0f766e',
+          backgroundColor: 'rgba(15, 118, 110, 0.16)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }, {
+          label: '<?php echo addslashes($txt_monthly_loan_paid); ?>',
+          data: monthlyPaidValues,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        interaction: {
+          mode: 'index',
+          intersect: false
+        },
+        plugins: {
+          datalabels: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ' + Number(context.raw).toLocaleString() + ' TZS';
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: function(value) {
+                return Number(value).toLocaleString();
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 
   const expectedVsPaidCanvas = document.getElementById('expectedVsPaidPieChart');
   if (expectedVsPaidCanvas) {

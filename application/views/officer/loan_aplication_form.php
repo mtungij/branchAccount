@@ -96,6 +96,7 @@ echo form_open($form_action, ['novalidate' => true]);
                     <input type="hidden" name="customer_id" value="<?= isset($customer) && is_object($customer) ? $customer->customer_id : ''; ?>">
                     <input type="hidden" name="blanch_id" value="<?= isset($customer) && is_object($customer) ? $customer->blanch_id : ''; ?>">
                     <input type="hidden" name="fee_status" value="YES">
+                    <input type="hidden" name="loan_form_token" value="<?= isset($loan_form_token) ? htmlspecialchars($loan_form_token, ENT_QUOTES, 'UTF-8') : ''; ?>">
 
                     <!-- Loan Amount -->
                     <div class="sm:col-span-4">
@@ -374,7 +375,12 @@ function closeConfirmationModal() {
 }
 
 function submitForm() {
-    // Submit the form
+    const submitBtn = document.querySelector('#confirmationModal button[onclick="submitForm()"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '<?php echo $this->lang->line('processing') ?: 'Processing...'; ?>';
+    }
+
     document.querySelector('form').submit();
 }
 </script>

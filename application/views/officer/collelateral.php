@@ -61,6 +61,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 </h3>
 
               <?php echo form_open("oficer/create_colateral/{$loan_attach->loan_id}", ['enctype' => 'multipart/form-data']); ?>
+              <input type="hidden" name="collateral_form_token" value="<?php echo isset($collateral_form_token) ? htmlspecialchars($collateral_form_token, ENT_QUOTES, 'UTF-8') : ''; ?>">
 
 <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
     <!-- Jina La Dhamana -->

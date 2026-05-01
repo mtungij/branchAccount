@@ -302,6 +302,9 @@ $lang['tt_today_penalty_paid'] = 'Jumla ya faini zilizolipwa leo kutoka kwa wate
 $lang['top_5_employees_by_deposit'] = 'Wafanyakazi 5 Bora kwa Makusanyo';
 $lang['top_10_branches_by_deposit'] = 'Matawi 10 Bora kwa Makusanyo';
 $lang['total_deposit_tzs'] = 'Jumla ya Makusanyo (TZS)';
+$lang['monthly_withdraw_vs_paid'] = 'Mwenendo wa Mkopo Uliotolewa dhidi ya Uliolipwa kwa Mwezi';
+$lang['monthly_loan_withdraw'] = 'Mkopo Uliotolewa';
+$lang['monthly_loan_paid'] = 'Mkopo Uliolipwa';
 $lang['user'] = 'Mtumiaji';
 
 $lang['quick_filter'] = 'Chuja Haraka';

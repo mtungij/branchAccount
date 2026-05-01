@@ -8,6 +8,8 @@ class Admin extends CI_Controller {
 	{
 	$this->load->model('queries');
 	$comp_id = $this->session->userdata('comp_id');
+    $selected_blanch_input = $this->input->get('blanch_id', true);
+    $selected_blanch_id = (is_numeric($selected_blanch_input) && (int) $selected_blanch_input > 0) ? (int) $selected_blanch_input : 0;
    $compdata = $this->queries->get_companyData($comp_id);
 
  
@@ -81,6 +83,8 @@ class Admin extends CI_Controller {
 
 	 $top_depositors = $this->queries->get_top_5_deposit_employees($comp_id);
      $top_branch_deposits = $this->queries->get_top_10_branch_deposit_today($comp_id);
+     $current_year = (int) date('Y');
+     $monthly_loan_series_raw = $this->queries->get_monthly_loan_withdraw_vs_paid($comp_id, $selected_blanch_id > 0 ? $selected_blanch_id : null, $current_year);
 
 	 $disbursed_loans= $this->queries->get_sum_loanDisbursed($comp_id);
 
@@ -96,6 +100,37 @@ class Admin extends CI_Controller {
 	 $total_active_paid= $this->queries->get_today_received_from_receivale	($comp_id);
  $total_default_paid=$this->queries->get_depositing_out_total_comp($comp_id);
  $today_endactive_paid=$this->queries->get_depositing_out_todayend_comp($comp_id);
+
+     $monthly_loan_chart = [];
+     $withdrawal_index = [];
+     $payment_index = [];
+
+     foreach ($monthly_loan_series_raw['withdrawals'] as $row) {
+     	$withdrawal_index[$row->month_key] = (float) $row->total_withdraw;
+     }
+
+     foreach ($monthly_loan_series_raw['payments'] as $row) {
+     	$payment_index[$row->month_key] = (float) $row->total_paid;
+     }
+
+     for ($month = 1; $month <= 12; $month++) {
+     	$month_key = sprintf('%04d-%02d', $current_year, $month);
+     	$monthly_loan_chart[] = [
+     		'label' => date('M Y', strtotime($month_key . '-01')),
+     		'withdraw' => isset($withdrawal_index[$month_key]) ? $withdrawal_index[$month_key] : 0,
+     		'paid' => isset($payment_index[$month_key]) ? $payment_index[$month_key] : 0,
+     	];
+     }
+
+     $selected_blanch_name = 'All Branches';
+     if ($selected_blanch_id > 0 && !empty($blanch)) {
+     	foreach ($blanch as $blanch_row) {
+     		if ((int) ($blanch_row->blanch_id ?? 0) === $selected_blanch_id) {
+     			$selected_blanch_name = $blanch_row->blanch_name;
+     			break;
+     		}
+     	}
+     }
 
 //   $today_deposits = $this->queries->get_today_received_loan($comp_id);
 
@@ -127,11 +162,14 @@ class Admin extends CI_Controller {
 
 	      // print_r($blanch_capital_circle);
 	      //         exit();
-	$this->load->view('admin/index',['receivable_total'=>$receivable_total,'total_deposit_monthly'=>$total_deposit_monthly,'total_deposit_weekly'=> $total_deposit_weekly,'total_deposit_daily'=> $total_deposit_daily,'deposit_daily'=> $deposit_daily,'done_customer_count'=>$done_customer_count,'all_customer_count'=>$all_customer_count,
+    $this->load->view('admin/index',['receivable_total'=>$receivable_total,'total_deposit_monthly'=>$total_deposit_monthly,'total_deposit_weekly'=> $total_deposit_weekly,'total_deposit_daily'=> $total_deposit_daily,'deposit_daily'=> $deposit_daily,'done_customer_count'=>$done_customer_count,'all_customer_count'=>$all_customer_count,
     'new_customer'=> $new_customer,'top_depositors'=> $top_depositors,'top_branch_deposits' => $top_branch_deposits,
 	'total_deni'=> $total_deni,
 	'today_enddate_collection' => $today_enddate_collection,
 	'total_loanWithdrawal'=>$total_loanWithdrawal,
+    'selected_blanch_id' => $selected_blanch_id,
+    'selected_blanch_name' => $selected_blanch_name,
+    'monthly_loan_chart' => $monthly_loan_chart,
 	' compdata'=> $compdata,
 	'total_loanDis'=>$total_loanDis,
 	'disbursed_loans'=>$disbursed_loans,
@@ -141,7 +179,7 @@ class Admin extends CI_Controller {
 	'total_default_paid'=> $total_default_paid,
 	'total_withdrawal_daily'=> $total_withdrawal_daily,'total_withdrawal_weekly'=> $total_withdrawal_weekly,'total_withdrawal_monthly'=>$total_withdrawal_monthly,
 	'total_overdue'=> $total_overdue,
-	 'employee_count'=> $employee_count,'top_employees'=>$top_employees,'default_customer_count'=>$default_customer_count,'manager_data' => $manager_data,'total_received'=>$total_received,'total_loan_pending'=>$total_loan_pending,'total_loanWithdrawal'=>$total_loanWithdrawal,'today_penart'=>$today_penart,'prepaid_today'=>$prepaid_today,'total_received'=>$total_received,'prepaid_today'=>$prepaid_today,'total_loan_fee'=>$total_loan_fee,'today_income'=>$today_income,'toay_expences'=>$toay_expences,'total_capital'=>$total_capital,'out_float'=>$out_float,'cash_bank'=>$cash_bank,'principal_loan'=>$principal_loan,'done_loan'=>$done_loan,'total_expect'=>$total_expect,'total_receved'=>$total_receved,'cash_depost'=>$cash_depost,'cash_income'=>$cash_income,'cash_expences'=>$cash_expences,'blanch'=>$blanch,'total_remain'=>$total_remain,'today_total_loan_pend'=>$today_total_loan_pend,'loanAprove'=>$loanAprove,'withdrawal'=>$withdrawal,'loan_depost'=>$loan_depost,'receive_Amount'=>$receive_Amount,'loan_fee'=>$loan_fee,'request_expences'=>$request_expences,'sum_comp_capital'=>$sum_comp_capital,'total_deducted_balance'=>$total_deducted_balance,'total_non'=>$total_non,'blanch_capital_circle'=>$blanch_capital_circle]);
+    'employee_count'=> $employee_count,'top_employees'=>$top_employees,'default_customer_count'=>$default_customer_count,'manager_data' => $manager_data,'total_received'=>$total_received,'total_loan_pending'=>$total_loan_pending,'total_loanWithdrawal'=>$total_loanWithdrawal,'today_penart'=>$today_penart,'prepaid_today'=>$prepaid_today,'total_received'=>$total_received,'prepaid_today'=>$prepaid_today,'total_loan_fee'=>$total_loan_fee,'today_income'=>$today_income,'toay_expences'=>$toay_expences,'total_capital'=>$total_capital,'out_float'=>$out_float,'cash_bank'=>$cash_bank,'principal_loan'=>$principal_loan,'done_loan'=>$done_loan,'total_expect'=>$total_expect,'total_receved'=>$total_receved,'cash_depost'=>$cash_depost,'cash_income'=>$cash_income,'cash_expences'=>$cash_expences,'blanch'=>$blanch,'total_remain'=>$total_remain,'today_total_loan_pend'=>$today_total_loan_pend,'loanAprove'=>$loanAprove,'withdrawal'=>$withdrawal,'loan_depost'=>$loan_depost,'receive_Amount'=>$receive_Amount,'loan_fee'=>$loan_fee,'request_expences'=>$request_expences,'sum_comp_capital'=>$sum_comp_capital,'total_deducted_balance'=>$total_deducted_balance,'total_non'=>$total_non,'blanch_capital_circle'=>$blanch_capital_circle]);
 	}
 
 
@@ -3810,8 +3848,8 @@ public function disburse($loan_id){
 	$loan_fee_sum = $this->queries->get_sumLoanFee($comp_id);
 	$total_loan_fee = $loan_fee_sum->total_fee;
 
-      // print_r($admin_data);
-      //       exit();
+    //   print_r($loan_data);
+    //         exit();
         
 	  $loan_id = $loan_data->loan_id;
 	  $blanch_id = $loan_data->blanch_id;
@@ -3859,9 +3897,13 @@ public function disburse($loan_id){
       $loan_interest = $interest /100 * $balance * $months;
       $total_loan = $balance + $loan_interest;
 
+        //   print_r($total_loan);
+        //     exit();
       }elseif($loan_data_interst->rate == 'SIMPLE'){
       $loan_interest = $interest /100 * $balance;
       $total_loan = $balance + $loan_interest;
+                // print_r($total_loan);
+                // exit();
       }elseif($loan_data_interst->rate == 'REDUCING'){
       	$month = date("m");
         $year = date("Y");
@@ -4013,7 +4055,13 @@ public function disburse($loan_id){
         // tafsiri session kuwa miezi kulingana na aina ya mkopo
         if ($day == 1) { 
             // daily loan
-            $loan_interest = $loan_aproved * ($interest_loan / 100) * $session_loan;
+    $months = $session_loan / 30;
+
+$loan_interest = $loan_aproved * ($interest_loan / 100) * $months;
+
+// echo "Daily Loan: Loan Approved = $loan_aproved, Interest Rate = $interest_loan%, Session = $session_loan days ($months months), Loan Interest = " . number_format($loan_interest);
+
+// exit();
 
         } elseif ($day == 7) { 
               $weeks = $session_loan;

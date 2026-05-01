@@ -471,11 +471,42 @@ public function get_customerDataLOANform($customer_id){
 }
 
 public function insert_customerData($data){
+	$customer_id = isset($data['customer_id']) ? (int) $data['customer_id'] : 0;
+	if ($customer_id <= 0) {
+		return false;
+	}
+
+	$latest_row = $this->db
+		->select('id')
+		->where('customer_id', $customer_id)
+		->order_by('id', 'DESC')
+		->limit(1)
+		->get('tbl_sub_customer')
+		->row();
+
+	if (!empty($latest_row)) {
+		return $this->db->where('id', $latest_row->id)->update('tbl_sub_customer', $data);
+	}
+
 	return $this->db->insert('tbl_sub_customer',$data);
 }
 
 public function get_allcutomer($comp_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.comp_id = '$comp_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
+		LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.comp_id = '$comp_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
@@ -496,19 +527,55 @@ public function get_allcutomer($comp_id){
 	}
 
 	public function get_cutomerBlanchData($blanch_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id JOIN tbl_account_type at ON at.account_id = sc.account_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.blanch_id = '$blanch_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		JOIN tbl_account_type at ON at.account_id = sc.account_id
+		JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.blanch_id = '$blanch_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
 	public function get_customer_blanch($blanch_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.blanch_id = '$blanch_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
+		LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.blanch_id = '$blanch_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
 	public function get_customers_by_officer($empl_id) {
 		return $this->db->query("
 			SELECT * FROM tbl_customer c
-			LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id
+			LEFT JOIN (
+				SELECT sc1.*
+				FROM tbl_sub_customer sc1
+				JOIN (
+					SELECT customer_id, MAX(id) AS latest_id
+					FROM tbl_sub_customer
+					GROUP BY customer_id
+				) latest_sc ON latest_sc.latest_id = sc1.id
+			) sc ON sc.customer_id = c.customer_id
 			LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
 			LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
 			WHERE c.empl_id = ?
@@ -978,7 +1045,21 @@ public function get_loan_by_id($loan_id)
 
 
 	public function get_allcutomerblanchData($blanch_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.blanch_id = '$blanch_id' ORDER BY c.customer_id DESC"); 
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id
+		LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.blanch_id = '$blanch_id'
+		ORDER BY c.customer_id DESC"); 
 	return $customer->result(); 
 	}
 
@@ -986,7 +1067,15 @@ public function get_loan_by_id($loan_id)
 {
     $customer = $this->db->query("
         SELECT * FROM tbl_customer c  
-        LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id 
+	        LEFT JOIN (
+	            SELECT sc1.*
+	            FROM tbl_sub_customer sc1
+	            JOIN (
+	                SELECT customer_id, MAX(id) AS latest_id
+	                FROM tbl_sub_customer
+	                GROUP BY customer_id
+	            ) latest_sc ON latest_sc.latest_id = sc1.id
+	        ) sc ON sc.customer_id = c.customer_id 
         LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id 
         LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id 
         WHERE c.blanch_id = '$blanch_id' AND c.empl_id = '$empl_id' 
@@ -1001,7 +1090,15 @@ public function get_loan_by_id($loan_id)
 		$customer = $this->db->query("
 			SELECT * 
 			FROM tbl_customer c  
-			LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id 
+			LEFT JOIN (
+				SELECT sc1.*
+				FROM tbl_sub_customer sc1
+				JOIN (
+					SELECT customer_id, MAX(id) AS latest_id
+					FROM tbl_sub_customer
+					GROUP BY customer_id
+				) latest_sc ON latest_sc.latest_id = sc1.id
+			) sc ON sc.customer_id = c.customer_id 
 			LEFT JOIN tbl_account_type at ON at.account_id = sc.account_id 
 			LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id 
 			WHERE c.blanch_id = '$blanch_id' 
@@ -1013,7 +1110,21 @@ public function get_loan_by_id($loan_id)
 	
 
 	public function get_allcustomerData($comp_id){
-	$customer = $this->db->query("SELECT * FROM tbl_customer c  JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id JOIN tbl_account_type at ON at.account_id = sc.account_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id WHERE c.comp_id = '$comp_id' ORDER BY c.customer_id DESC");
+	$customer = $this->db->query("SELECT *
+		FROM tbl_customer c
+		JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
+		JOIN tbl_account_type at ON at.account_id = sc.account_id
+		JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+		WHERE c.comp_id = '$comp_id'
+		ORDER BY c.customer_id DESC");
 	  return $customer->result(); 
 	}
 
@@ -4588,69 +4699,13 @@ public function get_next7days_ending_loans_restriction($comp_id, $blanch_id = nu
 	
 
 
-    public function get_total_recevable($comp_id, $blanch_id = null){
-	    	$date = date("Y-m-d");
-	    	$branch_sql = '';
-	    	$params = [$comp_id];
-	    	if (!empty($blanch_id)) {
-	    		$branch_sql = ' AND l.blanch_id = ? ';
-	    		$params[] = (int) $blanch_id;
-	    	}
-	    	$params = array_merge($params, [$date, $date, $date, $date, $date, $date, $date, $date, $date, $date, $date, $date, $date]);
-
-	    	$today_data = $this->db->query(
-	    		"SELECT COALESCE(SUM(filtered_loans.restration), 0) AS total_rejesho
-	    		 FROM (
-	    		     SELECT l.*, o.loan_stat_date, o.loan_end_date,
-	    		            COALESCE(d.total_deposit, 0) AS total_deposit,
-	    		            COALESCE(d.deposits_today, 0) AS deposits_today
-	    		     FROM tbl_loans l
-	    		     JOIN tbl_outstand o ON o.loan_id = l.loan_id
-	    		     LEFT JOIN (
-	    		         SELECT loan_id, 
-	    		                SUM(depost) AS total_deposit,
-	    		                SUM(CASE WHEN DATE(depost_day) = CURDATE() THEN depost ELSE 0 END) AS deposits_today
-	    		         FROM tbl_depost
-	    		         GROUP BY loan_id
-	    		     ) d ON d.loan_id = l.loan_id
-	    		     WHERE l.loan_status = 'withdrawal'
-	    		       AND l.comp_id = ?
-	    		       {$branch_sql}
-	    		       AND o.loan_stat_date IS NOT NULL
-	    		       AND DATE(?) >= DATE(o.loan_stat_date)
-	    		       AND DATE(?) <= DATE(o.loan_end_date)
-	    		       AND (
-	    		            NULLIF(TRIM(l.session), '') IS NULL
-	    		            OR CAST(l.session AS UNSIGNED) = 0
-	    		            OR (
-	    		                (CAST(l.day AS UNSIGNED) = 1 AND DATEDIFF(DATE(?), DATE(o.loan_stat_date)) < CAST(l.session AS UNSIGNED))
-	    		                OR (CAST(l.day AS UNSIGNED) = 7 AND FLOOR(DATEDIFF(DATE(?), DATE(o.loan_stat_date)) / 7) BETWEEN 1 AND CAST(l.session AS UNSIGNED))
-	    		                OR (CAST(l.day AS UNSIGNED) IN (30, 31) AND TIMESTAMPDIFF(MONTH, DATE(o.loan_stat_date), DATE(?)) BETWEEN 1 AND CAST(l.session AS UNSIGNED))
-	    		            )
-	    		       )
-	    		       AND (
-	    		            CAST(l.day AS UNSIGNED) = 1
-	    		            OR (CAST(l.day AS UNSIGNED) = 7 AND DATEDIFF(DATE(?), DATE(o.loan_stat_date)) >= 7 AND MOD(DATEDIFF(DATE(?), DATE(o.loan_stat_date)), 7) = 0)
-	    		            OR (
-	    		                CAST(l.day AS UNSIGNED) IN (30, 31)
-	    		                AND (
-	    		                    TIMESTAMPDIFF(MONTH, DATE(o.loan_stat_date), DATE(?)) >= 1
-	    		                    AND DAY(DATE(?)) = DAY(DATE(o.loan_stat_date))
-	    		                    OR (
-	    		                        DAY(DATE(o.loan_stat_date)) > DAY(LAST_DAY(DATE(?)))
-	    		                        AND TIMESTAMPDIFF(MONTH, DATE(o.loan_stat_date), DATE(?)) >= 1
-	    		                        AND DAY(DATE(?)) = DAY(LAST_DAY(DATE(?)))
-	    		                    )
-	    		                )
-	    		            )
-	    		       )
-	    		       AND COALESCE(d.deposits_today, 0) = 0
-	    		 ) AS filtered_loans",
-	    		$params
-	    	);
-	    	return $today_data->row();
+    public function get_total_recevable($comp_id){
+    	$date = date("Y-m-d");
+    	$today_data = $this->db->query("SELECT SUM(restration) AS total_rejesho FROM tbl_loans WHERE comp_id = '$comp_id' AND loan_status = 'withdrawal' AND date_show = '$date'");
+    	return $today_data->row();
     }
 
+	
 
     public function get_total_recevableBl($blanch_id){
 	    	return $this->get_total_recevableBlanch($blanch_id);
@@ -5484,6 +5539,52 @@ public function get_total_principal_monthly($comp_id, $blanch_id = null){
 		{$branch_sql}
     ");
     return $query->row();
+}
+
+public function get_monthly_loan_withdraw_vs_paid($comp_id, $blanch_id = null, $year = null)
+{
+	$year = !empty($year) ? (int) $year : (int) date('Y');
+	$start_date = $year . '-01-01';
+	$end_date = $year . '-12-31';
+	$branch_sql_loans = '';
+	$branch_sql_deposts = '';
+
+	if (!empty($blanch_id)) {
+		$branch_id = (int) $blanch_id;
+		$branch_sql_loans = " AND l.blanch_id = '{$branch_id}'";
+		$branch_sql_deposts = " AND d.blanch_id = '{$branch_id}'";
+	}
+
+	$withdrawals = $this->db->query("
+		SELECT DATE_FORMAT(COALESCE(ot.loan_stat_date, l.disburse_day), '%Y-%m') AS month_key,
+		       SUM(COALESCE(l.loan_aprove, 0)) AS total_withdraw
+		FROM tbl_loans l
+		LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id
+		WHERE l.comp_id = '{$comp_id}'
+		  AND l.loan_status IN ('withdrawal', 'out', 'done', 'disbarsed', 'disbursed')
+		  AND DATE(COALESCE(ot.loan_stat_date, l.disburse_day)) >= '{$start_date}'
+		  AND DATE(COALESCE(ot.loan_stat_date, l.disburse_day)) <= '{$end_date}'
+		  {$branch_sql_loans}
+		GROUP BY DATE_FORMAT(COALESCE(ot.loan_stat_date, l.disburse_day), '%Y-%m')
+		ORDER BY month_key ASC
+	")->result();
+
+	$payments = $this->db->query("
+		SELECT DATE_FORMAT(d.depost_day, '%Y-%m') AS month_key,
+		       SUM(COALESCE(d.depost, 0)) AS total_paid
+		FROM tbl_depost d
+		WHERE d.comp_id = '{$comp_id}'
+		  AND DATE(d.depost_day) >= '{$start_date}'
+		  AND DATE(d.depost_day) <= '{$end_date}'
+		  {$branch_sql_deposts}
+		GROUP BY DATE_FORMAT(d.depost_day, '%Y-%m')
+		ORDER BY month_key ASC
+	")->result();
+
+	return [
+		'withdrawals' => $withdrawals,
+		'payments' => $payments,
+	];
 }
 
 
@@ -6665,6 +6766,16 @@ public function defaulters_customer($blanch_id){
     	  }
        }
 
+		public function find_customer_by_phone($comp_id, $phone_no){
+			return $this->db
+				->where('comp_id', $comp_id)
+				->where('phone_no', $phone_no)
+				->order_by('customer_id', 'DESC')
+				->limit(1)
+				->get('tbl_customer')
+				->row();
+		}
+
        public function get_blanch_balance($blanch_id){
        	$data = $this->db->query("SELECT * FROM tbl_blanch_account WHERE blanch_id = '$blanch_id'");
        	return $data->row();
@@ -6934,7 +7045,15 @@ public function defaulters_customer($blanch_id){
    public function get_all_customerBlanch($blanch_id){
 	$customer = $this->db->query("SELECT c.*
 		FROM tbl_customer c
-		LEFT JOIN tbl_sub_customer sc ON sc.customer_id = c.customer_id
+		LEFT JOIN (
+			SELECT sc1.*
+			FROM tbl_sub_customer sc1
+			JOIN (
+				SELECT customer_id, MAX(id) AS latest_id
+				FROM tbl_sub_customer
+				GROUP BY customer_id
+			) latest_sc ON latest_sc.latest_id = sc1.id
+		) sc ON sc.customer_id = c.customer_id
 		WHERE c.blanch_id = '$blanch_id'
 		AND (sc.customer_id IS NULL OR c.customer_status = 'open')
 		ORDER BY c.customer_id DESC");

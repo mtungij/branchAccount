@@ -553,7 +553,7 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
                             <input type="text" id="how_loan" name="loan_aprove" placeholder="Full name" autocomplete="off" 
                                    class="py-2.5 px-4 block w-full border-green-600 rounded-lg text-sm focus:border-green-500 focus:ring-green-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-green-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" 
                                    value="<?php echo set_value('sp_lname', isset($loan_form->how_loan) ? $loan_form->how_loan : ''); ?>"
-                       required>
+                       readonly>
                         </div>
 
                         <input type="hidden" name="penat_status" value="YES">
