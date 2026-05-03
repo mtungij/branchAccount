@@ -77,6 +77,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
 <?php
   $customer_loan = !empty($customer->customer_id) ? $this->queries->get_loan_active_customer($customer->customer_id) : null;
   $total_deposit = $this->queries->get_total_amount_paid_loan($customer_loan->loan_id ?? 0);
+  $out_stand = $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0);
   $loan_int = $customer_loan->loan_int ?? 0;
   $deposit = $total_deposit->total_Deposit ?? 0;
   $status_label = 'Not Active';
@@ -652,7 +653,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
                             ?>
                             <span style="color:red;">Default Amount</span>
                             <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-                                value="<?php echo number_format($out_stand->total_out); ?>.00" readonly style="color:red">
+                            value="<?php echo number_format($out_stand->total_out ?? 0); ?>.00" readonly style="color:red">
                         <?php } else { ?>
                             <span>Recovery Amount</span>
                             <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
