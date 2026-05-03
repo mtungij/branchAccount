@@ -246,6 +246,7 @@ $total_filtered_income = !empty($total_receved->total_receved) ? (float) $total_
                             <th scope="col" class="px-4 py-3 dark:text-white">Loan Amount</th>
                             <th scope="col" class="px-4 py-3 dark:text-white">Income Type</th>
                             <th scope="col" class="px-4 py-3 dark:text-white">Income Amount</th>
+                            <th scope="col" class="px-4 py-3 dark:text-white">Payment Account</th>
                             <th scope="col" class="px-4 py-3 dark:text-white">Receiver</th>
 							<th scope="col" class="px-4 py-3 dark:text-white">Date</th>
 							<th scope="col" class="px-4 py-3 dark:text-white">Action</th>
@@ -267,6 +268,7 @@ $total_filtered_income = !empty($total_receved->total_receved) ? (float) $total_
 			  <td class="px-4 py-3 dark:text-white"><?php echo $detail_incomes->inc_name; ?></td>
           
 			 <td><?php echo number_format($detail_incomes->receve_amount); ?></td>
+       <td class="px-4 py-3 dark:text-white"><?php echo !empty($detail_incomes->payment_account_name) ? $detail_incomes->payment_account_name : '-'; ?></td>
 			 <td class="px-4 py-3 dark:text-white"><?php if ($detail_incomes->empl_name == FALSE) {
                                      ?>
                                      -

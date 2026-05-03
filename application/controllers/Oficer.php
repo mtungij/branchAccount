@@ -1019,13 +1019,19 @@ $this->load->model('queries');
         $income = $this->queries->get_income($comp_id);
         $detail_income = $this->queries->get_income_detailBlanchData($blanch_id);
         $total_receved = $this->queries->get_sum_incomeBlanchData($blanch_id);
+        $blanch_account = $this->queries->get_blanch_account_data($blanch_id);
         $customer = $this->queries->get_allcutomerblanchData($blanch_id);
         $privillage = $this->queries->get_position_empl($empl_id);
         $manager = $this->queries->get_position_manager($empl_id);
+
+    		$income_submit_token = function_exists('random_bytes')
+    			? bin2hex(random_bytes(16))
+    			: md5(uniqid((string) mt_rand(), true));
+    		$this->session->set_userdata('income_submit_token', $income_submit_token);
         //  echo "<pre>";
         //    print_r( $detail_income);
         //          exit();
-        $this->load->view('officer/income_dashboard',['income'=>$income,'detail_income'=>$detail_income,'total_receved'=>$total_receved,'customer'=>$customer,'empl_data'=>$empl_data,'privillage'=>$privillage,'manager'=>$manager]);
+        $this->load->view('officer/income_dashboard',['income'=>$income,'detail_income'=>$detail_income,'total_receved'=>$total_receved,'customer'=>$customer,'empl_data'=>$empl_data,'privillage'=>$privillage,'manager'=>$manager,'blanch_account'=>$blanch_account,'income_submit_token'=>$income_submit_token]);
     }
 
   public function daily_report(){
@@ -1041,6 +1047,7 @@ $this->load->model('queries');
     $selected_branch_name = !empty($blanch_data->blanch_name) ? $blanch_data->blanch_name : 'Branch';
 
     $total_today_with = $this->queries->get_today_loan_withdrawal($blanch_id, $report_date);
+    $today_loan_withdraw_by_account = $this->queries->get_today_loan_withdrawal_by_account_blanch($blanch_id, $report_date);
     $total_received = $this->queries->get_total_deposit_blanch($blanch_id, $report_date);
     $received_by_account = $this->queries->get_totalaccount_transaction_blanch($blanch_id, $report_date);
     $payment_breakdown = $this->queries->get_daily_payment_breakdown_blanch($blanch_id, $report_date);
@@ -1050,7 +1057,11 @@ $this->load->model('queries');
       'total_expected' => !empty($today_expected_raw->total_restoration) ? (float) $today_expected_raw->total_restoration : 0,
     );
     $penalty_today = $this->queries->get_sum_incomeBlanchData($blanch_id, $report_date);
+    $today_penalty_income_type = $this->queries->get_daily_penalty_income_by_type_blanch($blanch_id, $report_date);
+    $today_penalty_income_ledger = $this->queries->get_daily_penalty_income_ledger_blanch($blanch_id, $report_date);
     $processing_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id, $report_date);
+    $today_accepted_expenses = $this->queries->get_daily_accepted_expenses_blanch($blanch_id, $report_date);
+    $today_hq_transfer_in = $this->queries->get_daily_hq_transfer_in_by_account_blanch($blanch_id, $report_date);
 
       // echo "<pre>";
       //      print_r( $total_today_with);
@@ -1061,13 +1072,18 @@ $this->load->model('queries');
       'report_date' => $report_date,
       'selected_branch_name' => $selected_branch_name,
       'total_today_with' => $total_today_with,
+      'today_loan_withdraw_by_account' => $today_loan_withdraw_by_account,
       'total_received' => $total_received,
       'received_by_account' => $received_by_account,
       'payment_breakdown' => $payment_breakdown,
       'account_payment_summary' => $account_payment_summary,
       'today_expected' => $today_expected,
       'penalty_today' => $penalty_today,
+      'today_penalty_income_type' => $today_penalty_income_type,
+      'today_penalty_income_ledger' => $today_penalty_income_ledger,
       'processing_fee' => $processing_fee,
+      'today_accepted_expenses' => $today_accepted_expenses,
+      'today_hq_transfer_in' => $today_hq_transfer_in,
     ]);
   }
 
@@ -1084,6 +1100,7 @@ $this->load->model('queries');
     $selected_branch_name = !empty($blanch_data->blanch_name) ? $blanch_data->blanch_name : 'Branch';
 
     $total_today_with = $this->queries->get_today_loan_withdrawal($blanch_id, $report_date);
+    $today_loan_withdraw_by_account = $this->queries->get_today_loan_withdrawal_by_account_blanch($blanch_id, $report_date);
     $total_received = $this->queries->get_total_deposit_blanch($blanch_id, $report_date);
     $received_by_account = $this->queries->get_totalaccount_transaction_blanch($blanch_id, $report_date);
     $payment_breakdown = $this->queries->get_daily_payment_breakdown_blanch($blanch_id, $report_date);
@@ -1093,7 +1110,11 @@ $this->load->model('queries');
       'total_expected' => !empty($today_expected_raw->total_restoration) ? (float) $today_expected_raw->total_restoration : 0,
     );
     $penalty_today = $this->queries->get_sum_incomeBlanchData($blanch_id, $report_date);
+    $today_penalty_income_type = $this->queries->get_daily_penalty_income_by_type_blanch($blanch_id, $report_date);
+    $today_penalty_income_ledger = $this->queries->get_daily_penalty_income_ledger_blanch($blanch_id, $report_date);
     $processing_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id, $report_date);
+    $today_accepted_expenses = $this->queries->get_daily_accepted_expenses_blanch($blanch_id, $report_date);
+    $today_hq_transfer_in = $this->queries->get_daily_hq_transfer_in_by_account_blanch($blanch_id, $report_date);
 
     $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4', 'tempDir' => APPPATH . 'tmp/mpdf']);
     $html = $this->load->view('officer/daily_report_pdf', [
@@ -1102,18 +1123,24 @@ $this->load->model('queries');
       'selected_branch_name' => $selected_branch_name,
       'report_date' => $report_date,
       'total_today_with' => $total_today_with,
+      'today_loan_withdraw_by_account' => $today_loan_withdraw_by_account,
       'total_received' => $total_received,
       'received_by_account' => $received_by_account,
       'payment_breakdown' => $payment_breakdown,
       'account_payment_summary' => $account_payment_summary,
       'today_expected' => $today_expected,
       'penalty_today' => $penalty_today,
+      'today_penalty_income_type' => $today_penalty_income_type,
+      'today_penalty_income_ledger' => $today_penalty_income_ledger,
       'processing_fee' => $processing_fee,
+      'today_accepted_expenses' => $today_accepted_expenses,
+      'today_hq_transfer_in' => $today_hq_transfer_in,
     ], true);
 
     $mpdf->SetFooter('Generated By Brainsoft Technology');
     $mpdf->WriteHTML($html);
-    $mpdf->Output('officer_daily_report_' . $report_date . '.pdf', 'I');
+    $pdf_branch = preg_replace('/[^A-Za-z0-9_\-]/', '_', $selected_branch_name);
+    $mpdf->Output('hesabu_ya_siku_' . $pdf_branch . '_' . $report_date . '.pdf', 'I');
   }
 
   public function mauzo_report($report_date = null){
@@ -1616,8 +1643,8 @@ return true;
    return true;
   }
 
-  public function insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id){
-     $this->db->query("INSERT INTO tbl_receve (`comp_id`,`inc_id`,`blanch_id`,`customer_id`,`empl`,`receve_amount`,`receve_day`,`loan_id`,`group_id`) VALUES ('$comp_id','$inc_id','$blanch_id','$customer_id','$username','$penart_paid','$penart_date','$loan_id','$group_id')");
+    public function insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id,$trans_id){
+      $this->db->query("INSERT INTO tbl_receve (`comp_id`,`inc_id`,`blanch_id`,`customer_id`,`empl`,`receve_amount`,`trans_id`,`receve_day`,`loan_id`,`group_id`) VALUES ('$comp_id','$inc_id','$blanch_id','$customer_id','$username','$penart_paid','$trans_id','$penart_date','$loan_id','$group_id')");
   }
 
   private function get_cash_account_id($comp_id){
@@ -1636,20 +1663,20 @@ return true;
     return null;
   }
 
-  private function add_penalty_to_cash_account($comp_id, $blanch_id, $loan_id, $customer_id, $amount, $username, $group_id, $penart_date){
-    $cash_trans_id = $this->get_cash_account_id($comp_id);
-    if (empty($cash_trans_id)) {
+  private function add_income_to_branch_account($comp_id, $blanch_id, $loan_id, $customer_id, $amount, $username, $group_id, $income_date, $trans_id = null, $reference_type = 'penalty_income', $description = 'Income received'){
+    $target_trans_id = !empty($trans_id) ? (int) $trans_id : (int) $this->get_cash_account_id($comp_id);
+    if (empty($target_trans_id)) {
       return;
     }
 
-    $account_row = $this->queries->get_amount_remainAmountBlanch($blanch_id, $cash_trans_id);
+    $account_row = $this->queries->get_amount_remainAmountBlanch($blanch_id, $target_trans_id);
     $old_balance = !empty($account_row) ? (float) $account_row->blanch_capital : 0;
     $new_balance = $old_balance + (float) $amount;
 
     if (!empty($account_row)) {
-      $this->db->query("UPDATE tbl_blanch_account SET blanch_capital = '$new_balance' WHERE blanch_id = '$blanch_id' AND receive_trans_id = '$cash_trans_id'");
+      $this->db->query("UPDATE tbl_blanch_account SET blanch_capital = '$new_balance' WHERE blanch_id = '$blanch_id' AND receive_trans_id = '$target_trans_id'");
     } else {
-      $this->db->query("INSERT INTO tbl_blanch_account (`comp_id`,`blanch_id`,`blanch_capital`,`receive_trans_id`) VALUES ('$comp_id','$blanch_id','$amount','$cash_trans_id')");
+      $this->db->query("INSERT INTO tbl_blanch_account (`comp_id`,`blanch_id`,`blanch_capital`,`receive_trans_id`) VALUES ('$comp_id','$blanch_id','$amount','$target_trans_id')");
     }
 
     // Keep cash-in-hand and balance ledger aligned with the account movement.
@@ -1657,28 +1684,29 @@ return true;
     $this->queries->save_cash_inhand_balance(
       $comp_id,
       $blanch_id,
-      $cash_trans_id,
+      $target_trans_id,
       $created_by,
       $new_balance,
-      $penart_date
+      $income_date
     );
 
     $this->queries->record_account_balance_movement(array(
       'comp_id' => $comp_id,
       'blanch_id' => $blanch_id,
-      'trans_id' => $cash_trans_id,
-      'reference_type' => 'penalty_income',
+      'trans_id' => $target_trans_id,
+      'reference_type' => $reference_type,
       'reference_id' => $loan_id,
-      'movement_date' => $penart_date,
+      'movement_date' => $income_date,
       'amount_in' => $amount,
       'balance_before' => $old_balance,
       'balance_after' => $new_balance,
-      'description' => 'Penalty payment received',
+      'description' => $description,
       'created_by' => $created_by,
     ));
 
     // Keep account-based cashflow consistent for reporting.
-    $this->db->query("INSERT INTO tbl_pay (`loan_id`,`blanch_id`,`comp_id`,`customer_id`,`depost`,`balance`,`description`,`pay_status`,`stat`,`date_pay`,`emply`,`group_id`,`date_data`,`p_method`) VALUES ('$loan_id','$blanch_id','$comp_id','$customer_id','$amount','0','PENALTY INCOME','1','1','$penart_date','$username','$group_id','$penart_date','$cash_trans_id')");
+    $pay_desc = strtoupper($description);
+    $this->db->query("INSERT INTO tbl_pay (`loan_id`,`blanch_id`,`comp_id`,`customer_id`,`depost`,`balance`,`description`,`pay_status`,`stat`,`date_pay`,`emply`,`group_id`,`date_data`,`p_method`) VALUES ('$loan_id','$blanch_id','$comp_id','$customer_id','$amount','0','$pay_desc','1','1','$income_date','$username','$group_id','$income_date','$target_trans_id')");
   }
 
 
@@ -1688,6 +1716,7 @@ return true;
         $this->form_validation->set_rules('blanch_id','company','required');
         $this->form_validation->set_rules('customer_id','company','required');
         $this->form_validation->set_rules('inc_id','Income','required');
+        $this->form_validation->set_rules('trans_id','Account','required');
         $this->form_validation->set_rules('receve_amount','Amount','required');
         $this->form_validation->set_rules('receve_day','company','required');
         $this->form_validation->set_rules('empl','employee','required');
@@ -1695,6 +1724,14 @@ return true;
         $this->form_validation->set_error_delimiters('<div class="text-danger">','</div>');
         if ($this->form_validation->run()) {
              $data = $this->input->post();
+
+      $submit_token = trim((string) $this->input->post('submit_token', true));
+      $session_token = (string) $this->session->userdata('income_submit_token');
+      if (empty($submit_token) || empty($session_token) || !hash_equals($session_token, $submit_token)) {
+        $this->session->set_flashdata('error', 'Duplicate submit detected. Tafadhali jaribu tena.');
+        return redirect('oficer/income_dashboard');
+      }
+      $this->session->unset_userdata('income_submit_token');
 
             //  echo "<pre>";
             //  print_r($data);
@@ -1707,6 +1744,7 @@ return true;
             $loan_id = $data['loan_id'];
             $comp_id = $data['comp_id'];
             $penart_paid = $data['receve_amount'];
+            $trans_id = (int) $data['trans_id'];
             $username = $data['empl'];
             $customer_id = $data['customer_id'];
             $penart_date = $data['receve_day'];
@@ -1835,20 +1873,21 @@ Jumla leo tawi: " . number_format($jumla_faini) . " TZS.";
                  $old_paid = $penart->penart_paid;
                 $update_paid = $old_paid + $penart_paid;
                 $this->update_paidPenart($loan_id,$update_paid);
-                $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id);
-                 $this->add_penalty_to_cash_account($comp_id, $blanch_id, $loan_id, $customer_id, $penart_paid, $username, $group_id, $penart_date);
+                 $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id,$trans_id);
+                  $this->add_income_to_branch_account($comp_id, $blanch_id, $loan_id, $customer_id, $penart_paid, $username, $group_id, $penart_date, $trans_id, 'penalty_income', 'Penalty payment received');
                 $this->session->set_flashdata('massage','Tsh. '.$penart_paid .' Paid successfully');
                 $this->sendsms($phone,$massage);
                     }elseif($penart == FALSE){
-                 $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id);
+                  $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id,$trans_id);
                  $this->insert_penartPaid($loan_id,$inc_id,$blanch_id,$comp_id,$penart_paid,$username,$customer_id,$penart_date,$group_id);
-                  $this->add_penalty_to_cash_account($comp_id, $blanch_id, $loan_id, $customer_id, $penart_paid, $username, $group_id, $penart_date);
+                  $this->add_income_to_branch_account($comp_id, $blanch_id, $loan_id, $customer_id, $penart_paid, $username, $group_id, $penart_date, $trans_id, 'penalty_income', 'Penalty payment received');
                  $this->session->set_flashdata('massage','Tsh. '.$penart_paid .' Paid successfully');
                  $this->sendsms($phone,$massage);
                         }
                  
                  }else{ 
-              $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id);
+                $this->insert_income($comp_id,$inc_id,$blanch_id,$customer_id,$username,$penart_paid,$penart_date,$loan_id,$group_id,$trans_id);
+                $this->add_income_to_branch_account($comp_id, $blanch_id, $loan_id, $customer_id, $penart_paid, $username, $group_id, $penart_date, $trans_id, 'other_income', 'Income received');
               $this->session->set_flashdata('massage','Tsh. '.$penart_paid .' Paid successfully');
               $this->sendsms($phone,$massage);
                  }

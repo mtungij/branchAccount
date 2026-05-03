@@ -3991,6 +3991,30 @@ public function get_expences_requestAcceptedOnly($comp_id){
 	return $expences->result();
 }
 
+public function get_daily_accepted_expenses_blanch($blanch_id, $date){
+	$result = $this->db->query(
+		"SELECT e.ex_name, re.req_amount, re.req_description, at.account_name FROM tbl_request_exp re LEFT JOIN tbl_expenses e ON e.ex_id = re.ex_id LEFT JOIN tbl_account_transaction at ON at.trans_id = re.trans_id WHERE re.blanch_id = ? AND re.req_status = 'accept' AND re.req_date = ? ORDER BY at.account_name ASC, re.req_id ASC",
+		array($blanch_id, $date)
+	);
+	return $result->result();
+}
+
+public function get_daily_hq_transfer_in_by_account_blanch($blanch_id, $date){
+	$result = $this->db->query(
+		"SELECT l.trans_id, COALESCE(at.account_name, CONCAT('Account ', l.trans_id)) AS account_name, COALESCE(SUM(l.amount_in), 0) AS amount_in FROM tbl_account_balance_ledger l LEFT JOIN tbl_account_transaction at ON at.trans_id = l.trans_id WHERE l.blanch_id = ? AND l.movement_date = ? AND l.reference_type = 'float_transfer_in' GROUP BY l.trans_id, at.account_name ORDER BY at.account_name ASC",
+		array($blanch_id, $date)
+	);
+	return $result->result();
+}
+
+public function get_daily_penalty_income_ledger_blanch($blanch_id, $date){
+	$result = $this->db->query(
+		"SELECT COALESCE(SUM(l.amount_in), 0) AS total_penalty_income FROM tbl_account_balance_ledger l WHERE l.blanch_id = ? AND l.movement_date = ? AND l.reference_type = 'penalty_income'",
+		array($blanch_id, $date)
+	);
+	return $result->row();
+}
+
 public function get_expences_acceptedFiltered($comp_id, $from = null, $to = null, $blanch_id = null, $ex_id = null){
 	$sql = "SELECT re.*, e.ex_name, b.blanch_name, at.account_name, emp.empl_name AS approved_by_name FROM tbl_request_exp re LEFT JOIN tbl_expenses e ON e.ex_id = re.ex_id LEFT JOIN tbl_blanch b ON b.blanch_id = re.blanch_id LEFT JOIN tbl_account_transaction at ON at.trans_id = re.trans_id LEFT JOIN tbl_employee emp ON emp.empl_id = re.approved_by WHERE re.comp_id = ? AND re.req_status = 'accept'";
 	$params = array($comp_id);
@@ -4122,7 +4146,7 @@ public function get_blanchAccountremain($blanch_id){
 
 public function get_income_detail($comp_id){
 	$date = date("Y-m-d");
-	$income = $this->db->query("SELECT * FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = r.empl LEFT JOIN tbl_loans l ON l.loan_id = r.loan_id WHERE r.comp_id = '$comp_id' AND r.receve_day = '$date'");
+	$income = $this->db->query("SELECT r.*, i.*, c.*, b.*, e.*, l.*, at.account_name AS payment_account_name FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = r.empl LEFT JOIN tbl_loans l ON l.loan_id = r.loan_id LEFT JOIN tbl_account_transaction at ON at.trans_id = r.trans_id WHERE r.comp_id = '$comp_id' AND r.receve_day = '$date'");
 	 return $income->result();
 }
 
@@ -4132,7 +4156,7 @@ public function get_income_detail_filtered($comp_id, $from, $to, $blanch_id = nu
 		$branch_condition = " AND r.blanch_id = '" . (int) $blanch_id . "'";
 	}
 
-	$income = $this->db->query("SELECT * FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = r.empl LEFT JOIN tbl_loans l ON l.loan_id = r.loan_id WHERE r.comp_id = '$comp_id' AND DATE(r.receve_day) BETWEEN '$from' AND '$to'" . $branch_condition . " ORDER BY r.receve_day DESC, r.receved_id DESC");
+	$income = $this->db->query("SELECT r.*, i.*, c.*, b.*, e.*, l.*, at.account_name AS payment_account_name FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = r.empl LEFT JOIN tbl_loans l ON l.loan_id = r.loan_id LEFT JOIN tbl_account_transaction at ON at.trans_id = r.trans_id WHERE r.comp_id = '$comp_id' AND DATE(r.receve_day) BETWEEN '$from' AND '$to'" . $branch_condition . " ORDER BY r.receve_day DESC, r.receved_id DESC");
 	return $income->result();
 }
 
@@ -4165,7 +4189,7 @@ public function get_previous_income_all($from,$to,$comp_id){
 
 public function get_income_detailBlanchData($blanch_id){
 	$date = date("Y-m-d");
-	$income = $this->db->query("SELECT * FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id  WHERE r.blanch_id = '$blanch_id' AND r.receve_day = '$date'");
+	$income = $this->db->query("SELECT r.*, i.*, c.*, b.*, at.account_name AS payment_account_name FROM tbl_receve r JOIN tbl_income i ON i.inc_id = r.inc_id JOIN tbl_customer c ON c.customer_id = r.customer_id JOIN tbl_blanch b ON b.blanch_id = c.blanch_id LEFT JOIN tbl_account_transaction at ON at.trans_id = r.trans_id WHERE r.blanch_id = '$blanch_id' AND r.receve_day = '$date'");
 	 return $income->result();
 }
 
@@ -4201,6 +4225,25 @@ public function get_sum_incomeBlanchData($blanch_id, $date = null){
 	$report_date = empty($date) ? date("Y-m-d") : $date;
 	$data = $this->db->query("SELECT SUM(receve_amount) AS total_receved FROM  tbl_receve WHERE blanch_id = '$blanch_id' AND receve_day ='$report_date'");
 	 return $data->row();
+}
+
+public function get_daily_penalty_income_by_type_blanch($blanch_id, $date = null){
+	$report_date = empty($date) ? date("Y-m-d") : $date;
+	$data = $this->db->query(
+		"SELECT COALESCE(SUM(CAST(REPLACE(r.receve_amount, ',', '') AS DECIMAL(18,2))), 0) AS total_penalty_income
+		 FROM tbl_receve r
+		 JOIN tbl_income i ON i.inc_id = r.inc_id
+		 WHERE r.blanch_id = ?
+		   AND r.receve_day = ?
+		   AND (
+			LOWER(TRIM(i.inc_name)) IN ('penart','faini','fine','faini kulala','faini (penalty)','penalt','faini lala','penati','adhabu','penalty','penarty')
+			OR LOWER(i.inc_name) LIKE '%faini%'
+			OR LOWER(i.inc_name) LIKE '%penalty%'
+			OR LOWER(i.inc_name) LIKE '%adhabu%'
+		   )",
+		array($blanch_id, $report_date)
+	);
+	return $data->row();
 }
 
 public function get_sum_incomeBlanch($blanch_id){
@@ -9507,12 +9550,12 @@ public function get_daily_account_payment_summary($comp_id, $date = null){
 
 public function get_daily_account_payment_summary_blanch($blanch_id, $date = null){
 	$today = empty($date) ? date('Y-m-d') : $date;
+	$yesterday = date('Y-m-d', strtotime($today . ' -1 day'));
 
 	$account_rows = $this->db->query(
 		"SELECT
 			ba.receive_trans_id AS trans_id,
-			COALESCE(at.account_name, CONCAT('Account ', ba.receive_trans_id)) AS account_name,
-			COALESCE(SUM(ba.blanch_capital), 0) AS closing_balance
+			COALESCE(at.account_name, CONCAT('Account ', ba.receive_trans_id)) AS account_name
 		FROM tbl_blanch_account ba
 		LEFT JOIN tbl_account_transaction at ON at.trans_id = ba.receive_trans_id
 		WHERE ba.blanch_id = ?
@@ -9521,30 +9564,79 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 		array($blanch_id)
 	)->result();
 
-	$deposit_rows = $this->db->query(
+	$opening_rows = $this->db->query(
 		"SELECT
-			p.p_method AS trans_id,
-			COALESCE(SUM(p.depost), 0) AS total_deposit
-		FROM tbl_pay p
-		WHERE p.blanch_id = ?
-			AND p.pay_status = '1'
-			AND p.date_pay = ?
-			AND p.p_method IS NOT NULL
-		GROUP BY p.p_method",
+			l.trans_id,
+			COALESCE(at.account_name, CONCAT('Account ', l.trans_id)) AS account_name,
+			COALESCE(l.balance_after, 0) AS opening_balance
+		 FROM tbl_account_balance_ledger l
+		 LEFT JOIN tbl_account_transaction at ON at.trans_id = l.trans_id
+		 INNER JOIN (
+			SELECT trans_id, MAX(ledger_id) AS max_ledger_id
+			FROM tbl_account_balance_ledger
+			WHERE blanch_id = ? AND movement_date <= ?
+			GROUP BY trans_id
+		 ) lx ON lx.max_ledger_id = l.ledger_id
+		 WHERE l.blanch_id = ?",
+		array($blanch_id, $yesterday, $blanch_id)
+	)->result();
+
+	$opening_cash_rows = $this->db->query(
+		"SELECT
+			ch.trans_id,
+			COALESCE(at.account_name, CONCAT('Account ', ch.trans_id)) AS account_name,
+			COALESCE(ch.cash_amount, 0) AS opening_balance
+		 FROM tbl_cash_inhand ch
+		 LEFT JOIN tbl_account_transaction at ON at.trans_id = ch.trans_id
+		 INNER JOIN (
+			SELECT trans_id, MAX(hand_id) AS max_hand_id
+			FROM tbl_cash_inhand
+			WHERE blanch_id = ? AND cash_day = ? AND trans_id IS NOT NULL
+			GROUP BY trans_id
+		 ) cx ON cx.max_hand_id = ch.hand_id
+		 WHERE ch.blanch_id = ?",
+		array($blanch_id, $yesterday, $blanch_id)
+	)->result();
+
+	$received_rows = $this->db->query(
+		"SELECT
+			l.trans_id,
+			COALESCE(SUM(CASE WHEN l.reference_type = 'loan_payment' THEN l.amount_in ELSE 0 END), 0) AS loan_payment_received,
+			COALESCE(SUM(CASE WHEN l.reference_type = 'penalty_income' THEN l.amount_in ELSE 0 END), 0) AS penalty_received
+		 FROM tbl_account_balance_ledger l
+		 WHERE l.blanch_id = ?
+			AND l.movement_date = ?
+		 GROUP BY l.trans_id",
 		array($blanch_id, $today)
 	)->result();
 
 	$withdraw_rows = $this->db->query(
 		"SELECT
-			p.p_method AS trans_id,
-			COALESCE(SUM(p.withdrow), 0) AS total_withdraw
-		FROM tbl_pay p
-		WHERE p.blanch_id = ?
-			AND p.pay_status = '2'
-			AND p.date_pay = ?
-			AND p.p_method IS NOT NULL
-		GROUP BY p.p_method",
+			l.trans_id,
+			COALESCE(SUM(l.amount_out), 0) AS total_withdraw
+		 FROM tbl_account_balance_ledger l
+		 WHERE l.blanch_id = ?
+			AND l.movement_date = ?
+			AND l.reference_type = 'loan_withdrawal'
+		 GROUP BY l.trans_id",
 		array($blanch_id, $today)
+	)->result();
+
+	$closing_rows = $this->db->query(
+		"SELECT
+			l.trans_id,
+			COALESCE(at.account_name, CONCAT('Account ', l.trans_id)) AS account_name,
+			COALESCE(l.balance_after, 0) AS closing_balance
+		 FROM tbl_account_balance_ledger l
+		 LEFT JOIN tbl_account_transaction at ON at.trans_id = l.trans_id
+		 INNER JOIN (
+			SELECT trans_id, MAX(ledger_id) AS max_ledger_id
+			FROM tbl_account_balance_ledger
+			WHERE blanch_id = ? AND movement_date <= ?
+			GROUP BY trans_id
+		 ) lx ON lx.max_ledger_id = l.ledger_id
+		 WHERE l.blanch_id = ?",
+		array($blanch_id, $today, $blanch_id)
 	)->result();
 
 	$payment_split = $this->get_daily_payment_split_by_account_blanch($blanch_id, $today);
@@ -9558,13 +9650,56 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 			'opening_balance' => 0.0,
 			'today_received' => 0.0,
 			'today_loan_withdraw' => 0.0,
+			'penalty_added_to_cash' => 0.0,
 			'actual_payments' => 0.0,
 			'advance_payments' => 0.0,
-			'closing_balance' => (float) $row->closing_balance,
+			'closing_balance' => 0.0,
 		);
 	}
 
-	foreach ($deposit_rows as $row) {
+	foreach ($opening_rows as $row) {
+		$trans_id = (string) $row->trans_id;
+		if (!isset($account_map[$trans_id])) {
+			$account_map[$trans_id] = (object) array(
+				'trans_id' => $row->trans_id,
+				'account_name' => $row->account_name,
+				'opening_balance' => 0.0,
+				'today_received' => 0.0,
+				'today_loan_withdraw' => 0.0,
+				'penalty_added_to_cash' => 0.0,
+				'actual_payments' => 0.0,
+				'advance_payments' => 0.0,
+				'closing_balance' => 0.0,
+			);
+		}
+		$account_map[$trans_id]->opening_balance = (float) $row->opening_balance;
+	}
+
+	// Fallback for yesterday balances from cash snapshot when no ledger row exists for an account.
+	foreach ($opening_cash_rows as $row) {
+		$trans_id = (string) $row->trans_id;
+		if ($trans_id === '') {
+			continue;
+		}
+		if (!isset($account_map[$trans_id])) {
+			$account_map[$trans_id] = (object) array(
+				'trans_id' => $row->trans_id,
+				'account_name' => $row->account_name,
+				'opening_balance' => 0.0,
+				'today_received' => 0.0,
+				'today_loan_withdraw' => 0.0,
+				'penalty_added_to_cash' => 0.0,
+				'actual_payments' => 0.0,
+				'advance_payments' => 0.0,
+				'closing_balance' => 0.0,
+			);
+		}
+		if ((float) $account_map[$trans_id]->opening_balance <= 0) {
+			$account_map[$trans_id]->opening_balance = (float) $row->opening_balance;
+		}
+	}
+
+	foreach ($received_rows as $row) {
 		$trans_id = (string) $row->trans_id;
 		if (!isset($account_map[$trans_id])) {
 			$account_map[$trans_id] = (object) array(
@@ -9573,12 +9708,17 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 				'opening_balance' => 0.0,
 				'today_received' => 0.0,
 				'today_loan_withdraw' => 0.0,
+				'penalty_added_to_cash' => 0.0,
 				'actual_payments' => 0.0,
 				'advance_payments' => 0.0,
 				'closing_balance' => 0.0,
 			);
 		}
-		$account_map[$trans_id]->today_received = (float) $row->total_deposit;
+
+		$loan_payment_received = (float) $row->loan_payment_received;
+		$penalty_received = (float) $row->penalty_received;
+		$account_map[$trans_id]->today_received = $loan_payment_received + $penalty_received;
+		$account_map[$trans_id]->penalty_added_to_cash = $penalty_received;
 	}
 
 	foreach ($withdraw_rows as $row) {
@@ -9590,12 +9730,31 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 				'opening_balance' => 0.0,
 				'today_received' => 0.0,
 				'today_loan_withdraw' => 0.0,
+				'penalty_added_to_cash' => 0.0,
 				'actual_payments' => 0.0,
 				'advance_payments' => 0.0,
 				'closing_balance' => 0.0,
 			);
 		}
 		$account_map[$trans_id]->today_loan_withdraw = (float) $row->total_withdraw;
+	}
+
+	foreach ($closing_rows as $row) {
+		$trans_id = (string) $row->trans_id;
+		if (!isset($account_map[$trans_id])) {
+			$account_map[$trans_id] = (object) array(
+				'trans_id' => $row->trans_id,
+				'account_name' => $row->account_name,
+				'opening_balance' => 0.0,
+				'today_received' => 0.0,
+				'today_loan_withdraw' => 0.0,
+				'penalty_added_to_cash' => 0.0,
+				'actual_payments' => 0.0,
+				'advance_payments' => 0.0,
+				'closing_balance' => 0.0,
+			);
+		}
+		$account_map[$trans_id]->closing_balance = (float) $row->closing_balance;
 	}
 
 	foreach ($payment_split as $trans_id => $split) {
@@ -9615,12 +9774,12 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 		$account_map[$trans_id]->advance_payments = (float) $split['advance'];
 	}
 
-	$this->add_missing_penalty_to_cash_account($account_map, 'blanch_id', $blanch_id, $today);
-
 	foreach ($account_map as $trans_id => $row) {
-		$row->opening_balance = $row->closing_balance - $row->today_received + $row->today_loan_withdraw;
-		if ($row->opening_balance < 0) {
-			$row->opening_balance = 0;
+		if ((float) $row->closing_balance <= 0) {
+			$row->closing_balance = $row->opening_balance + $row->today_received - $row->today_loan_withdraw;
+		}
+		if ($row->closing_balance < 0) {
+			$row->closing_balance = 0;
 		}
 	}
 
@@ -10112,6 +10271,21 @@ public function get_eploye_deposit($blanch_id){
 	$data = $this->db->query("SELECT SUM(l.loan_aprove) AS total_loan_with,l.blanch_id  FROM tbl_loans l WHERE l.blanch_id = '$blanch_id' AND l.loan_status = 'withdrawal' AND l.disburse_day = '$report_date' GROUP BY l.blanch_id");
 
   	return $data = $data->row();
+  }
+
+  public function get_today_loan_withdrawal_by_account_blanch($blanch_id, $date = null){
+	$report_date = empty($date) ? date("Y-m-d") : $date;
+	$data = $this->db->query(
+		"SELECT l.method AS trans_id, COALESCE(at.account_name, CONCAT('Account ', l.method)) AS account_name, SUM(l.loan_aprove) AS total_loan_with
+		 FROM tbl_loans l
+		 LEFT JOIN tbl_account_transaction at ON at.trans_id = l.method
+		 WHERE l.blanch_id = ? AND l.loan_status = 'withdrawal' AND l.disburse_day = ?
+		 GROUP BY l.method, at.account_name
+		 ORDER BY at.account_name ASC",
+		array($blanch_id, $report_date)
+	);
+
+	return $data->result();
   }
 
   public function get_today_loan_withdrawal_prev($blanch_id,$from,$to){

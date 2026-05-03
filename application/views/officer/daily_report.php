@@ -14,9 +14,15 @@ $actual_paid = !empty($payment_breakdown->actual_paid) ? (float) $payment_breakd
 $advance_paid = !empty($payment_breakdown->advance_paid) ? (float) $payment_breakdown->advance_paid : 0;
 $not_paid_today = !empty($payment_breakdown->not_paid_today) ? (float) $payment_breakdown->not_paid_today : 0;
 $penalty_total = !empty($penalty_today->total_receved) ? (float) $penalty_today->total_receved : 0;
+$penalty_income_type_total = !empty($today_penalty_income_type->total_penalty_income) ? (float) $today_penalty_income_type->total_penalty_income : 0;
+$penalty_income_ledger_total = !empty($today_penalty_income_ledger->total_penalty_income) ? (float) $today_penalty_income_ledger->total_penalty_income : 0;
+$penalty_income_display_total = $penalty_income_type_total > 0 ? $penalty_income_type_total : $penalty_income_ledger_total;
 $processing_fee_total = !empty($processing_fee->total_deducted) ? (float) $processing_fee->total_deducted : 0;
 $received_by_account = !empty($received_by_account) ? $received_by_account : array();
 $account_payment_summary = !empty($account_payment_summary) ? $account_payment_summary : array();
+$today_loan_withdraw_by_account = !empty($today_loan_withdraw_by_account) ? $today_loan_withdraw_by_account : array();
+$today_accepted_expenses = !empty($today_accepted_expenses) ? $today_accepted_expenses : array();
+$today_hq_transfer_in = !empty($today_hq_transfer_in) ? $today_hq_transfer_in : array();
 $report_date = !empty($report_date) ? $report_date : date('Y-m-d');
 $selected_branch_name = !empty($selected_branch_name) ? $selected_branch_name : '-';
 $yesterday_date = date('Y-m-d', strtotime($report_date . ' -1 day'));
@@ -32,6 +38,9 @@ foreach ($account_payment_summary as $account_row) {
 	$total_withdraw_by_account += !empty($account_row->today_loan_withdraw) ? (float) $account_row->today_loan_withdraw : 0;
 	$total_received_by_account += !empty($account_row->today_received) ? (float) $account_row->today_received : 0;
 }
+
+// Use the same amount as the top "Today Loan Withdraw" card for GAWA summary.
+$total_withdraw_by_account = $withdraw_total_raw;
 
 $received_total = $total_received_by_account;
 $withdraw_total = $total_withdraw_by_account;
@@ -80,14 +89,16 @@ $txt_received_amount_account = $lang_line('officer_daily_received_amount_account
 $txt_withdraw_account = $lang_line('officer_daily_withdraw_account', 'Today Loan Withdraw - %s');
 $txt_actual_account = $lang_line('officer_daily_actual_account', 'Actual Payments - %s');
 $txt_advance_account = $lang_line('officer_daily_advance_account', 'Advance Payments - %s');
-$txt_opening_all_accounts = $lang_line('officer_daily_opening_all_accounts', 'Opening Balance (All Accounts)');
-$txt_opening_account = $lang_line('officer_daily_opening_account', 'Opening Balance - %s');
-$txt_plus_received_all = $lang_line('officer_daily_plus_received_all', '+ Received Amount (All Accounts)');
-$txt_plus_added_received_account = $lang_line('officer_daily_plus_added_received_account', '+ Added (Received) - %s');
-$txt_plus_penalty_added_account = $lang_line('officer_daily_plus_penalty_added_account', '+ Penalty Added - %s');
-$txt_minus_withdraw_all = $lang_line('officer_daily_minus_withdraw_all', '- Loan Withdraw (All Accounts)');
-$txt_minus_subtracted_withdraw_account = $lang_line('officer_daily_minus_subtracted_withdraw_account', '- Subtracted (Withdraw) - %s');
-$txt_closing_computed = $lang_line('officer_daily_closing_computed', '= Closing Balance (Computed)');
+$txt_opening_all_accounts = $lang_line('officer_daily_opening_all_accounts', 'JANA (Yesterday Balance - All Accounts)');
+$txt_opening_account = $lang_line('officer_daily_opening_account', 'JANA - %s');
+$txt_plus_added_received_account = $lang_line('officer_daily_plus_added_received_account', 'LEO Loan Payment - %s');
+$txt_plus_penalty_added_account = $lang_line('officer_daily_plus_penalty_added_account', 'LEO Penalty Income - %s');
+$txt_penalty_payment = $lang_line('officer_daily_penalty_payment', 'Malipo ya Faini');
+$txt_form_payment = $lang_line('officer_daily_form_payment', 'Malipo ya Fomu');
+$txt_minus_withdraw_all = $lang_line('officer_daily_minus_withdraw_all', 'GAWA (Loan Withdrawal - All Accounts)');
+$txt_minus_subtracted_withdraw_account = $lang_line('officer_daily_minus_subtracted_withdraw_account', 'GAWA - %s');
+$txt_hq_transfer_in = $lang_line('officer_daily_hq_transfer_in', 'Imetoka HQ');
+$txt_hq_transfer_in_account = $lang_line('officer_daily_hq_transfer_in_account', 'Imetoka HQ - %s');
 $txt_closing_current = $lang_line('officer_daily_closing_current', 'Closing Balance (Current Accounts)');
 $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Balance - %s');
 ?>
@@ -356,29 +367,12 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 					</div>
 				</a>
 
-				<div class="daily-report-card">
-					<div class="daily-report-label"><?php echo $txt_past_due_payments; ?></div>
-					<div class="daily-report-value"><?php echo number_format($past_due_paid); ?></div>
-					<div class="daily-report-note"><?php echo $txt_past_due_note; ?></div>
-				</div>
+			
 
-				<div class="daily-report-card">
-					<div class="daily-report-label"><?php echo $txt_actual_payments; ?></div>
-					<div class="daily-report-value"><?php echo number_format($actual_paid); ?></div>
-					<div class="daily-report-note"><?php echo $txt_actual_note; ?></div>
-				</div>
+			
 
-				<div class="daily-report-card">
-					<div class="daily-report-label"><?php echo $txt_advance_payments; ?></div>
-					<div class="daily-report-value"><?php echo number_format($advance_paid); ?></div>
-					<div class="daily-report-note"><?php echo $txt_advance_note; ?></div>
-				</div>
 
-				<div class="daily-report-card" style="border-left: 4px solid #e74c3c;">
-					<div class="daily-report-label" style="color:#c0392b;"><?php echo $txt_not_paid_today; ?></div>
-					<div class="daily-report-value" style="color:#c0392b;"><?php echo number_format($not_paid_today); ?></div>
-					<div class="daily-report-note"><?php echo $txt_not_paid_note; ?></div>
-				</div>
+			
 
 				<div class="daily-report-card" style="border-left: 4px solid #e67e22;">
 					<div class="daily-report-label" style="color:#d35400;"><?php echo $txt_penalty_paid_today; ?></div>
@@ -398,86 +392,22 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 				<div class="daily-report-table-wrap">
 				<table class="daily-report-table">
 					<thead>
-						<tr>
-							<th><?php echo $txt_item; ?></th>
-							<th><?php echo $txt_amount; ?></th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_expected_collection; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($expected_total); ?></td>
-						</tr>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_received_amount; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($received_total); ?></td>
-						</tr>
-						<?php if (!empty($account_payment_summary)): ?>
-							<?php foreach ($account_payment_summary as $account_row): ?>
+					
+					
+						<?php if (!empty($today_hq_transfer_in)): ?>
+							<?php $total_hq_transfer_in = 0.0; foreach ($today_hq_transfer_in as $hq_row) { $total_hq_transfer_in += (float) $hq_row->amount_in; } ?>
+							<tr>
+								<td data-label="<?php echo $txt_item; ?>" style="font-weight:700; background:#eef8ff; color:#1f4e79;"><?php echo $txt_hq_transfer_in; ?></td>
+								<td data-label="<?php echo $txt_amount; ?>" style="font-weight:700; background:#eef8ff; color:#1f4e79;"><?php echo number_format($total_hq_transfer_in); ?></td>
+							</tr>
+							<?php foreach ($today_hq_transfer_in as $hq_row): ?>
 								<tr>
-									<td data-label="<?php echo $txt_item; ?>"><?php echo sprintf($txt_received_amount_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-									<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format((float) $account_row->today_received); ?></td>
+									<td data-label="<?php echo $txt_item; ?>" style="padding-left:28px; color:#1f4e79;"><?php echo sprintf($txt_hq_transfer_in_account, htmlspecialchars(!empty($hq_row->account_name) ? $hq_row->account_name : $txt_unknown_account)); ?></td>
+									<td data-label="<?php echo $txt_amount; ?>" style="color:#1f4e79;"><?php echo number_format((float) $hq_row->amount_in); ?></td>
 								</tr>
 							<?php endforeach; ?>
 						<?php endif; ?>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_today_loan_withdraw; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($withdraw_total_raw); ?></td>
-						</tr>
-						<?php if (!empty($account_payment_summary)): ?>
-							<?php foreach ($account_payment_summary as $account_row): ?>
-								<?php if ((float) $account_row->today_loan_withdraw > 0): ?>
-									<tr>
-										<td data-label="<?php echo $txt_item; ?>"><?php echo sprintf($txt_withdraw_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-										<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format((float) $account_row->today_loan_withdraw); ?></td>
-									</tr>
-								<?php endif; ?>
-							<?php endforeach; ?>
-						<?php endif; ?>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_past_due_payments; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($past_due_paid); ?></td>
-						</tr>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_actual_payments; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($actual_paid); ?></td>
-						</tr>
-						<?php if (!empty($account_payment_summary)): ?>
-							<?php foreach ($account_payment_summary as $account_row): ?>
-								<?php if ((float) $account_row->actual_payments > 0): ?>
-									<tr>
-										<td data-label="<?php echo $txt_item; ?>"><?php echo sprintf($txt_actual_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-										<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format((float) $account_row->actual_payments); ?></td>
-									</tr>
-								<?php endif; ?>
-							<?php endforeach; ?>
-						<?php endif; ?>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>"><?php echo $txt_advance_payments; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($advance_paid); ?></td>
-						</tr>
-						<?php if (!empty($account_payment_summary)): ?>
-							<?php foreach ($account_payment_summary as $account_row): ?>
-								<?php if ((float) $account_row->advance_payments > 0): ?>
-									<tr>
-										<td data-label="<?php echo $txt_item; ?>"><?php echo sprintf($txt_advance_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-										<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format((float) $account_row->advance_payments); ?></td>
-									</tr>
-								<?php endif; ?>
-							<?php endforeach; ?>
-						<?php endif; ?>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="color:#c0392b; font-weight:600;"><?php echo $txt_not_paid_today; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>" style="color:#c0392b; font-weight:600;"><?php echo number_format($not_paid_today); ?></td>
-						</tr>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="color:#d35400; font-weight:600;"><?php echo $txt_penalty_paid_today; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>" style="color:#d35400; font-weight:600;"><?php echo number_format($penalty_total); ?></td>
-						</tr>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="color:#7d3c98; font-weight:600;"><?php echo $txt_processing_fee; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>" style="color:#7d3c98; font-weight:600;"><?php echo number_format($processing_fee_total); ?></td>
-						</tr>
+
 						<tr>
 							<td data-label="<?php echo $txt_item; ?>" style="font-weight:600; background:#f9fbfd;"><?php echo $txt_opening_all_accounts; ?></td>
 							<td data-label="<?php echo $txt_amount; ?>" style="font-weight:600; background:#f9fbfd;"><?php echo number_format($total_opening_balance); ?></td>
@@ -491,39 +421,78 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 							<?php endforeach; ?>
 						<?php endif; ?>
 						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="padding-left:28px;"><?php echo $txt_plus_received_all; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($total_received_by_account); ?></td>
+							<td data-label="<?php echo $txt_item; ?>" colspan="2" style="padding-left:28px; font-weight:700; color:#1e8449; background:#f0faf4;">Leo Summary</td>
 						</tr>
 						<?php if (!empty($account_payment_summary)): ?>
 							<?php foreach ($account_payment_summary as $account_row): ?>
 								<tr>
 									<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#1e8449;"><?php echo sprintf($txt_plus_added_received_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-									<td data-label="<?php echo $txt_amount; ?>" style="color:#1e8449;"><?php echo number_format((float) $account_row->today_received); ?></td>
+									<td data-label="<?php echo $txt_amount; ?>" style="color:#1e8449;">+<?php echo number_format((float) $account_row->today_received); ?></td>
 								</tr>
 								<?php if (!empty($account_row->penalty_added_to_cash) && (float) $account_row->penalty_added_to_cash > 0): ?>
 									<tr>
 										<td data-label="<?php echo $txt_item; ?>" style="padding-left:64px; color:#d35400;"><?php echo sprintf($txt_plus_penalty_added_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-										<td data-label="<?php echo $txt_amount; ?>" style="color:#d35400;"><?php echo number_format((float) $account_row->penalty_added_to_cash); ?></td>
+										<td data-label="<?php echo $txt_amount; ?>" style="color:#d35400;">+<?php echo number_format((float) $account_row->penalty_added_to_cash); ?></td>
 									</tr>
 								<?php endif; ?>
 							<?php endforeach; ?>
 						<?php endif; ?>
 						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="padding-left:28px;"><?php echo $txt_minus_withdraw_all; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>"><?php echo number_format($total_withdraw_by_account); ?></td>
+							<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#d35400;"><?php echo $txt_penalty_payment; ?></td>
+							<td data-label="<?php echo $txt_amount; ?>" style="color:#d35400;">+<?php echo number_format($penalty_income_display_total); ?></td>
 						</tr>
-						<?php if (!empty($account_payment_summary)): ?>
-							<?php foreach ($account_payment_summary as $account_row): ?>
+						<tr>
+							<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#7d3c98;"><?php echo $txt_form_payment; ?></td>
+							<td data-label="<?php echo $txt_amount; ?>" style="color:#7d3c98;">+<?php echo number_format((float) $processing_fee_total); ?></td>
+						</tr>
+						<?php
+						$gawa_accounts = array();
+						if (!empty($today_loan_withdraw_by_account)) {
+							foreach ($today_loan_withdraw_by_account as $account_row) {
+								if ((float) $account_row->total_loan_with > 0) {
+									$gawa_accounts[] = $account_row;
+								}
+							}
+						}
+						?>
+						<?php if (!empty($gawa_accounts)): ?>
+							<tr>
+								<td data-label="<?php echo $txt_item; ?>" style="padding-left:28px; font-weight:700; color:#b03a2e; background:#fdf3f2;">- Gawa Summary = Mikopo iliyotolewa leo</td>
+								
+							</tr>
+							<?php foreach ($gawa_accounts as $account_row): ?>
 								<tr>
-									<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#b03a2e;"><?php echo sprintf($txt_minus_subtracted_withdraw_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-									<td data-label="<?php echo $txt_amount; ?>" style="color:#b03a2e;"><?php echo number_format((float) $account_row->today_loan_withdraw); ?></td>
+									<td data-label="<?php echo $txt_item; ?>" colspan="2" style="padding-left:36px; font-weight:600; color:#b03a2e; background:#fff7f6; font-size:13px;"><?php echo htmlspecialchars(!empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
+								</tr>
+								<tr>
+								<td data-label="<?php echo $txt_item; ?>" style="padding-left:52px; color:#b03a2e;">- Mkopo Uliotolewa</td>
+								<td data-label="<?php echo $txt_amount; ?>" style="color:#b03a2e;"><?php echo number_format((float) $account_row->total_loan_with); ?></td>
 								</tr>
 							<?php endforeach; ?>
 						<?php endif; ?>
-						<tr>
-							<td data-label="<?php echo $txt_item; ?>" style="font-weight:700; background:#f3f8fc;"><?php echo $txt_closing_computed; ?></td>
-							<td data-label="<?php echo $txt_amount; ?>" style="font-weight:700; background:#f3f8fc;"><?php echo number_format($computed_closing_balance); ?></td>
-						</tr>
+						<?php if (!empty($today_accepted_expenses)): ?>
+							<tr>
+								<td data-label="<?php echo $txt_item; ?>" colspan="2" style="padding-left:28px; font-weight:700; color:#7d3c98; background:#f9f4ff;">Matumizi</td>
+							</tr>
+							<?php
+							$exp_grouped = array();
+							foreach ($today_accepted_expenses as $exp_row) {
+								$acct = !empty($exp_row->account_name) ? $exp_row->account_name : 'Bila Akaunti';
+								$exp_grouped[$acct][] = $exp_row;
+							}
+							foreach ($exp_grouped as $acct_name => $exp_items):
+							?>
+								<tr>
+									<td data-label="<?php echo $txt_item; ?>" colspan="2" style="padding-left:36px; font-weight:600; color:#7d3c98; background:#fdf8ff; font-size:13px;"><?php echo htmlspecialchars($acct_name); ?></td>
+								</tr>
+								<?php foreach ($exp_items as $exp_row): ?>
+									<tr>
+										<td data-label="<?php echo $txt_item; ?>" style="padding-left:52px; color:#7d3c98;">- <?php echo htmlspecialchars(!empty($exp_row->ex_name) ? $exp_row->ex_name : (!empty($exp_row->req_description) ? $exp_row->req_description : '-')); ?></td>
+										<td data-label="<?php echo $txt_amount; ?>" style="color:#7d3c98;"><?php echo number_format((float) $exp_row->req_amount); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							<?php endforeach; ?>
+						<?php endif; ?>
 						<tr>
 							<td data-label="<?php echo $txt_item; ?>" style="font-weight:700;"><?php echo $txt_closing_current; ?></td>
 							<td data-label="<?php echo $txt_amount; ?>" style="font-weight:700;"><?php echo number_format($total_closing_balance); ?></td>

@@ -4124,7 +4124,7 @@ $loan_interest = $loan_aproved * ($interest_loan / 100) * $months;
 	  $comp_name = $loan_datas->comp_name;
 	  $comp_phone = $loan_datas->comp_phone;
 	  $phone = $loan_datas->phone_no;
-
+$loan_aproveds = number_format($loan_aproved);
          //data inorder to send sms
 	  $fee_type = $this->queries->get_loanfee_type($comp_id);
 	  //$type = $fee_type->type;
@@ -4136,7 +4136,7 @@ $loan_interest = $loan_aproved * ($interest_loan / 100) * $months;
        }
 
             //  echo "<pre>";
-            // print_r( $remain_balance);
+            // print_r( $loan_aproveds);
             //  echo "</pre>";
             //   exit();
 
@@ -9755,11 +9755,125 @@ return true;
 	}
 
 	public function delete_receved($receved_id){
-		$this->load->model('queries');
-		if($this->queries->remove_receved($receved_id));
-		$this->session->set_flashdata('massage','Data Deleted successfully');
-		return redirect('admin/income_dashboard');
+        $this->load->model('queries');
+        $receive = $this->queries->income_receive_delete($receved_id);
+
+        if (empty($receive)) {
+            $this->session->set_flashdata('error', 'Income record not found.');
+            return redirect('admin/income_dashboard');
+        }
+
+        $comp_id = (int) $receive->comp_id;
+        $blanch_id = (int) $receive->blanch_id;
+        $loan_id = (int) $receive->loan_id;
+        $customer_id = (int) $receive->customer_id;
+        $amount = (float) $receive->receve_amount;
+        $income_date = $receive->receve_day;
+        $inc_id = (int) $receive->inc_id;
+        $trans_id = !empty($receive->trans_id) ? (int) $receive->trans_id : (int) $this->get_cash_account_id($comp_id);
+
+        $this->db->trans_start();
+
+        if ($trans_id > 0) {
+            $account_row = $this->queries->get_amount_remainAmountBlanch($blanch_id, $trans_id);
+            $old_balance = !empty($account_row) ? (float) $account_row->blanch_capital : 0;
+            $new_balance = $old_balance - $amount;
+            if ($new_balance < 0) {
+                $new_balance = 0;
+            }
+
+            if (!empty($account_row)) {
+                $this->db->query(
+                    "UPDATE tbl_blanch_account SET blanch_capital = ? WHERE blanch_id = ? AND receive_trans_id = ?",
+                    array($new_balance, $blanch_id, $trans_id)
+                );
+            }
+
+            $created_by = (int) $this->session->userdata('empl_id');
+            $this->queries->save_cash_inhand_balance(
+                $comp_id,
+                $blanch_id,
+                $trans_id,
+                $created_by,
+                $new_balance,
+                $income_date
+            );
+
+            $this->queries->record_account_balance_movement(array(
+                'comp_id' => $comp_id,
+                'blanch_id' => $blanch_id,
+                'trans_id' => $trans_id,
+                'reference_type' => 'income_delete',
+                'reference_id' => (int) $receved_id,
+                'movement_date' => $income_date,
+                'amount_out' => $amount,
+                'balance_before' => $old_balance,
+                'balance_after' => $new_balance,
+                'description' => 'Income deleted reversal',
+                'created_by' => $created_by,
+            ));
+
+            $pay_row = $this->db->query(
+                "SELECT pay_id FROM tbl_pay WHERE loan_id = ? AND blanch_id = ? AND customer_id = ? AND depost = ? AND date_pay = ? AND p_method = ? ORDER BY pay_id DESC LIMIT 1",
+                array($loan_id, $blanch_id, $customer_id, $amount, $income_date, $trans_id)
+            )->row();
+
+            if (!empty($pay_row->pay_id)) {
+                $this->db->query("DELETE FROM tbl_pay WHERE pay_id = ?", array((int) $pay_row->pay_id));
+            }
+        }
+
+        $received_non = $this->queries->get_receive_nonDeducted($blanch_id);
+        if (!empty($received_non)) {
+            $remain_receive = (float) $received_non->non_balance - $amount;
+            if ($remain_receive < 0) {
+                $remain_receive = 0;
+            }
+            $this->db->query(
+                "UPDATE tbl_receive_non_deducted SET non_balance = ? WHERE blanch_id = ?",
+                array($remain_receive, $blanch_id)
+            );
+        }
+
+        $income_data = $this->queries->get_income_data($inc_id);
+        $income_name = !empty($income_data->inc_name) ? (string) $income_data->inc_name : '';
+        if ($this->is_penalty_income_name($income_name)) {
+            $pay_penart = $this->queries->get_data_paypenart($loan_id);
+            if (!empty($pay_penart)) {
+                $remove_receive = (float) $pay_penart->penart_paid - $amount;
+                if ($remove_receive < 0) {
+                    $remove_receive = 0;
+                }
+                $this->db->query(
+                    "UPDATE tbl_pay_penart SET penart_paid = ? WHERE loan_id = ?",
+                    array($remove_receive, $loan_id)
+                );
+            }
+        }
+
+        $this->queries->remove_receved($receved_id);
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === false) {
+            $this->session->set_flashdata('error', 'Failed to delete income and reverse balances.');
+        } else {
+            $this->session->set_flashdata('massage', 'Data deleted and account balances reversed successfully.');
+        }
+
+        return redirect('admin/income_dashboard');
 	}
+
+    private function is_penalty_income_name($income_name){
+        $name = strtolower(trim((string) $income_name));
+        if ($name === '') {
+            return false;
+        }
+
+        return (strpos($name, 'pen') !== false)
+            || (strpos($name, 'faini') !== false)
+            || (strpos($name, 'adhabu') !== false)
+            || (strpos($name, 'fine') !== false);
+    }
 
 	public function print_general_report(){
     $this->load->model('queries');

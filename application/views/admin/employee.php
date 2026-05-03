@@ -629,7 +629,7 @@ if ($status === 'open') { ?>
                         
                         <div class="sm:col-span-4">
                             <label for="empl_email_<?php echo $employees->empl_id; ?>" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('email'); ?>:</label>
-                            <input type="email" id="empl_email_<?php echo $employees->empl_id; ?>" name="empl_email" placeholder="Email" autocomplete="off" required
+                            <input type="email" id="empl_email_<?php echo $employees->empl_id; ?>" name="empl_email" placeholder="Email" autocomplete="off" 
                                    class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"  value="<?php echo htmlspecialchars($employees->empl_email, ENT_QUOTES, 'UTF-8'); ?>">
                             
                         </div>

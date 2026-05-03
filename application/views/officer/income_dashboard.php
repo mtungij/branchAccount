@@ -124,6 +124,24 @@ Register New Customer
     <?php echo form_error("inc_id", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
   </div>
 
+  <!-- Account -->
+  <div>
+    <label for="trans_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+      * Select Account
+    </label>
+    <select id="trans_id" name="trans_id" class="block w-full ..." required>
+      <option value="">Select account</option>
+      <?php if (!empty($blanch_account)): ?>
+        <?php foreach ($blanch_account as $blanch_accounts): ?>
+          <option value="<?php echo $blanch_accounts->trans_id; ?>">
+            <?php echo $blanch_accounts->account_name; ?> - <?php echo $this->lang->line('balance') ?? 'Balance'; ?>: <?php echo number_format(isset($blanch_accounts->blanch_capital) ? $blanch_accounts->blanch_capital : 0); ?>
+          </option>
+        <?php endforeach; ?>
+      <?php endif; ?>
+    </select>
+    <?php echo form_error("trans_id", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+  </div>
+
   <!-- Amount -->
   <div>
     <label for="receve_amount" class="block text-sm font-medium mb-2 text-gray-900 dark:text-gray-300">
@@ -139,6 +157,7 @@ Register New Customer
 <input type="hidden" name="blanch_id" value="<?php echo $empl_data->blanch_id; ?>">
 <input type="hidden" name="empl" value="<?php echo $_SESSION['username']; ?>">
 <input type="hidden" name="receve_day" value="<?php echo date("Y-m-d"); ?>">
+<input type="hidden" name="submit_token" value="<?php echo !empty($income_submit_token) ? htmlspecialchars($income_submit_token) : ''; ?>">
 
 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
   <div class="flex justify-center gap-x-2">
@@ -203,6 +222,7 @@ Print PDF
 <th scope="col" class="px-4 py-3">Phone Number</th>
 <th scope="col" class="px-4 py-3">Income Type</th>
 <th scope="col" class="px-4 py-3">Income Amount</th>
+<th scope="col" class="px-4 py-3">Payment Account</th>
 <th scope="col" class="px-4 py-3">Received By</th>
 <th scope="col" class="px-4 py-3">Date</th>
 
@@ -238,6 +258,9 @@ Print PDF
                 <?= number_format($detail_incomes->receve_amount); ?>
             </td>
             <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+              <?= !empty($detail_incomes->payment_account_name) ? $detail_incomes->payment_account_name : '-'; ?>
+            </td>
+            <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                 <?= $detail_incomes->empl; ?>
             </td>
             <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
@@ -248,7 +271,7 @@ Print PDF
     <?php endforeach; ?>
 <?php else: ?>
     <tr>
-        <td colspan="8" class="px-4 py-3 text-center text-gray-500 dark:text-gray-200">
+    <td colspan="9" class="px-4 py-3 text-center text-gray-500 dark:text-gray-200">
             Hakuna taarifa za leo.
         </td>
     </tr>
@@ -260,7 +283,7 @@ Print PDF
     <tr>
         <td colspan="4" class="px-4 py-3 text-right">JUMLA</td>
         <td class="px-4 py-3"><b><?= number_format($total_receve) ?></b></td>
-        <td colspan="3"></td>
+    <td colspan="4"></td>
     </tr>
 </tfoot> 
 <?php endif; ?>
