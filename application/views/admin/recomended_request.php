@@ -252,13 +252,37 @@ include_once APPPATH . "views/partials/header.php";
           </svg>
         </button>
       </div>
-	  <?php echo form_open("admin/get_blanch_withdraw"); ?>
+    <?php echo form_open("admin/get_recomended_request", ['method' => 'get']); ?>
   <div class="p-4 overflow-y-auto space-y-4">
 
     <!-- Gender Dropdown -->
     <div>
-      <label for="blanch" class="block text-sm font-medium text-gray-700 dark:text-white">Chagua Tawi</label>
-  <select id="branchSelect" name="blanch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" data-live-search="true"> <option value="">Chagua Tawi</option> <?php foreach ($blanch as $blanchs): ?> <option value="<?php echo $blanchs->blanch_id; ?>"><?php echo $blanchs->blanch_name; ?> </option> <?php endforeach; ?> </select>
+      <label for="branchSelect" class="block text-sm font-medium text-gray-700 dark:text-white">Chagua Tawi</label>
+      <select id="branchSelect" name="blanch_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" data-live-search="true">
+        <option value="">Chagua Tawi</option>
+        <option value="all" <?php echo (($selected_blanch_id ?? '') === 'all') ? 'selected' : ''; ?>>Matawi Yote</option>
+        <?php foreach ($blanch as $blanchs): ?>
+          <option value="<?php echo $blanchs->blanch_id; ?>" <?php echo ((string)($selected_blanch_id ?? '') === (string)$blanchs->blanch_id) ? 'selected' : ''; ?>>
+            <?php echo $blanchs->blanch_name; ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+
+    </div>
+
+    <div>
+      <label for="expenseSelect" class="block text-sm font-medium text-gray-700 dark:text-white">Chagua Expense</label>
+      <select id="expenseSelect" name="expense" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+        <option value="">Expense Zote</option>
+        <option value="daily_allowance" <?php echo (($filter_expense ?? '') === 'daily_allowance') ? 'selected' : ''; ?>>Daily Allowance</option>
+        <?php if (isset($expns) && is_array($expns)): ?>
+          <?php foreach ($expns as $exp): ?>
+            <option value="<?php echo $exp->ex_id; ?>" <?php echo ((string)($filter_expense ?? '') === (string)$exp->ex_id) ? 'selected' : ''; ?>>
+              <?php echo $exp->ex_name; ?>
+            </option>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </select>
 
     </div>
 
@@ -271,17 +295,17 @@ include_once APPPATH . "views/partials/header.php";
     
 
       <!-- Company Name -->
-	  <?php $date = date("Y-m-d"); ?>  
+    <?php $date = date("Y-m-d"); ?>  
 
       <div>
         <label for="company" class="block text-sm font-medium text-gray-700 dark:text-white">Kwanzia Tarehe</label>
-		<input type="date" value="<?php echo $date; ?>" name="from"  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+		<input type="date" value="<?php echo !empty($filter_from) ? $filter_from : $date; ?>" name="from"  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
       </div>
 
       <!-- Address -->
       <div>
         <label for="address" class="block text-sm font-medium text-gray-700 dark:text-white">Mpaka Tarehe</label>
-		<input type="date" name="to" value="<?php echo $date; ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+    <input type="date" name="to" value="<?php echo !empty($filter_to) ? $filter_to : $date; ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
       </div>
     </div>
 

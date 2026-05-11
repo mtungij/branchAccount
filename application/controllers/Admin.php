@@ -8996,17 +8996,57 @@ public function create_requstion_form(){
     public function get_recomended_request(){
     	$this->load->model('queries');
     	$comp_id = $this->session->userdata('comp_id');
-    	$data = $this->queries->get_expences_request($comp_id);
+        $selected_blanch_id = $this->input->get('blanch_id', true);
+        $filter_branch_id = null;
+        if (!empty($selected_blanch_id) && $selected_blanch_id !== 'all') {
+            $filter_branch_id = (int)$selected_blanch_id;
+        }
+        $filter_from = $this->input->get('from', true);
+        $filter_to = $this->input->get('to', true);
+        $filter_expense = $this->input->get('expense', true);
+
+        $has_filter = !empty($filter_from) || !empty($filter_to) || !empty($filter_branch_id) || !empty($filter_expense);
+
+        if ($has_filter) {
+            $data = $this->queries->get_expences_request_filtered(
+                $comp_id,
+                $filter_from,
+                $filter_to,
+                $filter_branch_id,
+                $filter_expense
+            );
+        } else {
+            $data = $this->queries->get_expences_request($comp_id);
+        }
     	$blanch = $this->queries->get_blanch($comp_id);
-		
-    	$tota_exp = $this->queries->get_sum_expences($comp_id);
+        $expns = $this->queries->get_expenses($comp_id);
+
+        if ($has_filter) {
+            $total_amount = 0;
+            foreach ($data as $row) {
+                $total_amount += (float)($row->req_amount ?? 0);
+            }
+            $tota_exp = (object)['total_expences' => $total_amount];
+        } else {
+        		$tota_exp = $this->queries->get_sum_expences($comp_id);
+        }
     	$account = $this->queries->get_account_transaction($comp_id);
 		
 		//   $blanc_capital_remain = $this->queries->get_blanch_capital_balance($blanch_id,$payment_method);
     	//      echo "<pre>";
     	//   print_r($account);
     	//          exit();
-    	$this->load->view('admin/recomended_request',['data'=>$data,'blanch'=>$blanch,'tota_exp'=>$tota_exp,'account'=>$account]);
+        	$this->load->view('admin/recomended_request',[
+            'data'=>$data,
+            'blanch'=>$blanch,
+            'tota_exp'=>$tota_exp,
+            'account'=>$account,
+            'expns'=>$expns,
+            'selected_blanch_id'=>$selected_blanch_id,
+            'filter_from'=>$filter_from,
+            'filter_to'=>$filter_to,
+            'filter_expense'=>$filter_expense
+        ]);
     }
    
 

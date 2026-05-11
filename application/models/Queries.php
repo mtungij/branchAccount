@@ -3976,6 +3976,34 @@ public function get_expences_request($comp_id){
 	 return $expences->result();
 }
 
+public function get_expences_request_filtered($comp_id, $from = null, $to = null, $blanch_id = null, $ex_id = null){
+	$sql = "SELECT * FROM tbl_request_exp re LEFT JOIN tbl_expenses e ON e.ex_id = re.ex_id LEFT JOIN tbl_blanch b ON b.blanch_id = re.blanch_id LEFT JOIN tbl_account_transaction at ON at.trans_id = re.trans_id WHERE re.comp_id = ?";
+	$params = array($comp_id);
+
+	if (!empty($from) && !empty($to)) {
+		$sql .= " AND re.req_date BETWEEN ? AND ?";
+		$params[] = $from;
+		$params[] = $to;
+	}
+
+	if (!empty($blanch_id)) {
+		$sql .= " AND re.blanch_id = ?";
+		$params[] = (int)$blanch_id;
+	}
+
+	if (!empty($ex_id)) {
+		if ($ex_id === 'daily_allowance') {
+			$sql .= " AND re.deduct_type = 'daily_allowance'";
+		} else {
+			$sql .= " AND re.ex_id = ?";
+			$params[] = (int)$ex_id;
+		}
+	}
+
+	$sql .= " ORDER BY re.req_id DESC";
+	return $this->db->query($sql, $params)->result();
+}
+
 public function get_expences_requestManager($comp_id){
 	$expences = $this->db->query("SELECT * FROM tbl_request_exp re JOIN tbl_expenses e ON e.ex_id = re.ex_id JOIN tbl_blanch b ON b.blanch_id = re.blanch_id LEFT JOIN tbl_account_transaction at ON at.trans_id = re.trans_id WHERE re.comp_id = '$comp_id' AND re.req_status = 'open' ORDER BY re.req_id DESC");
 	 return $expences->result();
