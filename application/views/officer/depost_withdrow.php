@@ -354,6 +354,9 @@ include_once APPPATH . "views/partials/officerheader.php";
                                       @$total_recovery = $this->queries->get_total_loan_pend($customer_loan->loan_id);
                                       @$total_penart =   $this->queries->get_total_penart_loan($customer_loan->loan_id);
                                       @$total_deposit_penart =  $this->queries->get_total_paypenart($customer_loan->loan_id);
+                                    $penalty_total = (float)($total_penart->total_penart ?? 0);
+                                    $penalty_paid = (float)($total_deposit_penart->total_penart_paid ?? 0);
+                                    $penalty_balance = max(0, $penalty_total - $penalty_paid);
                                       @$end_deposit = $this->queries->get_end_deposit_time($customer_loan->loan_id);
                                        ?>
                                     <?php if (isset($loan_desc ) && is_array($loan_desc ) && !empty($loan_desc )): ?>
@@ -511,33 +514,123 @@ include_once APPPATH . "views/partials/officerheader.php";
         <div class="flex flex-col bg-white border shadow-sm rounded-xl pointer-events-auto dark:bg-gray-800 dark:border-gray-700">
       
       <!-- Modal Header -->
-      <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-white">Jina La Mteja: <?= htmlspecialchars($customer->f_name, ENT_QUOTES, 'UTF-8'); ?></h3>
-        <button type="button" class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" data-hs-overlay="#hs-edit-deposit-modal">
-          <span class="sr-only">Close</span>
-          <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-        </button>
+      <div class="py-3 px-4 border-b dark:border-gray-700">
+        <?php
+          $loan_amount_modal = (float)($loan_int ?? 0);
+          $paid_amount_modal = (float)($deposit ?? 0);
+          $remain_amount_modal = max(0, $loan_amount_modal - $paid_amount_modal);
+          $last_payment_raw = $end_deposit->depost_day ?? $end_deposit->deposit_day ?? null;
+          $last_payment_modal = !empty($last_payment_raw) ? date('Y-m-d', strtotime($last_payment_raw)) : '-';
+          $loan_status_modal = $customer_loan->loan_status ?? '';
+          $loan_status_label_modal = 'N/A';
+          $loan_status_class_modal = 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+          if ($loan_status_modal === 'withdrawal') {
+            $loan_status_label_modal = 'Ndani ya Mkataba';
+            $loan_status_class_modal = 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200';
+          } elseif ($loan_status_modal === 'out') {
+            $loan_status_label_modal = 'Nje ya Mkataba';
+            $loan_status_class_modal = 'bg-red-600 text-white';
+          }
+        ?>
+        <div class="flex justify-between items-start gap-3">
+          <div>
+            <h3 class="font-bold text-gray-800 dark:text-white">Jina La Mteja: <?= htmlspecialchars($customer->f_name, ENT_QUOTES, 'UTF-8'); ?></h3>
+            <div class="mt-1">
+              <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold <?= $loan_status_class_modal; ?>">Hali ya Mteja: <?= $loan_status_label_modal; ?></span>
+            </div>
+            <div class="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div class="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-cyan-800 shadow-sm dark:border-cyan-900 dark:bg-gray-700 dark:text-gray-200">
+                <span class="block text-[10px] font-semibold uppercase tracking-wide opacity-80">Mkopo</span>
+                <span class="block text-sm font-bold leading-tight"><?= number_format($loan_amount_modal, 0); ?></span>
+              </div>
+              <div class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-800 shadow-sm dark:border-emerald-900 dark:bg-gray-700 dark:text-gray-200">
+                <span class="block text-[10px] font-semibold uppercase tracking-wide opacity-80">Lipwa</span>
+                <span class="block text-sm font-bold leading-tight"><?= number_format($paid_amount_modal, 0); ?></span>
+              </div>
+              <div class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-rose-800 shadow-sm dark:border-rose-900 dark:bg-gray-700 dark:text-gray-200">
+                <span class="block text-[10px] font-semibold uppercase tracking-wide opacity-80">Baki</span>
+                <span class="block text-sm font-bold leading-tight"><?= number_format($remain_amount_modal, 0); ?></span>
+              </div>
+              <div class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-800 shadow-sm dark:border-amber-900 dark:bg-gray-700 dark:text-gray-200">
+                <span class="block text-[10px] font-semibold uppercase tracking-wide opacity-80">Malipo ya Mwisho</span>
+                <span class="block text-sm font-bold leading-tight"><?= $last_payment_modal; ?></span>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" data-hs-overlay="#hs-edit-deposit-modal">
+            <span class="sr-only">Close</span>
+            <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
       </div>
 
+      <?php
+        $out_stand_modal = $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0);
+      ?>
       <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}"); ?>
 <!-- Modal Body -->
 <div class="p-4 sm:p-6">
   <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
 
-    <!-- Total Withdraw -->
+    <!-- Loan Applied -->
     <div class="sm:col-span-6">
-  <label for="depost_display" class="block text-sm font-medium mb-2 dark:text-gray-300">
-    * Deposit:
-  </label>
+      <label class="block text-sm font-medium mb-2 dark:text-gray-300">* Loan Applied:</label>
+      <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+        value="<?= number_format($loan_int, 0); ?>" readonly>
+    </div>
 
-  <!-- Visible formatted input -->
-  <input type="text" id="depost_display"
-    class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-    placeholder="0" required>
+    <!-- Amount Paid -->
+    <div class="sm:col-span-6">
+      <label class="block text-sm font-medium mb-2 dark:text-gray-300">* Amount Paid:</label>
+      <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+        value="<?php
+          if ($deposit > $loan_int) {
+            echo number_format($loan_int, 0) . ' (' . number_format($deposit - $loan_int, 0) . ')';
+          } else {
+            echo number_format($deposit, 0);
+          }
+        ?>" readonly>
+    </div>
 
-  <!-- Hidden clean input to be submitted -->
-  <input type="hidden" name="depost" id="depost">
-</div>
+    <!-- Due Amount -->
+    <div class="sm:col-span-6">
+      <label class="block text-sm font-medium mb-2 dark:text-gray-300">* Due Amount:</label>
+      <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+        value="<?= $deposit > $loan_int ? '0' : number_format(max(0, $loan_int - $deposit), 0); ?>" readonly>
+    </div>
+
+    <!-- Recovery / Default Amount (conditional) -->
+    <div class="sm:col-span-6">
+      <?php if (($customer_loan->loan_status ?? '') === 'withdrawal'): ?>
+        <label class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
+        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+          value="<?= number_format($total_recovery->total_pending ?? 0, 0); ?>" readonly style="color:red">
+      <?php elseif (($customer_loan->loan_status ?? '') === 'out'): ?>
+        <label class="block text-sm font-medium mb-2" style="color:red">Default Amount</label>
+        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+          value="<?= number_format($out_stand_modal->total_out ?? 0, 0); ?>" readonly style="color:red">
+      <?php else: ?>
+        <label class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
+        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+          value="0" readonly style="color:red">
+      <?php endif; ?>
+    </div>
+
+    <!-- Penalt (balance only) -->
+    <div class="sm:col-span-6">
+      <label class="block text-sm font-medium mb-2 dark:text-gray-300">* Penalt:</label>
+      <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+        value="<?= number_format($penalty_balance, 0); ?>" readonly style="color:#ef4444">
+    </div>
+
+    <!-- Deposit (editable) -->
+    <div class="sm:col-span-6">
+      <label for="depost_display" class="block text-sm font-medium mb-2 dark:text-gray-300">* Deposit:</label>
+      <input type="text" id="depost_display"
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
+        placeholder="0" required>
+      <input type="hidden" name="depost" id="depost">
+    </div>
 
     <!-- Payment Method -->
     <div class="sm:col-span-6">
@@ -555,33 +648,11 @@ include_once APPPATH . "views/partials/officerheader.php";
 
     <div class="sm:col-span-6" id="wakala-field" style="display:none;">
       <label for="wakala" class="block text-sm font-medium mb-2 dark:text-gray-300">
-        * Wakala:
+        * Jina la Wakala:
       </label>
       <input type="text" id="wakala" name="wakala"
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600">
     </div>
-
-
-    <!-- <div class="sm:col-span-6">
-    <?php if ($customer_loan->loan_status == 'withdrawal') { ?>
-        <label for="pending" class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-               value="<?php echo number_format($total_recovery->total_pending, 2); ?>" 
-               readonly style="color:red"> 
-
-    <?php } elseif ($customer_loan->loan_status == 'out') { ?>
-        <span style="color:red;">Default Amount</span>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-               value="<?php echo number_format($out_stand->total_out, 2); ?>" 
-               readonly style="color:red"> 
-
-    <?php } else { ?>
-        <label for="pending" class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-                value="<?php echo number_format($total_recovery->pending, 2); ?>"
-               readonly style="color:red"> 
-    <?php } ?>
-</div> -->
 
     <!-- Date -->
     <div class="sm:col-span-6">
@@ -593,9 +664,6 @@ include_once APPPATH . "views/partials/officerheader.php";
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
         required>
     </div>
-
-    <!-- Code -->
-   
 
   </div>
 

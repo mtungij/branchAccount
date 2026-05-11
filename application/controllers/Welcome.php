@@ -1157,6 +1157,12 @@ $massage .= "MKOPO PAMOJA NA RIBA = $total_loan_int";
            $pay_balance_check = @$loan_balance_check->balance;
            $reamain_kulipwa = $lejesho - $pay_balance_check;
 
+        //    echo "<pre>";
+        //    print_r($pay_balance_check);
+        //       echo "</pre>";
+        //       exit();
+
+
             @$deni_ckeck = $this->queries->check_loan_pending($loan_id);
             $total_pend = @$deni_ckeck->total_pend;
             $deni_baki = $total_pend + $reamain_kulipwa;

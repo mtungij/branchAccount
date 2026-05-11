@@ -6479,7 +6479,6 @@ public function print_officer_todaycash_transaction()
     $empl_data = $this->queries->get_employee_data($empl_id);
 
     $this->form_validation->set_rules('customer_id','Customer','required');
-    $this->form_validation->set_rules('comp_id','Company','required');
     $this->form_validation->set_rules('blanch_id','blanch','required');
     $this->form_validation->set_rules('loan_id','Loan','required');
     $this->form_validation->set_rules('depost','depost','required');
@@ -6498,7 +6497,7 @@ $wakala = $this->input->post('wakala'); // may be empty for cash
           //     exit();
 
           $customer_id = $depost['customer_id'];
-          $comp_id = $depost['comp_id'];
+          $comp_id = !empty($depost['comp_id']) ? $depost['comp_id'] : $comp_id;
           $blanch_id = $depost['blanch_id'];
           $p_method = $depost['p_method'];
           $loan_id = $depost['loan_id'];
@@ -6983,7 +6982,9 @@ $massage = 'Ndugu ' . $first_name . ' ' . $last_name .
          return redirect('oficer/data_with_depost/'.$customer_id);
              
        }
-       $this->data_with_depost();
+
+       $this->session->set_flashdata('error', validation_errors('<div class="text-danger">', '</div>'));
+       return redirect('oficer/data_with_depost/'.$customer_id);
 
       }
 
@@ -7239,9 +7240,19 @@ public function insert_comp_balance($comp_id,$new_depost){
 
 
 
-    public function data_with_depost($customer_id){
+    public function data_with_depost($customer_id = null){
     ini_set("max_execution_time", 3600);
     $this->load->model('queries');
+
+    if (empty($customer_id)) {
+      $customer_id = $this->input->post('customer_id');
+    }
+
+    if (empty($customer_id)) {
+      $this->session->set_flashdata('error', 'Customer is required.');
+      return redirect('oficer');
+    }
+
     $blanch_id = $this->session->userdata('blanch_id');
     $empl_id = $this->session->userdata('empl_id');
     $manager_data = $this->queries->get_manager_data($empl_id);
@@ -7251,6 +7262,10 @@ public function insert_comp_balance($comp_id,$new_depost){
     $empl_data = $this->queries->get_employee_data($empl_id);
     $privillage = $this->queries->get_position_empl($empl_id);
    
+//     echo "<pre>";
+// print_r($comp_id);
+// echo "</pre>";
+// exit();
   
     $depost = $this->queries->get_sumTodayDepostBlanch($blanch_id);
     $withdraw = $this->queries->get_sumTodayWithdrawalBlanch($blanch_id);
@@ -7259,7 +7274,6 @@ public function insert_comp_balance($comp_id,$new_depost){
 
     $customer = $this->queries->search_CustomerLoan($customer_id);
     $customery = $this->queries->get_allcutomerblanchData($blanch_id);
-    $customer_id = $this->input->post('customer_id');
     $comp_id = $this->input->post('comp_id');
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
