@@ -555,7 +555,7 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
   </label>
   <select id="p_method" name="p_method"
     class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600"
-    onchange="handlePaymentChange(this)">
+    onchange="handlePaymentChange(this)" required>
     <option value="">Chagua Malipo</option>
     <?php foreach ($acount as $acounts): ?>
       <option value="<?= $acounts->trans_id; ?>" data-label="<?= strtolower(trim($acounts->account_name)); ?>">

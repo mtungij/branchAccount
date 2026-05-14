@@ -664,10 +664,10 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
 
 
       <div class="sm:col-span-6">
-      <label for="depost" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+        <label for="penalty_display" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
         * Penalt:
       </label>
-      <input type="text" id="depost" name="depost"
+        <input type="text" id="penalty_display" name="penalty_display"
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
         value="<?php echo number_format($total_penart->total_penart - $total_deposit_penart->total_penart_paid); ?>.00"
                             readonly style="color:red">
@@ -690,7 +690,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
       </label>
       <select id="p_method" name="p_method"
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600"
-        onchange="handlePaymentChange(this)">
+        onchange="handlePaymentChange(this)" required>
         <option value="">Chagua Malipo</option>
         <?php foreach ($acount as $acounts): ?>
           <option value="<?= $acounts->trans_id; ?>" data-label="<?= strtolower(trim($acounts->account_name)); ?>">

@@ -168,5 +168,44 @@
 	</tbody>
 </table>
 
+<div class="section-title">MALIPO YA FAINI</div>
+<table>
+	<thead>
+		<tr>
+			<th>S/No</th>
+			<th>Jina La Mteja</th>
+			<th>Namba Ya Simu</th>
+			<th>Aina Ya Mapato</th>
+			<th>Kiasi</th>
+			<th>Afisa</th>
+			<th>Tarehe</th>
+		</tr>
+	</thead>
+	<tbody>
+		<?php if (!empty($faini)): $sno = 1; $total_fine = 0; ?>
+			<?php foreach ($faini as $detail): $total_fine += (float) ($detail->receve_amount ?? 0); ?>
+				<tr>
+					<td><?= $sno++; ?></td>
+					<td><?= htmlspecialchars(trim((string) (($detail->f_name ?? '') . ' ' . ($detail->m_name ?? '') . ' ' . ($detail->l_name ?? '')))); ?></td>
+					<td><?= htmlspecialchars($detail->phone_no ?? ''); ?></td>
+					<td><?= htmlspecialchars($detail->inc_name ?? ''); ?></td>
+					<td><?= number_format((float) ($detail->receve_amount ?? 0)); ?></td>
+					<td><?= htmlspecialchars($detail->empl ?? ''); ?></td>
+					<td><?= htmlspecialchars($detail->receve_day ?? ''); ?></td>
+				</tr>
+			<?php endforeach; ?>
+			<tr class="total-row">
+				<td colspan="4" style="text-align:right;"><strong>JUMLA YA FAINI</strong></td>
+				<td><strong><?= number_format($total_fine); ?></strong></td>
+				<td colspan="2"></td>
+			</tr>
+		<?php else: ?>
+			<tr>
+				<td colspan="7" style="text-align:center;">Hakuna taarifa za faini leo.</td>
+			</tr>
+		<?php endif; ?>
+	</tbody>
+</table>
+
 </body>
 </html>
