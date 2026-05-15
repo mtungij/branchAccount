@@ -4343,6 +4343,7 @@ if (!empty($employee_ids)) {
 
 		if($this->queries->remove_loandisbursed($loan_id));
 		   $this->remove_nonDeducted_amount($blanch_id,$remain_nonBalance);
+              $this->delete_deducted_fee($loan_id);
            $this->delete_from_tbl_pay($loan_id);
            $this->delete_from_Deposttable($loan_id);
            $this->delete_from_prevlecod($loan_id);

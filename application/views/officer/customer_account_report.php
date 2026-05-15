@@ -56,10 +56,16 @@ include_once APPPATH . "views/partials/officerheader.php";
     </thead>
     <tbody>
     
-          <?php @$loan_desc = $this->queries->get_total_pay_description_acount_statement($loan_id); ?>
+                    <?php
+                        $loan_desc = $this->queries->get_total_pay_description_acount_statement($loan_id);
+                        if (!is_array($loan_desc)) {
+                            $loan_desc = [];
+                        }
+                    ?>
 
     
 
+            <?php if (!empty($loan_desc)): ?>
             <?php foreach ($loan_desc as $payisnulls): ?>
                         <tr class="font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700">
                           <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white"><?php echo $payisnulls->date_data; ?></td>
@@ -130,7 +136,12 @@ include_once APPPATH . "views/partials/officerheader.php";
                             <?php } ?> 
                         </td>
                           </tr>
-                    <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="6" class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white text-center">Hakuna taarifa za statement.</td>
+                            </tr>
+                        <?php endif; ?>
     
     </tbody>
  
