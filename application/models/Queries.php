@@ -1164,7 +1164,8 @@ public function get_total_pay_description_acount_statement($loan_id)
       
         ORDER BY p.pay_id DESC
     ");
-				$this->db->where($branch_sql);
+
+	return $query->result();
 }
 
 
