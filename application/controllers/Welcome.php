@@ -1076,7 +1076,20 @@ $massage .= "MKOPO PAMOJA NA RIBA = $total_loan_int";
 
            // Determine whether today is a scheduled repayment day based on outstand start/end dates and loan day interval.
            $loan_start_date_raw = !empty($loan_data->loan_stat_date) ? $loan_data->loan_stat_date : null;
-           $loan_end_date_raw = !empty($loan_data->loan_end_date) ? $loan_data->loan_end_date : null;
+
+           // Always anchor overdue grace penalty to tbl_outstand.loan_end_date.
+           $outstand_row = $this->db
+            	->select('loan_end_date')
+            	->from('tbl_outstand')
+            	->where('loan_id', $loan_id)
+            	->order_by('out_id', 'DESC')
+            	->limit(1)
+            	->get()
+            	->row();
+
+           $loan_end_date_raw = !empty($outstand_row->loan_end_date)
+            	? $outstand_row->loan_end_date
+            	: (!empty($loan_data->loan_end_date) ? $loan_data->loan_end_date : null);
            $loan_start_date = $loan_start_date_raw ? date('Y-m-d', strtotime($loan_start_date_raw)) : null;
            $loan_end_date_schedule = $loan_end_date_raw ? date('Y-m-d', strtotime($loan_end_date_raw)) : null;
            $repayment_day_interval = (int)$day;
@@ -1120,7 +1133,7 @@ $massage .= "MKOPO PAMOJA NA RIBA = $total_loan_int";
            $is_grace_penalty_due_today = false;
            $grace_penalty_amount = 0;
 
-           if (!empty($loan_end_date_schedule)) {
+           if (!empty($loan_end_date_schedule) && $rem > 0) {
             	$days_since_end = (int)((strtotime($today_date) - strtotime($loan_end_date_schedule)) / 86400);
             	if ($days_since_end > $grace_period_days) {
             		$grace_penalty_amount = round(((float)$lejesho * $daily_overdue_penalty_rate) / 100, 2);
