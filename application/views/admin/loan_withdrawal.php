@@ -1,10 +1,6 @@
 
 <?php
 include_once APPPATH . "views/partials/header.php";
-
-$is_super_admin = ($this->session->userdata('role') === 'admin');
-$can_loan_view = $is_super_admin || has_permission('Loans', 'can_view') || has_permission('Mikopo', 'can_view');
-$can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || has_permission('Mikopo', 'can_delete');
 ?>
 
 
@@ -158,7 +154,6 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                 <span class="px-2 py-1 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
             </td>
 <td class="px-4 py-3 dark:text-white flex items-center gap-2">
-  <?php if ($can_loan_view): ?>
     <a href="<?= base_url("admin/customer_loan_detail/{$loan_aproveds->customer_id}") ?>" 
        class="text-blue-600 hover:text-blue-900 flex items-center gap-1" title="<?php echo $this->lang->line('view_statement') ?? 'View Statement'; ?>">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -166,8 +161,6 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
         </svg>
     </a>
-  <?php endif; ?>
-  <?php if ($can_loan_delete): ?>
     <a href="<?= base_url("admin/delete_loanwith/{$loan_aproveds->loan_id}") ?>" 
        class="text-red-600 hover:text-red-900 flex items-center gap-1" 
     onclick="return confirm('<?php echo $this->lang->line('are_you_sure'); ?>')">
@@ -176,7 +169,6 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4"/>
         </svg>
     </a>
-  <?php endif; ?>
 </td>
 
         </tr>
