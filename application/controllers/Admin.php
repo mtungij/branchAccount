@@ -4470,12 +4470,6 @@ public function loan_withdrawal()
 {
     $this->load->model('queries');
 
-    // Permission check: block users with remove permission
-    if (function_exists('has_permission') && has_permission('loan_withdrawal', 'can_delete')) {
-        show_error('You do not have access to this page.', 403);
-        return;
-    }
-
     $comp_id = $this->session->userdata('comp_id');
     if (!$comp_id) {
         redirect('login');
