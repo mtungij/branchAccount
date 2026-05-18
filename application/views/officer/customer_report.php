@@ -32,6 +32,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                             <th class="px-4 py-3">Tarehe</th>
                             <th class="px-4 py-3">Rejesho</th>
                             <th class="px-4 py-3">Lipwa</th>
+                            <th class="px-4 py-3">Wakala</th>
                             <th class="px-4 py-3">Faini</th>
                             <th class="px-4 py-3">Salio La Mkopo</th>
                         </tr>
@@ -45,12 +46,29 @@ include_once APPPATH . "views/partials/officerheader.php";
                         $interval = new DateInterval($intervalSpec);
                         $dates = []; $currentDate = clone $startDate;
                         for ($i = 0; $i < $loan->session; $i++) { $dates[] = clone $currentDate; $currentDate->add($interval); }
-                        $payments = []; foreach ($customer_report as $r) { if (!empty($r->depost_day)) { $payments[date('Y-m-d', strtotime($r->depost_day))] = $r->depost; } }
+                        $payments = [];
+                        $wakala_by_date = [];
+                        foreach ($customer_report as $r) {
+                            $source_date = !empty($r->rep_date) ? $r->rep_date : (!empty($r->depost_day) ? $r->depost_day : '');
+                            if (!empty($source_date)) {
+                                $date_key = date('Y-m-d', strtotime($source_date));
+
+                                // In customer_report rows, pending_amount is the paid amount for that schedule date.
+                                $paid_value = isset($r->pending_amount) ? (float)$r->pending_amount : (isset($r->depost) ? (float)$r->depost : 0);
+                                $payments[$date_key] = $paid_value;
+
+                                $wakala_value = trim((string)($r->wakala_name ?? ($r->wakala ?? '')));
+                                if ($wakala_value !== '' && !ctype_digit($wakala_value)) {
+                                    $wakala_by_date[$date_key] = $wakala_value;
+                                }
+                            }
+                        }
                         $balance = $loan->loan_int; $i=1;
                         ?>
                         <?php foreach ($dates as $date): 
                             $d = $date->format('Y-m-d');
                             $paid = $payments[$d] ?? 0;
+                            $wakala = $wakala_by_date[$d] ?? '-';
                             $balance -= $paid;
                         ?>
                         <tr class="font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700">
@@ -58,6 +76,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                             <td class="px-3 py-2 whitespace-nowrap"><?= $date->format('d-m-Y'); ?></td>
                             <td class="px-3 py-2 whitespace-nowrap"><?= $loan->restration?></td>
                             <td class="px-3 py-2 whitespace-nowrap"><?= number_format($paid); ?></td>
+                            <td class="px-3 py-2 whitespace-nowrap"><?= htmlspecialchars($wakala, ENT_QUOTES, 'UTF-8'); ?></td>
                             <td class="px-3 py-2 whitespace-nowrap"><?= !empty($loan->penart_amount) ? number_format($loan->penart_amount) : 0; ?></td>
                             <td class="px-3 py-2 whitespace-nowrap"><?= number_format($balance); ?></td>
                         </tr>

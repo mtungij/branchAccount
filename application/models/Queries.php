@@ -675,9 +675,12 @@ public function count_default_customers_by_branch($blanch_id) {
 		return $query->row()->total_active;
 	}
 
-	public function get_today_registered_customers_count($comp_id) {
+	public function get_today_registered_customers_count($comp_id, $blanch_id = null) {
 		$this->db->where('reg_date', date('Y-m-d'));
 		$this->db->where('comp_id', $comp_id);
+		if (!empty($blanch_id)) {
+			$this->db->where('blanch_id', (int) $blanch_id);
+		}
 		return $this->db->count_all_results('tbl_customer'); // Returns count directly
 	}
 
@@ -747,33 +750,49 @@ public function count_default_customers_by_branch($blanch_id) {
 			return $this->db->from('tbl_customer')->count_all_results();
 		}
 
-	public function count_completed_today($comp_id)
+	public function count_completed_today($comp_id, $blanch_id = null)
     {
         $today = date('Y-m-d'); // Format should match your `date_show` column
 
-        return $this->db
+		$this->db
             ->where('loan_status', 'done')
             ->where('comp_id', $comp_id)
             ->where('DATE(date_show)', $today)
-            ->from('tbl_loans')
-            ->count_all_results();
+			->from('tbl_loans');
+
+		if (!empty($blanch_id)) {
+			$this->db->where('blanch_id', (int) $blanch_id);
+		}
+
+		return $this->db->count_all_results();
     }
 
-	public function count_default_loans_today($comp_id)
+	public function count_default_loans_today($comp_id, $blanch_id = null)
 {
     $today = date('Y-m-d');
 
-    return $this->db
+	$this->db
         ->where('loan_status', 'out')
         ->where('comp_id', $comp_id)
         ->where('DATE(date_show)', $today)
-        ->from('tbl_loans')
-        ->count_all_results();
+		->from('tbl_loans');
+
+	if (!empty($blanch_id)) {
+		$this->db->where('blanch_id', (int) $blanch_id);
+	}
+
+	return $this->db->count_all_results();
 }
 
-public function fetch_today_deposit_daily_comp($comp_id){
+public function fetch_today_deposit_daily_comp($comp_id, $blanch_id = null){
 	$today = date("Y-m-d");
-	$data = $this->db->query("SELECT SUM(depost) AS total_deposit,SUM(double_amont) AS total_double FROM tbl_depost WHERE comp_id = '$comp_id' AND day_id = '1' AND depost_day = '$today'");
+	$branch_sql = '';
+	$params = [$comp_id, $today];
+	if (!empty($blanch_id)) {
+		$branch_sql = ' AND blanch_id = ? ';
+		$params[] = (int) $blanch_id;
+	}
+	$data = $this->db->query("SELECT SUM(depost) AS total_deposit,SUM(double_amont) AS total_double FROM tbl_depost WHERE comp_id = ? AND day_id = '1' AND depost_day = ? {$branch_sql}", $params);
 	return $data->row();
 }
 public function get_today_received_loan_total($comp_id, $blanch_id = null)
@@ -803,8 +822,13 @@ public function get_today_received_loan_total($comp_id, $blanch_id = null)
 
 
 
-public function get_today_received_from_receivale($comp_id)
+public function get_today_received_from_receivale($comp_id, $blanch_id = null)
 {
+	$branch_sql = '';
+	if (!empty($blanch_id)) {
+		$branch_sql = " AND p.blanch_id = '" . (int) $blanch_id . "'";
+	}
+
     $query = $this->db->query("
         SELECT SUM(p.depost) AS total_amount
         FROM tbl_depost p
@@ -815,6 +839,7 @@ public function get_today_received_from_receivale($comp_id)
         WHERE p.comp_id = '$comp_id'
           AND p.depost_day = l.date_show
           AND l.loan_status = 'withdrawal'
+		  {$branch_sql}
     ");
 
     return $query->row()->total_amount ?? 0;
@@ -822,8 +847,12 @@ public function get_today_received_from_receivale($comp_id)
 
 
 
-public function get_depositing_out_total_comp($comp_id){
+public function get_depositing_out_total_comp($comp_id, $blanch_id = null){
     $date = date("Y-m-d");
+	$branch_sql = '';
+	if (!empty($blanch_id)) {
+		$branch_sql = " AND d.blanch_id = '" . (int) $blanch_id . "'";
+	}
     $data = $this->db->query("
         SELECT SUM(d.depost) AS total_default 
         FROM tbl_depost d 
@@ -833,13 +862,18 @@ public function get_depositing_out_total_comp($comp_id){
         WHERE d.depost_day = '$date' 
           AND d.comp_id = '$comp_id' 
           AND d.dep_status = 'out'
+		  {$branch_sql}
     ");
     return $data->row();
 }
 
 
-public function get_depositing_out_todayend_comp($comp_id){
+public function get_depositing_out_todayend_comp($comp_id, $blanch_id = null){
     $date = date("Y-m-d");
+	$branch_sql = '';
+	if (!empty($blanch_id)) {
+		$branch_sql = " AND d.blanch_id = '" . (int) $blanch_id . "'";
+	}
     $data = $this->db->query("
         SELECT SUM(d.depost) AS total_default 
         FROM tbl_depost d 
@@ -851,6 +885,7 @@ public function get_depositing_out_todayend_comp($comp_id){
           AND o.loan_end_date = '$date'
           AND d.comp_id = '$comp_id' 
           AND d.dep_status = 'out'
+		  {$branch_sql}
     ");
     return $data->row();
 }
@@ -4771,10 +4806,16 @@ public function get_next7days_ending_loans_restriction($comp_id, $blanch_id = nu
 	
 
 
-    public function get_total_recevable($comp_id){
-    	$date = date("Y-m-d");
-    	$today_data = $this->db->query("SELECT SUM(restration) AS total_rejesho FROM tbl_loans WHERE comp_id = '$comp_id' AND loan_status = 'withdrawal' AND date_show = '$date'");
-    	return $today_data->row();
+    public function get_total_recevable($comp_id, $blanch_id = null){
+	    	$date = date("Y-m-d");
+			$branch_sql = '';
+			$params = [$comp_id, $date];
+			if (!empty($blanch_id)) {
+				$branch_sql = ' AND blanch_id = ? ';
+				$params[] = (int) $blanch_id;
+			}
+	    	$today_data = $this->db->query("SELECT SUM(restration) AS total_rejesho FROM tbl_loans WHERE comp_id = ? AND loan_status = 'withdrawal' AND date_show = ? {$branch_sql}", $params);
+	    	return $today_data->row();
     }
 
 	
@@ -6520,9 +6561,13 @@ public function total_outstand_loan($comp_id, $blanch_id = null, $empl_id = null
  	 return $data->row();
  }
 
- public function total_outstand_loan_today($comp_id)
+ public function total_outstand_loan_today($comp_id, $blanch_id = null)
 {
     $today = date('Y-m-d'); // tarehe ya leo
+	$branch_sql = '';
+	if (!empty($blanch_id)) {
+		$branch_sql = " AND o.blanch_id = '" . (int) $blanch_id . "'";
+	}
 
     $data = $this->db->query("
         SELECT SUM(o.remain_amount) AS total_out
@@ -6531,6 +6576,7 @@ public function total_outstand_loan($comp_id, $blanch_id = null, $empl_id = null
         WHERE o.comp_id = '$comp_id'
           AND o.out_status = 'open'
           AND DATE(t.loan_end_date) = '$today'
+		  {$branch_sql}
     ");
 
     return $data->row();

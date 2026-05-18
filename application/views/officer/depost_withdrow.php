@@ -365,8 +365,25 @@ include_once APPPATH . "views/partials/officerheader.php";
     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo $payisnulls->date_data; ?></td>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?= $payisnulls->emply ? $payisnulls->emply . ' / ' : ''; ?>
-            <?= $payisnulls->description; ?>
-            <?= $payisnulls->p_method ? ' / ' . $payisnulls->account_name : ''; ?>
+            <?php
+              $method_name = trim((string)($payisnulls->account_name ?? ''));
+              $description_text = strtolower(trim((string)($payisnulls->description ?? '')));
+              $wakala_value = trim((string)($payisnulls->wakala ?? ''));
+              $has_valid_wakala = ($wakala_value !== '' && !ctype_digit($wakala_value));
+              $is_non_cash_deposit = ($description_text === 'cash deposit' && $method_name !== '' && strtolower($method_name) !== 'cash');
+            ?>
+            <?php if ($is_non_cash_deposit): ?>
+              <?= htmlspecialchars(strtoupper($method_name), ENT_QUOTES, 'UTF-8'); ?>
+              <?php if ($has_valid_wakala): ?>
+                <?= '(' . htmlspecialchars(strtoupper($wakala_value), ENT_QUOTES, 'UTF-8') . ')'; ?>
+              <?php endif; ?>
+            <?php else: ?>
+              <?= $payisnulls->description; ?>
+              <?= $payisnulls->p_method ? ' / ' . $payisnulls->account_name : ''; ?>
+              <?php if ($has_valid_wakala && strtolower($method_name) !== 'cash'): ?>
+                <?= ' / Wakala: ' . htmlspecialchars($wakala_value, ENT_QUOTES, 'UTF-8'); ?>
+              <?php endif; ?>
+            <?php endif; ?>
             <?= ($payisnulls->fee_id !== null && $payisnulls->fee_id !== '') ? 
                 ' / ' . $payisnulls->fee_desc . ' ' . $payisnulls->fee_percentage . ' ' . $payisnulls->symbol : ''; ?>
             <?= $payisnulls->p_method ? '/' : ''; ?>
@@ -442,8 +459,8 @@ include_once APPPATH . "views/partials/officerheader.php";
         * Njia Za Malipo:
       </label>
       <select id="method_<?php echo $customer->customer_id; ?>" name="method"
-        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600">
-        <option value="">Chagua Malipo</option>
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600" required>
+        <option value="" selected disabled>Chagua Malipo</option>
         <?php foreach ($acount as $acounts): ?>
           <option value="<?= $acounts->trans_id; ?>" style="color: #16a34a;"><?= $acounts->account_name; ?> - Salio: <?= number_format(isset($acounts->blanch_capital) ? $acounts->blanch_capital : 0); ?></option>
         <?php endforeach; ?>
@@ -464,11 +481,11 @@ include_once APPPATH . "views/partials/officerheader.php";
     <!-- Code -->
     <div class="sm:col-span-6">
       <label for="code_<?php echo $customer->customer_id; ?>" class="block text-sm font-medium mb-2 dark:text-gray-300">
-        * Code Number:
+        Code Number (Optional):
       </label>
       <input type="number" placeholder="andika code ya Mteja" id="code_<?php echo $customer->customer_id; ?>" name="code"
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-        required>
+        >
     </div>
 
   </div>
@@ -638,8 +655,8 @@ include_once APPPATH . "views/partials/officerheader.php";
         * Njia Za Malipo:
       </label>
       <select id="p_method" name="p_method"
-        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600">
-        <option value="">Chagua Malipo</option>
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600" required>
+        <option value="" selected disabled>Chagua Malipo</option>
         <?php foreach ($acount as $acounts): ?>
           <option value="<?= $acounts->trans_id; ?>" style="color: #16a34a;"><?= $acounts->account_name; ?> - Salio: <?= number_format(isset($acounts->blanch_capital) ? $acounts->blanch_capital : 0); ?></option>
         <?php endforeach; ?>

@@ -328,9 +328,26 @@ include_once APPPATH . "views/partials/header.php";
                       <td class="px-4 py-3 uppercase">
                         <?php echo $payisnulls->emply; ?>
                         <?php if ($payisnulls->emply == TRUE): ?>/<?php endif; ?>
-                        <?php echo $payisnulls->description; ?>
-                        <?php if($payisnulls->p_method == TRUE): ?>
-                          /<?php echo $payisnulls->account_name; ?>
+                        <?php
+                          $method_name = trim((string)($payisnulls->account_name ?? ''));
+                          $description_text = strtolower(trim((string)($payisnulls->description ?? '')));
+                          $wakala_value = trim((string)($payisnulls->wakala_name ?? ($payisnulls->wakala ?? '')));
+                          $has_valid_wakala = ($wakala_value !== '' && !ctype_digit($wakala_value));
+                          $is_non_cash_deposit = ($description_text === 'cash deposit' && $method_name !== '' && strtolower($method_name) !== 'cash');
+                        ?>
+                        <?php if ($is_non_cash_deposit): ?>
+                          <?php echo htmlspecialchars(strtoupper($method_name), ENT_QUOTES, 'UTF-8'); ?>
+                          <?php if ($has_valid_wakala): ?>
+                            <?php echo '(' . htmlspecialchars(strtoupper($wakala_value), ENT_QUOTES, 'UTF-8') . ')'; ?>
+                          <?php endif; ?>
+                        <?php else: ?>
+                          <?php echo $payisnulls->description; ?>
+                          <?php if($payisnulls->p_method == TRUE): ?>
+                            /<?php echo $payisnulls->account_name; ?>
+                          <?php endif; ?>
+                          <?php if ($has_valid_wakala && strtolower($method_name) !== 'cash'): ?>
+                            / Wakala: <?php echo htmlspecialchars($wakala_value, ENT_QUOTES, 'UTF-8'); ?>
+                          <?php endif; ?>
                         <?php endif; ?>
                         <?php if ($payisnulls->fee_id == TRUE): ?>
                           / <?php echo $payisnulls->fee_desc; ?> <?php echo $payisnulls->fee_percentage; ?> <?php echo $payisnulls->symbol; ?>

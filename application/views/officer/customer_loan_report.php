@@ -118,11 +118,16 @@ background-color: ;
 <th style="font-size:12px;border: none;">Loan ID</th>
 <th style="font-size:12px;border: none;">Receivable Amount</th>
 <th style="font-size:12px;border: none;">Received Amount </th>
+<th style="font-size:12px;border: none;">Wakala</th>
 <th style="font-size:12px;border: none;">Penalt Amount</th>
 </tr>
 
                      <?php foreach ($customer_report as $customer_reports): ?>
                           <tr>
+                        <?php
+                          $wakala_value = trim((string)($customer_reports->wakala_name ?? ($customer_reports->wakala ?? '')));
+                          $wakala_display = ($wakala_value !== '' && !ctype_digit($wakala_value)) ? strtoupper($wakala_value) : '-';
+                        ?>
                         <td style="font-size:12px;border: none;"><?php  echo substr($customer_reports->rep_date, 0,10); ?></td>
                          <td style="font-size:12px;border: none;"><?php echo $customer_reports->loan_code; ?></td>
                          <td style="font-size:12px;border: none;"><?php echo number_format($customer_reports->recevable_amount); ?></td>
@@ -135,6 +140,7 @@ background-color: ;
                                                 <?php echo number_format($customer_reports->pending_amount); ?>
                                                     <?php } ?>
                          </td>
+                                     <td style="font-size:12px;border: none;"><?php echo htmlspecialchars($wakala_display, ENT_QUOTES, 'UTF-8'); ?></td>
                          <td style="font-size:12px;border: none;">
                              <?php if ($customer_reports->penart_amount == NULL) {
                                                   ?>
@@ -152,6 +158,7 @@ background-color: ;
         <td style="font-size:12px;border: none;">  </td>
         <td style="font-size:12px;border: none;"><b><?php echo number_format(@$sum_recevable->total_recevable); ?></b></td>
         <td style="font-size:12px;border: none;"><b><?php echo number_format($sum_pend->TotalPending); ?></b></td>
+        <td style="font-size:12px;border: none;"><b>-</b></td>
         <td style="font-size:12px;border: none;"><b><?php echo number_format(@$sum_penart->total_penart); ?></b></td>
         </tr>
         

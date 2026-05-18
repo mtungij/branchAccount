@@ -486,14 +486,16 @@
        				</a>
        			</li>
 
-       			<li class="kt-menu__item " aria-haspopup="true" >
-       				<a  href="<?php echo base_url("admin/loan_withdrawal"); ?>" class="kt-menu__link ">
-       					<i class="kt-menu__link-bullet kt-menu__link-bullet--dot">
-       						<span></span>
-       					</i>
-       					<span class="kt-menu__link-text">Loan Withdrawal</span>
-       				</a>
-       			</li>
+		        <?php if (function_exists('has_permission') ? has_permission('loan_withdrawal', 'can_view') && !has_permission('loan_withdrawal', 'can_delete') : true): ?>
+		        <li class="kt-menu__item " aria-haspopup="true" >
+		        	<a  href="<?php echo base_url("admin/loan_withdrawal"); ?>" class="kt-menu__link ">
+		        		<i class="kt-menu__link-bullet kt-menu__link-bullet--dot">
+		        			<span></span>
+		        		</i>
+		        		<span class="kt-menu__link-text">Loan Withdrawal</span>
+		        	</a>
+		        </li>
+		        <?php endif; ?>
 
        			<li class="kt-menu__item " aria-haspopup="true" >
        				<a  href="<?php echo base_url("admin/all_loan_lejected"); ?>" class="kt-menu__link ">

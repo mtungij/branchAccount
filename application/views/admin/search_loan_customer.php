@@ -420,8 +420,8 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
         * Njia Za Malipo:
       </label>
       <select id="method_<?php echo $customer->customer_id; ?>" name="method"
-        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600">
-        <option value="">Chagua Malipo</option>
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600" required>
+        <option value="" selected disabled>Chagua Malipo</option>
         <?php foreach ($acount as $acounts): ?>
           <option value="<?= $acounts->trans_id; ?>"><?= $acounts->account_name; ?> - Salio: <?= number_format(isset($acounts->blanch_capital) ? $acounts->blanch_capital : 0); ?></option>
         <?php endforeach; ?>

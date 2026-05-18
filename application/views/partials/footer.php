@@ -416,6 +416,50 @@
 <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 
+<?php
+$is_admin_route = ($this->uri->segment(1) === 'admin');
+$session_blanch_id = (int) $this->session->userdata('blanch_id');
+?>
+<?php if ($is_admin_route): ?>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var sessionBlanchId = <?php echo (int) $session_blanch_id; ?>;
+
+    document.querySelectorAll('select[name="blanch_id"]').forEach(function (selectEl) {
+      // Respect explicit server-side selection already rendered by the view.
+      var hasServerSelection = Array.prototype.some.call(selectEl.options, function (opt) {
+        return opt.defaultSelected || opt.hasAttribute('selected');
+      });
+      if (hasServerSelection) {
+        return;
+      }
+
+      var selectedValue = '';
+      if (sessionBlanchId > 0) {
+        var branchOptionExists = Array.prototype.some.call(selectEl.options, function (opt) {
+          return String(opt.value) === String(sessionBlanchId);
+        });
+        if (branchOptionExists) {
+          selectedValue = String(sessionBlanchId);
+        }
+      } else {
+        var allOption = Array.prototype.find.call(selectEl.options, function (opt) {
+          return String(opt.value).toLowerCase() === 'all';
+        });
+        if (allOption) {
+          selectedValue = 'all';
+        }
+      }
+
+      if (selectedValue !== '' && String(selectEl.value) !== selectedValue) {
+        selectEl.value = selectedValue;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  });
+</script>
+<?php endif; ?>
+
 
 
   </body>

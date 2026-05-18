@@ -6499,12 +6499,12 @@ public function print_officer_todaycash_transaction()
     $this->form_validation->set_rules('loan_id','Loan','required');
     $this->form_validation->set_rules('depost','depost','required');
     $this->form_validation->set_rules('p_method','Method','required');
-    $this->form_validation->set_rules('description','description','required');
+    $this->form_validation->set_rules('description','description','trim');
     $this->form_validation->set_rules('deposit_date','deposit date','required');
     $this->form_validation->set_error_delimiters('<div class="text-danger">','</div>');
        if ($this->form_validation->run()) {
           $depost = $this->input->post();
-$wakala = $this->input->post('wakala'); // may be empty for cash
+$wakala = trim((string)$this->input->post('wakala')); // may be empty for cash
 
       
 
@@ -6534,6 +6534,10 @@ $wakala = $this->input->post('wakala'); // may be empty for cash
     $method_name = $method ? strtolower(trim($method->account_name)) : '';
     if ($method_name !== 'cash') {
         $this->form_validation->set_rules('wakala','Wakala','required|trim');
+		if ($wakala !== '' && ctype_digit($wakala)) {
+			$this->session->set_flashdata('error', 'Tafadhali andika jina la wakala sahihi, sio ID au namba pekee.');
+			return redirect('oficer/data_with_depost/' . $customer_id);
+		}
     }
 
     
@@ -7345,7 +7349,7 @@ public function create_withdrow_balance($customer_id){
     $this->form_validation->set_rules('loan_status','loan status','required');
     // $this->form_validation->set_rules('code','Code','required');
     $this->form_validation->set_rules('with_date','with date','required');
-    $this->form_validation->set_rules('description','description','required');
+    $this->form_validation->set_rules('description','description','trim');
     if ($this->form_validation->run() ) {
           $data = $this->input->post();
 
@@ -7354,9 +7358,9 @@ public function create_withdrow_balance($customer_id){
           $customer_id = $data['customer_id'];
           $blanch_id = $data['blanch_id'];
           $comp_id = $data['comp_id'];
-          $description = $data['description'];
+          $description = !empty($data['description']) ? $data['description'] : 'CASH WITHDRAWALS';
           $method = $data['method'];
-          //  $new_code = $data['code'];
+          $new_code = isset($data['code']) ? trim((string)$data['code']) : '';
           $with_date = $data['with_date'];
           $loan_status = 'withdrawal';
           $new_balance = $withdrow_newbalance;
@@ -7511,7 +7515,7 @@ if (substr($phone_sp, 0, 1) === '0') {
            
             $new_deducted = $deducted + $sum_total_loanFee;
 
-               if($new_code === $code){
+               if($new_code !== '' && $new_code === (string)$code){
                  $this->session->set_flashdata('error','Pin ya mteja Uliyojaza Haipo Sahihi!!');
                }else
                if($blanch_capital < $withdrow_newbalance){

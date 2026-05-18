@@ -381,9 +381,25 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo $payisnulls->date_data; ?></td>
     <td class=" uppercase px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?= $payisnulls->emply ? $payisnulls->emply . ' / ' : ''; ?>
-<?= $payisnulls->description; ?>
-<?= $payisnulls->p_method ? ' / ' . $payisnulls->account_name : ''; ?>
-<?= !empty($payisnulls->wakala_name) ? ' / ' . $payisnulls->wakala_name : ''; ?>
+  <?php
+    $method_name = trim((string)($payisnulls->account_name ?? ''));
+    $description_text = strtolower(trim((string)($payisnulls->description ?? '')));
+    $wakala_value = trim((string)($payisnulls->wakala_name ?? ($payisnulls->wakala ?? '')));
+    $has_valid_wakala = ($wakala_value !== '' && !ctype_digit($wakala_value));
+    $is_non_cash_deposit = ($description_text === 'cash deposit' && $method_name !== '' && strtolower($method_name) !== 'cash');
+  ?>
+  <?php if ($is_non_cash_deposit): ?>
+  <?= htmlspecialchars(strtoupper($method_name), ENT_QUOTES, 'UTF-8'); ?>
+  <?php if ($has_valid_wakala): ?>
+  <?= '(' . htmlspecialchars(strtoupper($wakala_value), ENT_QUOTES, 'UTF-8') . ')'; ?>
+  <?php endif; ?>
+  <?php else: ?>
+  <?= $payisnulls->description; ?>
+  <?= $payisnulls->p_method ? ' / ' . $payisnulls->account_name : ''; ?>
+  <?php if ($has_valid_wakala && strtolower($method_name) !== 'cash'): ?>
+  <?= ' / Wakala: ' . htmlspecialchars($wakala_value, ENT_QUOTES, 'UTF-8'); ?>
+  <?php endif; ?>
+  <?php endif; ?>
 <?= ($payisnulls->fee_id !== null && $payisnulls->fee_id !== '') ? 
     ' / ' . $payisnulls->fee_desc . ' ' . $payisnulls->fee_percentage . ' ' . $payisnulls->symbol : ''; ?>
 <?= $payisnulls->p_method ? ' / ' : ''; ?>
@@ -459,8 +475,8 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
         * Payment Method:
       </label>
       <select id="method_<?php echo $customer->customer_id; ?>" name="method"
-        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600">
-        <option value="">Select Account</option>
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:focus:ring-gray-600" required>
+        <option value="" selected disabled>Select Account</option>
         <?php foreach ($acount as $acounts): ?>
           <option value="<?= $acounts->trans_id; ?>"><?= $acounts->account_name; ?> - Salio: <?= number_format(isset($acounts->blanch_capital) ? $acounts->blanch_capital : 0); ?></option>
         <?php endforeach; ?>

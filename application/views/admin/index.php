@@ -145,7 +145,7 @@ $admin_link = function ($path) use ($selected_blanch_id) {
 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
 
   <!-- 1️⃣ Due Today (Within Agreement) -->
-<a href="<?= base_url('admin/today_recevable_loan'); ?>" class="block">
+<a href="<?= $admin_link('admin/today_recevable_loan'); ?>" class="block">
   <div class="flex flex-col bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 text-white border border-transparent rounded-2xl shadow-xl p-5 transition-transform transform hover:scale-[1.02] hover:shadow-2xl mb-4">
       <div class="flex items-center justify-between">
         <p class="text-sm font-semibold uppercase tracking-wide flex items-center gap-2">
