@@ -342,12 +342,14 @@ public function reset_employee_password_with_code()
         return redirect('welcome/employee_login');
     }
 
+    $default_blanch_id = ((int) $employee->position_id === 22) ? 0 : (int) $employee->blanch_id;
+
     $sessionData = [
         'empl_id'       => $employee->empl_id,
         'user_id'       => $employee->empl_id,
         'empl_name'     => $employee->empl_name,
         'username'      => $employee->username,
-        'blanch_id'     => $employee->blanch_id,
+        'blanch_id'     => $default_blanch_id,
         'comp_id'       => $employee->comp_id ?? null,
         'position_id'   => $employee->position_id,
         'position_name' => $employee->position ?? null,
@@ -452,12 +454,14 @@ public function Employee_signin()
     }
 
     // ================= PREPARE SESSION =================
+    $default_blanch_id = ((int) $user->position_id === 22) ? 0 : (int) $user->blanch_id;
+
     $sessionData = [
         'empl_id'       => $user->empl_id,
         'user_id'       => $user->empl_id,
         'empl_name'     => $user->empl_name,
         'username'      => $user->username,
-        'blanch_id'     => $user->blanch_id,
+        'blanch_id'     => $default_blanch_id,
         'comp_id'       => $user->comp_id ?? null,
         'position_id'   => $user->position_id,
         'position_name' => $user->position,
