@@ -2633,7 +2633,20 @@ public function customer(){
           // print_r($employee);
           // echo "</pre>";
           //      exit();
-    $this->load->view('officer/customer',['region'=>$region,'blanch'=>$blanch,'empl_data'=>$empl_data,'privillage'=>$privillage,'manager'=>$manager,'employee'=>$employee]);
+    $old_input = $this->session->flashdata('customer_form_old_input');
+    if (!is_array($old_input)) {
+      $old_input = [];
+    }
+
+    $this->load->view('officer/customer',[
+      'region'=>$region,
+      'blanch'=>$blanch,
+      'empl_data'=>$empl_data,
+      'privillage'=>$privillage,
+      'manager'=>$manager,
+      'employee'=>$employee,
+      'old_input'=>$old_input
+    ]);
     }
 
 
@@ -2647,6 +2660,7 @@ public function customer(){
 
     if (!$post_token || $post_token !== ($_SESSION['form_token'] ?? null)) {
         $this->session->set_flashdata('error', 'Invalid or duplicate form submission.');
+      $this->session->set_flashdata('customer_form_old_input', $this->input->post(NULL, true));
         return redirect('oficer/customer');
     }
 
@@ -2692,10 +2706,12 @@ public function customer(){
 
         if ($check == TRUE) {
             $this->session->set_flashdata('error', 'This customer Already Registered');
+            $this->session->set_flashdata('customer_form_old_input', $this->input->post(NULL, true));
             return redirect('oficer/customer');
         } elseif (!empty($existing_phone_customer)) {
-          $this->session->set_flashdata('error', 'This phone number is already registered.');
-          return redirect('oficer/customer_details/' . $existing_phone_customer->customer_id);
+          $this->session->set_flashdata('error', $this->lang->line('phone_already_registered'));
+          $this->session->set_flashdata('customer_form_old_input', $this->input->post(NULL, true));
+          return redirect('oficer/customer');
         } elseif ($check == FALSE) {
             $customer_id = $this->queries->insert_customer($data);
             if ($customer_id > 0) {
@@ -2711,7 +2727,7 @@ public function customer(){
             } else {
                 $this->session->set_flashdata('error', 'Failed to register the customer.');
             }
-            return redirect('oficer/customer_details/' . $customer_id);
+            return redirect('oficer/employment_status/' . $customer_id);
         }
     }
 
@@ -2758,6 +2774,55 @@ public function customer(){
   
  
   }
+
+      public function employment_status($customer_id){
+        $this->load->model('queries');
+        $empl_id = $this->session->userdata('empl_id');
+        $customer = $this->queries->get_customer_data($customer_id);
+        $sub_customer = $this->queries->get_latest_sub_customer($customer_id);
+        $privillage = $this->queries->get_position_empl($empl_id);
+        $manager = $this->queries->get_position_manager($empl_id);
+
+        if (empty($customer)) {
+          $this->session->set_flashdata('error', 'Customer not found.');
+          return redirect('oficer/customer');
+        }
+
+        $this->load->view('officer/employment_status',[
+          'customer'=>$customer,
+          'sub_customer'=>$sub_customer,
+          'privillage'=>$privillage,
+          'manager'=>$manager
+        ]);
+      }
+
+  public function save_employment_status($customer_id)
+  {
+    $this->load->library('form_validation');
+    $this->form_validation->set_rules('work_status', 'Employment Status', 'required');
+    $this->form_validation->set_rules('place_imployment', 'Employment Place', 'required');
+
+    if ($this->form_validation->run() === FALSE) {
+      return $this->employment_status($customer_id);
+    }
+
+    $data = array(
+      'customer_id'      => (int) $customer_id,
+      'work_status'      => $this->input->post('work_status', true),
+      'place_imployment' => $this->input->post('place_imployment', true),
+    );
+
+    $this->load->model('queries');
+    $saved = $this->queries->insert_customerData($data);
+
+    if ($saved) {
+      $this->session->set_flashdata('massage', 'Employment details saved successfully.');
+      return redirect('oficer/customer_details/' . $customer_id);
+    }
+
+    $this->session->set_flashdata('error', 'Failed to save employment details.');
+    return redirect('oficer/employment_status/' . $customer_id);
+  }
   
          public function customer_details($customer_id){
             $this->load->model('queries');
@@ -2788,7 +2853,6 @@ public function create_lastDetail($customer_id)
 
     // Validate required text fields
     $this->form_validation->set_rules('famous_area', 'Nick Name', 'required');
-    $this->form_validation->set_rules('place_imployment', 'Place of Business', 'required');
     $this->form_validation->set_rules('code', 'Code', 'required');
     $this->form_validation->set_rules('account_id', 'Account ID', 'required');
 
@@ -2827,7 +2891,6 @@ public function create_lastDetail($customer_id)
     $data = array(
         'customer_id'       => $this->input->post('customer_id'),
         'famous_area'       => $this->input->post('famous_area'),
-        'place_imployment'  => $this->input->post('place_imployment'),
         'code'              => $this->input->post('code'),
         'account_id'        => $this->input->post('account_id'),
     );
@@ -3333,6 +3396,213 @@ $this->load->model('queries');
     $this->load->view('officer/loan_application',['customer'=>$customer,'empl_data'=>$empl_data,'privillage'=>$privillage,'manager'=>$manager]);
 }
 
+  public function loan_guarantee_option()
+  {
+    $this->load->model('queries');
+
+    $empl_id = $this->session->userdata('empl_id');
+    if (!$empl_id) {
+      return redirect('welcome/employee_login');
+    }
+
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    if (!$manager_data) {
+      $this->session->set_flashdata('error', 'Taarifa za meneja hazijapatikana.');
+      return redirect('oficer/loan_application');
+    }
+
+    $comp_id = (int) $manager_data->comp_id;
+    $customer_id = (int) $this->input->post('customer_id');
+
+    if ($customer_id <= 0) {
+      $this->session->set_flashdata('error', 'Tafadhali chagua mteja.');
+      return redirect('oficer/loan_application');
+    }
+
+    $customer = $this->queries->search_CustomerID($customer_id, $comp_id);
+    if (!$customer) {
+      $this->session->set_flashdata('error', 'Mteja hakupatikana au hajaruhusiwa chini ya kampuni hii.');
+      return redirect('oficer/loan_application');
+    }
+
+    $restriction_view = $this->render_loan_eligibility_restriction($customer_id, $customer);
+    if ($restriction_view !== null) {
+      return $restriction_view;
+    }
+
+    $this->session->set_userdata('customer_id', $customer_id);
+
+    return $this->load->view('officer/loan_guarantee_option', [
+      'customer'   => $customer,
+      'empl_data'  => $this->queries->get_employee_data($empl_id),
+      'privillage' => $this->queries->get_position_empl($empl_id),
+      'manager'    => $this->queries->get_position_manager($empl_id)
+    ]);
+  }
+
+  public function handle_loan_guarantee_option()
+  {
+    $this->load->model('queries');
+
+    $empl_id = $this->session->userdata('empl_id');
+    if (!$empl_id) {
+      return redirect('welcome/employee_login');
+    }
+
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    if (!$manager_data) {
+      $this->session->set_flashdata('error', 'Taarifa za meneja hazijapatikana.');
+      return redirect('oficer/loan_application');
+    }
+
+    $comp_id = (int) $manager_data->comp_id;
+    $customer_id = (int) $this->input->post('customer_id');
+    $guarantee_type = trim((string) $this->input->post('guarantee_type', true));
+
+    if ($customer_id <= 0 || $guarantee_type === '') {
+      $this->session->set_flashdata('error', 'Tafadhali chagua mteja na aina ya udhamini.');
+      return redirect('oficer/loan_application');
+    }
+
+    $customer = $this->queries->search_CustomerID($customer_id, $comp_id);
+    if (!$customer) {
+      $this->session->set_flashdata('error', 'Mteja hakupatikana au hajaruhusiwa chini ya kampuni hii.');
+      return redirect('oficer/loan_application');
+    }
+
+    $restriction_view = $this->render_loan_eligibility_restriction($customer_id, $customer);
+    if ($restriction_view !== null) {
+      return $restriction_view;
+    }
+
+    $this->session->set_userdata('customer_id', $customer_id);
+
+    if ($guarantee_type === 'has_guarantor') {
+      $this->session->unset_userdata('collateral_first_customer_id');
+      return redirect('oficer/search_customer');
+    }
+
+    if ($guarantee_type === 'collateral_office' || $guarantee_type === 'self_guarantee') {
+      $relation_text = ($guarantee_type === 'self_guarantee')
+        ? 'Self-guarantee for a loan'
+        : 'Submit collateral at office';
+
+      $data = [
+        'customer_id' => $customer_id,
+        'comp_id' => $comp_id,
+        'sp_name' => $customer->f_name,
+        'sp_mname' => $customer->m_name,
+        'sp_lname' => $customer->l_name,
+        'sp_phone_no' => $this->normalize_local_phone_number($customer->phone_no),
+        'sp_relation' => $relation_text,
+        'nature' => $relation_text,
+        'created_at' => date('Y-m-d H:i:s')
+      ];
+
+      $existing = $this->db
+        ->where('customer_id', $customer_id)
+        ->where('comp_id', $comp_id)
+        ->where('loan_id IS NULL', null, false)
+        ->get('tbl_sponser')
+        ->row();
+
+      if ($existing) {
+        $this->db->where('sp_id', $existing->sp_id)->update('tbl_sponser', $data);
+      } else {
+        $this->db->insert('tbl_sponser', $data);
+      }
+
+      if ($guarantee_type === 'collateral_office') {
+        $loan_id = $this->get_or_create_open_loan_for_collateral_flow($customer_id, $comp_id, $empl_id, $customer);
+        if (empty($loan_id)) {
+          $this->session->set_flashdata('error', 'Imeshindikana kuanzisha ombi la mkopo kwa hatua ya dhamana.');
+          return redirect('oficer/loan_applicationForm/' . $customer_id);
+        }
+
+        // Attach any sponsor created in this step to the active open loan.
+        $this->queries->link_sponsors_to_loan($customer_id, $comp_id, $loan_id);
+
+        $this->session->set_userdata('collateral_first_customer_id', $customer_id);
+        $this->session->set_flashdata('massage', 'Jaza dhamana kwanza, kisha malizia fomu ya mkopo.');
+        return redirect('oficer/collelateral_session/' . $loan_id);
+      }
+
+      $this->session->unset_userdata('collateral_first_customer_id');
+      $this->session->set_flashdata('massage', 'Udhamini umehifadhiwa kwa mteja huyu.');
+      return redirect('oficer/loan_applicationForm/' . $customer_id);
+    }
+
+    $this->session->set_flashdata('error', 'Chaguo la udhamini halijatambulika.');
+    return redirect('oficer/loan_application');
+  }
+
+  private function render_loan_eligibility_restriction($customer_id, $customer)
+  {
+    if ($this->queries->has_pending_loans($customer_id)) {
+      return $this->load->view('officer/toast_message_view', [
+        'message' => "Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> bado hajamaliza mkopo wake. Tafadhali maliza mkopo kabla ya kuomba tena.",
+        'type' => 'loan'
+      ]);
+    }
+
+    $latestLoan = $this->queries->get_latest_done_loan($customer_id);
+    if ($latestLoan) {
+      $total_penart = $this->queries->get_total_penart_loan($latestLoan->loan_id)->total_penart ?? 0;
+      $paid = $this->queries->get_total_penart_paid_loan($latestLoan->loan_id)->total_PaidPenart ?? 0;
+
+      $msamaha = $this->queries->get_penart_check($latestLoan->loan_id);
+      $waived = ($msamaha && $msamaha->status === 'checked');
+
+      if (!$waived && ($total_penart > $paid)) {
+        return $this->load->view('officer/toast_message_view', [
+          'message' => "Habari, Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> anadaiwa faini TZS " .
+            number_format($total_penart - $paid) .
+            '. Tafadhali alipe au omba ahakikiwe.',
+          'type' => 'penalty'
+        ]);
+      }
+    }
+
+    return null;
+  }
+
+  private function get_or_create_open_loan_for_collateral_flow($customer_id, $comp_id, $empl_id, $customer)
+  {
+    $this->load->helper('string');
+
+    $existing_open_loan = $this->db
+      ->select('loan_id')
+      ->from('tbl_loans')
+      ->where('customer_id', $customer_id)
+      ->where('loan_status', 'open')
+      ->order_by('loan_id', 'DESC')
+      ->limit(1)
+      ->get()
+      ->row();
+
+    if (!empty($existing_open_loan) && !empty($existing_open_loan->loan_id)) {
+      return (int) $existing_open_loan->loan_id;
+    }
+
+    $created_by = $this->session->userdata('user_id');
+    if (empty($created_by)) {
+      $created_by = (string) $empl_id;
+    }
+
+    $draft_loan_data = [
+      'comp_id' => $comp_id,
+      'blanch_id' => !empty($customer->blanch_id) ? (int) $customer->blanch_id : (int) $this->session->userdata('blanch_id'),
+      'customer_id' => $customer_id,
+      'empl_id' => $empl_id,
+      'loan_code' => random_string('numeric', 14),
+      'created_by' => (string) $created_by,
+      'loan_status' => 'open',
+      'dep_status' => 'open'
+    ];
+
+    return (int) $this->queries->insert_loan($draft_loan_data);
+  }
+
 public function search_customer()
 {
     $this->load->model('queries');
@@ -3421,36 +3691,14 @@ public function search_customer()
     }
 
     /* ===============================
-       7. Hakiki mikopo inayosubiri
+       7. Hakiki vikwazo vya mkopo/faini
     ================================*/
-    if ($this->queries->has_pending_loans($customer_id)) {
-        return $this->load->view('officer/toast_message_view', [
-            'message' => "Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> bado hajamaliza mkopo wake. Tafadhali maliza mkopo kabla ya kuomba tena.",
-            'type'    => 'loan'
-        ]);
+    $restriction_view = $this->render_loan_eligibility_restriction($customer_id, $customer);
+    if ($restriction_view !== null) {
+      return $restriction_view;
     }
 
-    /* ===============================
-       8. Hakiki faini
-    ================================*/
     $latestLoan = $this->queries->get_latest_done_loan($customer_id);
-
-    if ($latestLoan) {
-        $total_penart = $this->queries->get_total_penart_loan($latestLoan->loan_id)->total_penart ?? 0;
-        $paid         = $this->queries->get_total_penart_paid_loan($latestLoan->loan_id)->total_PaidPenart ?? 0;
-
-        $msamaha = $this->queries->get_penart_check($latestLoan->loan_id);
-        $waived  = ($msamaha && $msamaha->status === 'checked');
-
-        if (!$waived && ($total_penart > $paid)) {
-            return $this->load->view('officer/toast_message_view', [
-                'message' => "Habari, Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> anadaiwa faini TZS " .
-                    number_format($total_penart - $paid) .
-                    ". Tafadhali alipe au omba ahakikiwe.",
-                'type' => 'penalty'
-            ]);
-        }
-    }
 
     /* ===============================
        9. Sponsor info
@@ -3680,7 +3928,7 @@ public function create_sponser($customer_id = null, $comp_id = null)
     $this->form_validation->set_rules(
         'sp_phone_no',
         'Phone Number',
-        'required|numeric|exact_length[10]'
+      'required|regex_match[/^0[67][0-9]{8}$/]'
     );
     $this->form_validation->set_rules('sp_relation', 'Relationship', 'required');
     $this->form_validation->set_rules('nature', 'Business Nature', 'required');
@@ -3714,6 +3962,13 @@ public function create_sponser($customer_id = null, $comp_id = null)
         ]);
         return;
     }
+
+      $sponsor_phone_local = $this->normalize_local_phone_number($this->input->post('sp_phone_no', true));
+
+      if (!$this->is_valid_local_phone_number($sponsor_phone_local)) {
+        $this->session->set_flashdata('error', 'Phone number must start with 06 or 07 and have 10 digits.');
+        return redirect('oficer/search_customer');
+      }
 
     /* ================= FILE UPLOADS ================= */
 
@@ -3767,7 +4022,7 @@ $data = [
     'sp_name'            => $this->input->post('sp_name'),
     'sp_mname'           => $this->input->post('sp_mname'),
     'sp_lname'           => $this->input->post('sp_lname'),
-    'sp_phone_no'        => $this->input->post('sp_phone_no'),
+    'sp_phone_no'        => $sponsor_phone_local,
     'sp_relation'        => $this->input->post('sp_relation'),
     'nature'             => $this->input->post('nature'),
 
@@ -3807,6 +4062,32 @@ $data = [
 
     redirect("oficer/loan_applicationForm/" . $customer_id);
 }
+
+  private function normalize_local_phone_number($phone_no)
+  {
+    $phone_no = preg_replace('/\D+/', '', (string) $phone_no);
+
+    if ($phone_no === '') {
+      return '';
+    }
+
+    // Convert 255XXXXXXXXX -> 0XXXXXXXXX
+    if (strpos($phone_no, '255') === 0 && strlen($phone_no) === 12) {
+      return '0' . substr($phone_no, 3);
+    }
+
+    // Convert 6XXXXXXXX or 7XXXXXXXX -> 06XXXXXXXX / 07XXXXXXXX
+    if (strlen($phone_no) === 9 && ($phone_no[0] === '6' || $phone_no[0] === '7')) {
+      return '0' . $phone_no;
+    }
+
+    return $phone_no;
+  }
+
+  private function is_valid_local_phone_number($phone_no)
+  {
+    return (bool) preg_match('/^0[67][0-9]{8}$/', (string) $phone_no);
+  }
 
 
 public function verify_sponsor_otp_page($customer_id)
@@ -4048,6 +4329,10 @@ private function upload_file($field_name, $new_name_prefix)
             session_start();
         }
 
+        if ((int) $this->session->userdata('collateral_first_customer_id') === (int) $customer_id) {
+          $this->session->unset_userdata('collateral_first_customer_id');
+        }
+
         $_SESSION['loan_form_token'] = bin2hex(random_bytes(32));
 
         $this->load->model('queries');
@@ -4242,6 +4527,7 @@ public function modify_loanapplication($customer_id, $loan_id) {
 
     if ($this->form_validation->run()) {
         $data = $this->input->post();
+      unset($data['loan_form_token']);
 
         $this->load->model('queries');
 
@@ -4326,6 +4612,13 @@ $admins_numbers = $this->queries->get_admin_numbers();
     $collateral = $this->queries->get_colateral_data($loan_id);
     $manager = $this->queries->get_position_manager($empl_id);
 
+    $target_blanch_id = !empty($loan_attach->blanch_id)
+      ? (int) $loan_attach->blanch_id
+      : (int) $blanch_id;
+    $branch_employees = $this->queries->get_employee_blanch($target_blanch_id);
+
+    $is_collateral_first_flow = ((int) $this->session->userdata('collateral_first_customer_id') === (int) $loan_attach->customer_id);
+
 
        
         // echo "<pre>";
@@ -4371,7 +4664,9 @@ $admins_numbers = $this->queries->get_admin_numbers();
         'privillage'=>$privillage,
         'collateral'=>$collateral,
       'manager'=>$manager,
-      'collateral_form_token' => $_SESSION['collateral_form_token']
+      'branch_employees' => $branch_employees,
+      'collateral_form_token' => $_SESSION['collateral_form_token'],
+      'is_collateral_first_flow' => $is_collateral_first_flow
     ]);
 }
 
@@ -4391,17 +4686,72 @@ $admins_numbers = $this->queries->get_admin_numbers();
       unset($_SESSION['collateral_form_token']);
 
  
-    // Prepare data array for database if you want to save info
+    $this->load->model('queries');
+
+    $collateral_type = trim((string) $this->input->post('collateral_type', true));
+    $collateral_name = trim((string) $this->input->post('collateral_name', true));
+    $collateral_description = trim((string) $this->input->post('collateral_description', true));
+    $submitted_at_office = trim((string) $this->input->post('submitted_at_office', true));
+    $received_by_empl_id = (int) $this->input->post('received_by_empl_id');
+    $received_by = '';
+
+    $loan_attach = $this->queries->get_loanAttach($loan_id);
+    $target_blanch_id = !empty($loan_attach->blanch_id)
+      ? (int) $loan_attach->blanch_id
+      : (int) $this->session->userdata('blanch_id');
+    $branch_employees = $this->queries->get_employee_blanch($target_blanch_id);
+
+    foreach ((array) $branch_employees as $employee) {
+      if ((int) $employee->empl_id === $received_by_empl_id) {
+        $received_by = !empty($employee->empl_name)
+          ? trim((string) $employee->empl_name)
+          : trim((string) $employee->username);
+        break;
+      }
+    }
+
+    if ($collateral_type === '' || $collateral_name === '' || $submitted_at_office === '' || $received_by === '') {
+      $this->session->set_flashdata('error', 'Tafadhali jaza taarifa zote za dhamana.');
+      return redirect('oficer/collelateral_session/' . $loan_id);
+    }
+
+    $composed_description = "Type: {$collateral_type}\n"
+      . "Jina La Dhamana: {$collateral_name}\n"
+      . "Description: {$collateral_description}\n"
+      . "Submitted at Office: {$submitted_at_office}\n"
+      . "Received By: {$received_by}";
+
+    $has_collateral_type_column = $this->db->field_exists('collateral_type', 'tbl_collelateral');
+    $has_collateral_name_column = $this->db->field_exists('collateral_name', 'tbl_collelateral');
+    $has_collateral_description_column = $this->db->field_exists('collateral_description', 'tbl_collelateral');
+    $has_submitted_column = $this->db->field_exists('submitted_at_office', 'tbl_collelateral');
+    $has_received_by_column = $this->db->field_exists('received_by', 'tbl_collelateral');
+
+    // Prepare data array for database
     $data = [
-        'description'  => $this->input->post('description', true),
+      'description'  => ($has_collateral_name_column ? $collateral_name : $composed_description),
         'loan_id'      => $loan_id,
         'co_condition' => $this->input->post('co_condition', true),
         'value'        => str_replace(',', '', $this->input->post('value', true)),
-    
     ];
 
+    if ($has_collateral_type_column) {
+      $data['collateral_type'] = $collateral_type;
+    }
+    if ($has_collateral_name_column) {
+      $data['collateral_name'] = $collateral_name;
+    }
+    if ($has_collateral_description_column) {
+      $data['collateral_description'] = $collateral_description;
+    }
+    if ($has_submitted_column) {
+      $data['submitted_at_office'] = $submitted_at_office;
+    }
+    if ($has_received_by_column) {
+      $data['received_by'] = $received_by;
+    }
+
     // Save in DB or do whatever you want with $data
-    $this->load->model('queries');
     if ($this->queries->insert($data)) {
         $this->session->set_flashdata('massage', 'Dhamana imehifadhiwa vizuri.');
     } else {
@@ -4438,13 +4788,53 @@ $admins_numbers = $this->queries->get_admin_numbers();
                 $file_name = '';
             }
             
+            $collateral_type = trim((string) $this->input->post('collateral_type', true));
+            $collateral_name = trim((string) $this->input->post('collateral_name', true));
+            $collateral_description = trim((string) $this->input->post('collateral_description', true));
+            $submitted_at_office = trim((string) $this->input->post('submitted_at_office', true));
+            $received_by = trim((string) $this->input->post('received_by', true));
+            $manual_description = trim((string) $this->input->post('description', true));
+
+            $has_collateral_type_column = $this->db->field_exists('collateral_type', 'tbl_collelateral');
+            $has_collateral_name_column = $this->db->field_exists('collateral_name', 'tbl_collelateral');
+            $has_collateral_description_column = $this->db->field_exists('collateral_description', 'tbl_collelateral');
+            $has_submitted_column = $this->db->field_exists('submitted_at_office', 'tbl_collelateral');
+            $has_received_by_column = $this->db->field_exists('received_by', 'tbl_collelateral');
+
+            $composed_description = "Type: {$collateral_type}\n"
+              . "Jina La Dhamana: {$collateral_name}\n"
+              . "Description: {$collateral_description}\n"
+              . "Submitted at Office: {$submitted_at_office}\n"
+              . "Received By: {$received_by}";
+
             //Prepare array of user data
             $data = array(
-            'description' =>$this->input->post('description'),
+            'description' => ($manual_description !== ''
+              ? $manual_description
+              : (($has_collateral_name_column && $collateral_name !== '') ? $collateral_name : $composed_description)),
             'co_condition' =>$this->input->post('co_condition'),
-            'value' =>$this->input->post('value'),
-            'file_name' => $file_name,
+            'value' =>$this->input->post('value')
             );
+
+            if ($file_name !== '') {
+              $data['file_name'] = $file_name;
+            }
+
+            if ($has_collateral_type_column && $collateral_type !== '') {
+              $data['collateral_type'] = $collateral_type;
+            }
+            if ($has_collateral_name_column && $collateral_name !== '') {
+              $data['collateral_name'] = $collateral_name;
+            }
+            if ($has_collateral_description_column && $collateral_description !== '') {
+              $data['collateral_description'] = $collateral_description;
+            }
+            if ($has_submitted_column && $submitted_at_office !== '') {
+              $data['submitted_at_office'] = $submitted_at_office;
+            }
+            if ($has_received_by_column && $received_by !== '') {
+              $data['received_by'] = $received_by;
+            }
             //   echo "<pre>";
             // print_r($data);
             //  echo "</pre>";
@@ -4452,7 +4842,7 @@ $admins_numbers = $this->queries->get_admin_numbers();
            $this->load->model('queries'); 
             //Storing insertion status message.
             if($data){
-                $this->queries->queries->update_collateral($data,$col_id);
+              $this->queries->update_collateral($data,$col_id);
                 $this->session->set_flashdata('massage','Colateral Updated  Successfully');
                }else{
                 $this->session->set_flashdata('error','Data failed!!');
@@ -9624,12 +10014,18 @@ public function oficer_profile(){
       $this->form_validation->set_rules('sp_name','Sponser first name','required');
       $this->form_validation->set_rules('sp_mname','Sponser midle name','required');
       $this->form_validation->set_rules('sp_lname','Sponser last name','required');
-      $this->form_validation->set_rules('sp_phone_no','Sponser phone number','required');
+      $this->form_validation->set_rules('sp_phone_no','Sponser phone number','required|regex_match[/^0[67][0-9]{8}$/]');
       $this->form_validation->set_rules('nature','nature','required');
       $this->form_validation->set_rules('sp_relation','Sponser relation','required');
       $this->form_validation->set_error_delimiters('<div class="text-danger">','</div>');
       if ($this->form_validation->run()) {
         $data = $this->input->post();
+        $data['sp_phone_no'] = $this->normalize_local_phone_number($data['sp_phone_no'] ?? '');
+
+        if (!$this->is_valid_local_phone_number($data['sp_phone_no'])) {
+          $this->session->set_flashdata('error', 'Phone number must start with 06 or 07 and have 10 digits.');
+          return redirect('oficer/edit_viewSponser/' . $customer_id);
+        }
         //       echo "<pre>";
         // print_r($data);
         //       exit();

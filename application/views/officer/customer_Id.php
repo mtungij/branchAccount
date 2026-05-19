@@ -3,6 +3,21 @@
 <div class="w-full lg:ps-64">
   <div class="p-4 sm:p-6 space-y-6">
 
+    <div class="mb-2">
+      <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200">Upload Passport & Signature</h2>
+      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Hatua ya mwisho ya usajili wa mteja.</p>
+    </div>
+
+    <div class="bg-white border shadow-sm rounded-xl p-4 dark:bg-gray-800 dark:border-gray-700">
+      <div class="flex items-center justify-between text-xs sm:text-sm font-medium mb-2">
+        <span class="text-cyan-700 dark:text-cyan-400">Step 3 of 3: Passport & Signature</span>
+        <span class="text-gray-500 dark:text-gray-400">100%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+        <div class="bg-cyan-600 h-2 rounded-full" style="width: 100%"></div>
+      </div>
+    </div>
+
    
 
     <!-- Skip Button -->

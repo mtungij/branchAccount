@@ -95,7 +95,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-6">
                    <?php echo $this->lang->line('select_customer'); ?>
                 </h3>
-                <?php echo form_open("oficer/search_customer", ['novalidate' => true]); ?>
+                <?php echo form_open("oficer/loan_guarantee_option", ['novalidate' => true]); ?>
                    
                     
                         <!-- Branch Select2 Dropdown -->

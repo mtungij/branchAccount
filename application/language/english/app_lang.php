@@ -202,6 +202,23 @@ $lang['current_general_loan_fee_type'] = 'Current General Loan Fee Type';
 $lang['no_general_fee_type_set'] = 'No general fee type set.';
 $lang['add_general_loan_fee'] = 'Add General Loan Fee';
 $lang['description'] = 'Description';
+$lang['type_of_collateral'] = 'Type of Collateral';
+$lang['select_collateral_type'] = 'Select collateral type';
+$lang['collateral_type_land'] = 'Land';
+$lang['collateral_type_house'] = 'House';
+$lang['collateral_type_vehicle'] = 'Vehicle';
+$lang['collateral_type_business_assets'] = 'Business Assets';
+$lang['collateral_type_household_assets'] = 'Household Assets';
+$lang['collateral_type_electronics'] = 'Electronics';
+$lang['collateral_type_livestock'] = 'Livestock';
+$lang['collateral_type_other'] = 'Other';
+$lang['description_of_collateral'] = 'Description of Collateral';
+$lang['collateral_name_label'] = 'Collateral Name';
+$lang['collateral_condition_label'] = 'Collateral Condition';
+$lang['submitted_at_office'] = 'Submitted at Office';
+$lang['received_by'] = 'Received By';
+$lang['yes'] = 'Yes';
+$lang['no'] = 'No';
 $lang['in_currency_tsh'] = 'in (Tsh)';
 $lang['in_percentage'] = 'in (%)';
 $lang['save_fee'] = 'Save Fee';
@@ -894,6 +911,18 @@ $lang['guarantee_confirmation_question'] = 'Should they remain the same guaranto
 $lang['keep_same_guarantor'] = 'Same Guarantor';
 $lang['change_guarantor'] = 'Change Guarantor';
 
+// Officer Loan Guarantee Option Page
+$lang['guarantor_choice'] = 'Guarantor Choice';
+$lang['guarantor_choice_desc'] = 'Choose how this loan will be guaranteed before continuing.';
+$lang['guarantor_step_decision'] = 'Step: Guarantor Decision';
+$lang['required_label'] = 'Required';
+$lang['self_guarantee_option'] = 'Self-guarantee for a loan';
+$lang['self_guarantee_option_desc'] = 'System will use selected customer as sponsor in next step.';
+$lang['collateral_office_option'] = 'Submit collateral at the office';
+$lang['collateral_office_option_desc'] = 'System will use selected customer as sponsor in next step.';
+$lang['has_guarantor_option'] = 'Has a guarantor for the loan';
+$lang['has_guarantor_option_desc'] = 'Continue to sponsor section in search_customer.';
+
 // Officer Loan Application Form Page
 $lang['loan_application_form'] = 'Loan Application Form';
 $lang['loan_application_form_desc'] = 'Loan Application Form';
@@ -921,6 +950,7 @@ $lang['week'] = 'Week';
 $lang['month'] = 'Month';
 $lang['repayment_sessions'] = 'sessions';
 $lang['fill_all_required_fields'] = 'Please fill in all required fields before proceeding.';
+$lang['phone_already_registered'] = 'This phone number is already registered.';
 
 // Teller officer page
 $lang['collections_desk'] = 'Collections Desk';

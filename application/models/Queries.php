@@ -470,6 +470,20 @@ public function get_customerDataLOANform($customer_id){
 	  return $customer->row();
 }
 
+public function get_latest_sub_customer($customer_id){
+	$customer_id = (int) $customer_id;
+	if ($customer_id <= 0) {
+		return null;
+	}
+
+	return $this->db
+		->where('customer_id', $customer_id)
+		->order_by('id', 'DESC')
+		->limit(1)
+		->get('tbl_sub_customer')
+		->row();
+}
+
 public function insert_customerData($data){
 	$customer_id = isset($data['customer_id']) ? (int) $data['customer_id'] : 0;
 	if ($customer_id <= 0) {

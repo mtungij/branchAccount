@@ -33,6 +33,16 @@ include_once APPPATH . "views/partials/officerheader.php";
                 <?php echo $this->lang->line('customer_detail_desc'); ?>
             </p>
         </div>
+
+        <div class="bg-white border shadow-sm rounded-xl p-4 dark:bg-gray-800 dark:border-gray-700">
+            <div class="flex items-center justify-between text-xs sm:text-sm font-medium mb-2">
+                <span class="text-cyan-700 dark:text-cyan-400">Step 2 of 3: Customer Details</span>
+                <span class="text-gray-500 dark:text-gray-400">66%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                <div class="bg-cyan-600 h-2 rounded-full" style="width: 66%"></div>
+            </div>
+        </div>
         <!-- End Page Title / Subheader -->
 
         <?php // Flash Messages ?>
@@ -59,26 +69,16 @@ include_once APPPATH . "views/partials/officerheader.php";
 
 <?php echo form_open_multipart("oficer/create_lastDetail/{$customer->customer_id}", ['novalidate' => true]); ?>
 
-<!-- Grid: Nickname and Place of Business -->
+<!-- Grid: Nickname -->
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <!-- Nickname -->
-    <div>
+    <div class="sm:col-span-2">
         <label for="famous_area" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('nick_name'); ?>:</label>
         <input type="text" id="famous_area" name="famous_area" placeholder="<?php echo $this->lang->line('nick_name_placeholder'); ?>" autocomplete="off" required
             class="uppercase py-2.5 px-4 w-full border border-gray-300 rounded-md shadow-sm text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
             value="<?php echo set_value('famous_area', ($customer && isset($customer->famous_area) ? htmlspecialchars($customer->famous_area, ENT_QUOTES, 'UTF-8') : '')); ?>">
         <p class="text-xs text-gray-500 mt-1 dark:text-gray-400"><?php echo $this->lang->line('nick_name_hint'); ?></p>
         <?php echo form_error("famous_area", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
-    </div>
-
-    <!-- Place of Business -->
-    <div>
-        <label for="place_imployment" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('place_of_business'); ?>:</label>
-        <input type="text" id="place_imployment" name="place_imployment" placeholder="<?php echo $this->lang->line('place_of_business_placeholder'); ?>" autocomplete="off" required
-            class="uppercase py-2.5 px-4 w-full border border-gray-300 rounded-md shadow-sm text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-            value="<?php echo set_value('place_imployment', ($customer && isset($customer->place_imployment) ? htmlspecialchars($customer->place_imployment, ENT_QUOTES, 'UTF-8') : '')); ?>">
-        <p class="text-xs text-gray-500 mt-1 dark:text-gray-400"><?php echo $this->lang->line('place_of_business_hint'); ?></p>
-        <?php echo form_error("place_imployment", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
     </div>
 </div>
 

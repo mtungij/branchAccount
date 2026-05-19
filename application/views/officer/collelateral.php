@@ -64,18 +64,36 @@ include_once APPPATH . "views/partials/officerheader.php";
               <input type="hidden" name="collateral_form_token" value="<?php echo isset($collateral_form_token) ? htmlspecialchars($collateral_form_token, ENT_QUOTES, 'UTF-8') : ''; ?>">
 
 <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
+    <!-- Type of Collateral -->
+    <div class="sm:col-span-4">
+        <label for="collateral_type" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('type_of_collateral'); ?>:</label>
+        <select id="collateral_type" name="collateral_type" required
+            class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+            <option value=""><?php echo $this->lang->line('select_collateral_type'); ?></option>
+            <option value="Land" <?php echo set_select('collateral_type', 'Land'); ?>><?php echo $this->lang->line('collateral_type_land'); ?></option>
+            <option value="House" <?php echo set_select('collateral_type', 'House'); ?>><?php echo $this->lang->line('collateral_type_house'); ?></option>
+            <option value="Vehicle" <?php echo set_select('collateral_type', 'Vehicle'); ?>><?php echo $this->lang->line('collateral_type_vehicle'); ?></option>
+            <option value="Business Assets" <?php echo set_select('collateral_type', 'Business Assets'); ?>><?php echo $this->lang->line('collateral_type_business_assets'); ?></option>
+            <option value="Household Assets" <?php echo set_select('collateral_type', 'Household Assets'); ?>><?php echo $this->lang->line('collateral_type_household_assets'); ?></option>
+            <option value="Electronics" <?php echo set_select('collateral_type', 'Electronics'); ?>><?php echo $this->lang->line('collateral_type_electronics'); ?></option>
+            <option value="Livestock" <?php echo set_select('collateral_type', 'Livestock'); ?>><?php echo $this->lang->line('collateral_type_livestock'); ?></option>
+            <option value="Other" <?php echo set_select('collateral_type', 'Other'); ?>><?php echo $this->lang->line('collateral_type_other'); ?></option>
+        </select>
+        <?php echo form_error("collateral_type", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+    </div>
+
     <!-- Jina La Dhamana -->
     <div class="sm:col-span-4">
-        <label for="description" class="block text-sm font-medium mb-2 dark:text-gray-300">* Jina La dhamana:</label>
-        <input type="text" id="description" name="description" placeholder="Jaza Jina la dhamana" autocomplete="off" required
+        <label for="collateral_name" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('collateral_name_label'); ?>:</label>
+        <input type="text" id="collateral_name" name="collateral_name" placeholder="Jaza Jina la dhamana" autocomplete="off" required
             class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
-            value="<?php echo set_value('description'); ?>">
-        <?php echo form_error("description", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+            value="<?php echo set_value('collateral_name'); ?>">
+        <?php echo form_error("collateral_name", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
     </div>
 
     <!-- Hali ya Dhamana -->
     <div class="sm:col-span-4">
-        <label for="co_condition" class="block text-sm font-medium mb-2 dark:text-gray-300">* Hali ya Dhamana:</label>
+        <label for="co_condition" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('collateral_condition_label'); ?>:</label>
         <select id="co_condition" name="co_condition" required
             class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
             <option value="">Chagua hali ya dhamana</option>
@@ -88,6 +106,48 @@ include_once APPPATH . "views/partials/officerheader.php";
             <option value="haifanyi kazi" <?php echo set_select('co_condition', 'haifanyi kazi'); ?>>Haifanyi kazi</option>
         </select>
         <?php echo form_error("co_condition", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+    </div>
+
+    <!-- Description of Collateral -->
+    <div class="sm:col-span-6">
+        <label for="collateral_description" class="block text-sm font-medium mb-2 dark:text-gray-300"><?php echo $this->lang->line('description_of_collateral'); ?>:</label>
+        <textarea id="collateral_description" name="collateral_description" rows="3"
+            placeholder="Andika maelezo ya dhamana"
+            class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"><?php echo set_value('collateral_description'); ?></textarea>
+        <?php echo form_error("collateral_description", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+    </div>
+
+    <!-- Collateral Submission -->
+    <div class="sm:col-span-3">
+        <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('submitted_at_office'); ?>?</label>
+        <div class="flex items-center gap-x-4 py-2.5 px-4 border border-gray-200 rounded-lg dark:border-gray-600 dark:bg-gray-700">
+            <label class="inline-flex items-center gap-x-2 text-sm dark:text-gray-300">
+                <input type="radio" name="submitted_at_office" value="Yes" <?php echo set_radio('submitted_at_office', 'Yes'); ?> required>
+                <span><?php echo $this->lang->line('yes'); ?></span>
+            </label>
+            <label class="inline-flex items-center gap-x-2 text-sm dark:text-gray-300">
+                <input type="radio" name="submitted_at_office" value="No" <?php echo set_radio('submitted_at_office', 'No'); ?> required>
+                <span><?php echo $this->lang->line('no'); ?></span>
+            </label>
+        </div>
+        <?php echo form_error("submitted_at_office", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+    </div>
+
+    <!-- Received By -->
+    <div class="sm:col-span-3">
+        <label for="received_by" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('received_by'); ?>:</label>
+        <select id="received_by" name="received_by_empl_id" required
+            class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+            <option value=""><?php echo $this->lang->line('select_employee'); ?></option>
+            <?php if (!empty($branch_employees) && is_array($branch_employees)): ?>
+                <?php foreach ($branch_employees as $branch_employee): ?>
+                    <option value="<?php echo (int) $branch_employee->empl_id; ?>" <?php echo set_select('received_by_empl_id', (string) $branch_employee->empl_id); ?>>
+                        <?php echo htmlspecialchars(!empty($branch_employee->empl_name) ? $branch_employee->empl_name : $branch_employee->username, ENT_QUOTES, 'UTF-8'); ?>
+                    </option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+        <?php echo form_error("received_by_empl_id", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
     </div>
 
     <!-- Thamani ya Dhamana -->
@@ -124,9 +184,11 @@ include_once APPPATH . "views/partials/officerheader.php";
         class="py-2 px-4 btn-primary-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg">Save</button>
 
     <?php if (!empty($collateral)): ?>
-        <a href="<?php echo base_url("oficer/loan_pending"); ?>"
+        <a href="<?php echo !empty($is_collateral_first_flow)
+            ? base_url("oficer/loan_applicationForm/{$loan_attach->customer_id}")
+            : base_url("oficer/loan_pending"); ?>"
             class="py-2 px-4 btn-secondary-sm bg-green-600 text-white rounded-lg hover:bg-red-700">
-            Complete application
+            <?php echo !empty($is_collateral_first_flow) ? 'Endelea na maombi ya mkopo' : 'Complete application'; ?>
         </a>
     <?php endif; ?>
 </div>
@@ -166,8 +228,12 @@ include_once APPPATH . "views/partials/officerheader.php";
                                 <thead class="bg-gray-50 dark:bg-gray-700">
                                     <tr>
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">S/No.</span></div></th>
-                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Jina La Dhamana</span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
-                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Hali Ya Dhamana</span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('type_of_collateral'); ?></span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('collateral_name_label'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('collateral_condition_label'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('description_of_collateral'); ?></span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('submitted_at_office'); ?></span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('received_by'); ?></span></div></th>
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Thamani Ya Dhamana</span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-end --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Action</span></div></th>
                                     </tr>
@@ -176,10 +242,67 @@ include_once APPPATH . "views/partials/officerheader.php";
                                     <?php $no = 1; ?>
                                     <?php if (isset($collateral ) && is_array($collateral ) && !empty($collateral )): ?>
                                         <?php foreach ($collateral  as  $collaterals): ?>
+                                        <?php
+                                            $legacy_description = (string) ($collaterals->description ?? '');
+                                            $legacy_type = '';
+                                            $legacy_name = '';
+                                            $legacy_detail = '';
+                                            $legacy_submitted = '';
+                                            $legacy_received_by = '';
+
+                                            if (preg_match('/^Type:\s*(.+)$/mi', $legacy_description, $match)) {
+                                                $legacy_type = trim($match[1]);
+                                            }
+                                            if (preg_match('/^Jina La Dhamana:\s*(.+)$/mi', $legacy_description, $match)) {
+                                                $legacy_name = trim($match[1]);
+                                            }
+                                            if (preg_match('/^Description:\s*(.+)$/mi', $legacy_description, $match)) {
+                                                $legacy_detail = trim($match[1]);
+                                            }
+                                            if (preg_match('/^Submitted at Office:\s*(.+)$/mi', $legacy_description, $match)) {
+                                                $legacy_submitted = trim($match[1]);
+                                            }
+                                            if (preg_match('/^Received By:\s*(.+)$/mi', $legacy_description, $match)) {
+                                                $legacy_received_by = trim($match[1]);
+                                            }
+
+                                            $display_type = !empty($collaterals->collateral_type) ? $collaterals->collateral_type : $legacy_type;
+                                            $display_name = !empty($collaterals->collateral_name)
+                                                ? $collaterals->collateral_name
+                                                : (!empty($legacy_name) ? $legacy_name : $legacy_description);
+                                            $display_description = !empty($collaterals->collateral_description) ? $collaterals->collateral_description : $legacy_detail;
+                                            $display_submitted = !empty($collaterals->submitted_at_office) ? $collaterals->submitted_at_office : $legacy_submitted;
+                                            $display_received_by = !empty($collaterals->received_by) ? $collaterals->received_by : $legacy_received_by;
+
+                                            $type_translations = [
+                                                'Land' => $this->lang->line('collateral_type_land'),
+                                                'House' => $this->lang->line('collateral_type_house'),
+                                                'Vehicle' => $this->lang->line('collateral_type_vehicle'),
+                                                'Business Assets' => $this->lang->line('collateral_type_business_assets'),
+                                                'Household Assets' => $this->lang->line('collateral_type_household_assets'),
+                                                'Electronics' => $this->lang->line('collateral_type_electronics'),
+                                                'Livestock' => $this->lang->line('collateral_type_livestock'),
+                                                'Other' => $this->lang->line('collateral_type_other')
+                                            ];
+
+                                            if (!empty($display_type) && isset($type_translations[$display_type])) {
+                                                $display_type = $type_translations[$display_type];
+                                            }
+
+                                            if ($display_submitted === 'Yes') {
+                                                $display_submitted = $this->lang->line('yes');
+                                            } elseif ($display_submitted === 'No') {
+                                                $display_submitted = $this->lang->line('no');
+                                            }
+                                        ?>
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200"><?php echo $no++; ?>.</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars( $collaterals->description, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($display_type, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($display_name, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars( $collaterals->co_condition, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($display_description, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($display_submitted, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($display_received_by, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars( $collaterals->value, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                                                 <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">

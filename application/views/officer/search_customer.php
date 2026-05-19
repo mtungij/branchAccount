@@ -258,9 +258,16 @@ $comp_id = $comp_id ?? null;
     <!-- Phone Number -->
     <div class="sm:col-span-4">
         <label for="sp_phone_no" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('phone_number'); ?>:</label>
+        <?php
+        $sp_phone_display = isset($sponser->sp_phone_no) ? trim((string) $sponser->sp_phone_no) : '';
+        if (strpos($sp_phone_display, '255') === 0 && strlen($sp_phone_display) === 12) {
+            $sp_phone_display = '0' . substr($sp_phone_display, 3);
+        }
+        ?>
         <input type="text" id="sp_phone_no" name="sp_phone_no"
-               value="<?= isset($sponser->sp_phone_no) ? htmlspecialchars($sponser->sp_phone_no) : '' ?>"
+               value="<?= htmlspecialchars($sp_phone_display, ENT_QUOTES, 'UTF-8'); ?>"
                placeholder="<?php echo $this->lang->line('guarantor_phone_placeholder'); ?>" autocomplete="off"
+             pattern="0[67][0-9]{8}" maxlength="10" inputmode="numeric"
                class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm 
                       focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
         <?php echo form_error("sp_phone_no", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
@@ -542,16 +549,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const phoneInput = document.getElementById('sp_phone_no');
 
     phoneInput.addEventListener('input', function (e) {
-        let value = phoneInput.value.replace(/\D/g, ''); // Remove non-digits
-
-        // Format like: 0712 345 678
-        if (value.length > 3 && value.length <= 6) {
-            value = value.replace(/(\d{3})(\d+)/, '$1 $2');
-        } else if (value.length > 6) {
-            value = value.replace(/(\d{3})(\d{3})(\d+)/, '$1 $2 $3');
-        }
-
-        phoneInput.value = value;
+        // Keep only digits so HTML pattern and maxlength validation work reliably.
+        phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10);
     });
 
     // On submit, strip formatting so only digits are sent

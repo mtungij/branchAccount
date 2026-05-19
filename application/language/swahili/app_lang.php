@@ -202,6 +202,23 @@ $lang['current_general_loan_fee_type'] = 'Aina ya Sasa ya Ada ya Jumla ya Mkopo'
 $lang['no_general_fee_type_set'] = 'Hakuna aina ya ada ya jumla iliyowekwa.';
 $lang['add_general_loan_fee'] = 'Ongeza Ada ya Jumla ya Mkopo';
 $lang['description'] = 'Maelezo';
+$lang['type_of_collateral'] = 'Aina ya Dhamana';
+$lang['select_collateral_type'] = 'Chagua aina ya dhamana';
+$lang['collateral_type_land'] = 'Ardhi';
+$lang['collateral_type_house'] = 'Nyumba';
+$lang['collateral_type_vehicle'] = 'Gari';
+$lang['collateral_type_business_assets'] = 'Mali za Biashara';
+$lang['collateral_type_household_assets'] = 'Mali za Nyumbani';
+$lang['collateral_type_electronics'] = 'Vifaa vya Kielektroniki';
+$lang['collateral_type_livestock'] = 'Mifugo';
+$lang['collateral_type_other'] = 'Nyingine';
+$lang['description_of_collateral'] = 'Maelezo ya Dhamana';
+$lang['collateral_name_label'] = 'Jina La Dhamana';
+$lang['collateral_condition_label'] = 'Hali ya Dhamana';
+$lang['submitted_at_office'] = 'Imewasilishwa Ofisini';
+$lang['received_by'] = 'Imepokelewa na';
+$lang['yes'] = 'Ndiyo';
+$lang['no'] = 'Hapana';
 $lang['in_currency_tsh'] = 'katika (Tsh)';
 $lang['in_percentage'] = 'katika (%)';
 $lang['save_fee'] = 'Hifadhi Ada';
@@ -895,6 +912,18 @@ $lang['guarantee_confirmation_question'] = 'Je bado anabaki kuwa mdhamini au ana
 $lang['keep_same_guarantor'] = 'Mdhamini Sawa';
 $lang['change_guarantor'] = 'Badilisha Mdhamini';
 
+// Officer Loan Guarantee Option Page
+$lang['guarantor_choice'] = 'Chaguo la Mdhamini';
+$lang['guarantor_choice_desc'] = 'Chagua namna mkopo huu utadhaminiwa kabla ya kuendelea.';
+$lang['guarantor_step_decision'] = 'Hatua: Uamuzi wa Udhamini';
+$lang['required_label'] = 'Inahitajika';
+$lang['self_guarantee_option'] = 'Mkopaji anajidhamini mwenyewe';
+$lang['self_guarantee_option_desc'] = '';
+$lang['collateral_office_option'] = 'Mkopaji anakabidhi dhamana offisini';
+$lang['collateral_office_option_desc'] = '';
+$lang['has_guarantor_option'] = 'Mkopaji ana mdhamini atakayedhamini mkopo';
+$lang['has_guarantor_option_desc'] = '';
+
 // Officer Loan Application Form Page
 $lang['loan_application_form'] = 'Fomu ya Ombi la Mkopo';
 $lang['loan_application_form_desc'] = 'Fomu ya Ombi la Mkopo';
@@ -922,6 +951,7 @@ $lang['week'] = 'Wiki';
 $lang['month'] = 'Mwezi';
 $lang['repayment_sessions'] = 'malipo';
 $lang['fill_all_required_fields'] = 'Tafadhali jaza sehemu zote zinazohitajika kabla ya kuendelea.';
+$lang['phone_already_registered'] = 'Namba hii ya simu tayari imesajiliwa.';
 
 // Teller officer page
 $lang['collections_desk'] = 'Dawati la Makusanyo';

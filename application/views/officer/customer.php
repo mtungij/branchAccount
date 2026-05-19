@@ -99,25 +99,29 @@ include_once APPPATH . "views/partials/officerheader.php";
            ?>
 
                 <?php echo form_open("oficer/create_customer", ['novalidate' => true]); ?>
+                    <?php
+                        $old_input = (isset($old_input) && is_array($old_input)) ? $old_input : [];
+                        $old_gender = isset($old_input['gender']) ? (string) $old_input['gender'] : '';
+                    ?>
                     <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
                         <div class="sm:col-span-4">
                             <label for="f_name" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('first_name'); ?>:</label>
                             <input type="text" id="f_name" name="f_name" placeholder="<?php echo $this->lang->line('full_name_placeholder'); ?>" autocomplete="off" 
-                                   class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('f_name'); ?>">
+                                   class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('f_name', isset($old_input['f_name']) ? $old_input['f_name'] : ''); ?>">
                             <?php echo form_error("f_name", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
 
 						<div class="sm:col-span-4">
                             <label for="m_name" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('middle_name'); ?>:</label>
                             <input type="text" id="m_name" name="m_name" placeholder="<?php echo $this->lang->line('full_name_placeholder'); ?>" autocomplete="off" 
-                                   class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('m_name'); ?>">
+                                class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('m_name', isset($old_input['m_name']) ? $old_input['m_name'] : ''); ?>">
                             <?php echo form_error("m_name", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
 
 						<div class="sm:col-span-4">
                             <label for="l_name" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('last_name'); ?>:</label>
                             <input type="text" id="l_name" name="l_name" placeholder="<?php echo $this->lang->line('full_name_placeholder'); ?>" autocomplete="off" 
-                                   class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('l_name'); ?>">
+                                class=" uppercase py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?php echo set_value('l_name', isset($old_input['l_name']) ? $old_input['l_name'] : ''); ?>">
                             <?php echo form_error("l_name", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
 
@@ -125,7 +129,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                             <label for="phone_no" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('phone_number'); ?>:</label>
                             <input type="text" id="phone_no" name="phone_no" placeholder="<?php echo $this->lang->line('phone_number_format'); ?>" autocomplete="off" required
                                 class="phone-format py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-                                value="<?php echo set_value('phone_no'); ?>">
+                                value="<?php echo set_value('phone_no', isset($old_input['phone_no']) ? $old_input['phone_no'] : ''); ?>">
 
                             <?php echo form_error("phone_no", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
@@ -135,8 +139,8 @@ include_once APPPATH . "views/partials/officerheader.php";
                             <select id="gender" name="gender"
                                 class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600">
                                 <option value=""><?php echo $this->lang->line('select_gender'); ?></option>
-                                <option value="Male" <?php echo set_select('gender', 'Male'); ?>><?php echo $this->lang->line('male'); ?></option>
-                                <option value="Female" <?php echo set_select('gender', 'Female'); ?>><?php echo $this->lang->line('female'); ?></option>
+                                <option value="Male" <?php echo set_select('gender', 'Male', $old_gender === 'Male'); ?>><?php echo $this->lang->line('male'); ?></option>
+                                <option value="Female" <?php echo set_select('gender', 'Female', $old_gender === 'Female'); ?>><?php echo $this->lang->line('female'); ?></option>
                             </select>
                             <?php echo form_error("gender", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
@@ -147,7 +151,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                             </label>
                             <input type="date" id="date_birth" name="date_birth" autocomplete="off"
                                 class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-                                value="<?php echo set_value('date_birth'); ?>">
+                                value="<?php echo set_value('date_birth', isset($old_input['date_birth']) ? $old_input['date_birth'] : ''); ?>">
                             <?php echo form_error("date_birth", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                         </div>
                         

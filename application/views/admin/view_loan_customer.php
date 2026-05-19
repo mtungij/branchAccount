@@ -247,8 +247,12 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
     <thead class="bg-gray-50 dark:bg-gray-700">
         <tr>
             <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold">S/No.</th>
+                <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('type_of_collateral'); ?></th>
                 <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('collateral_name'); ?></th>
                 <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('collateral_condition'); ?></th>
+                <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('description_of_collateral'); ?></th>
+                <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('submitted_at_office'); ?></th>
+                <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('received_by'); ?></th>
                 <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('collateral_value'); ?></th>
                 <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('view_collateral'); ?></th>
         </tr>
@@ -261,11 +265,68 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
             ?>
             <?php foreach ($collateral as $item): ?>
                 <?php $total_value += $item->value; ?>
+                <?php
+                    $legacy_description = (string) ($item->description ?? '');
+                    $legacy_type = '';
+                    $legacy_name = '';
+                    $legacy_detail = '';
+                    $legacy_submitted = '';
+                    $legacy_received_by = '';
+
+                    if (preg_match('/^Type:\s*(.+)$/mi', $legacy_description, $match)) {
+                        $legacy_type = trim($match[1]);
+                    }
+                    if (preg_match('/^Jina La Dhamana:\s*(.+)$/mi', $legacy_description, $match)) {
+                        $legacy_name = trim($match[1]);
+                    }
+                    if (preg_match('/^Description:\s*(.+)$/mi', $legacy_description, $match)) {
+                        $legacy_detail = trim($match[1]);
+                    }
+                    if (preg_match('/^Submitted at Office:\s*(.+)$/mi', $legacy_description, $match)) {
+                        $legacy_submitted = trim($match[1]);
+                    }
+                    if (preg_match('/^Received By:\s*(.+)$/mi', $legacy_description, $match)) {
+                        $legacy_received_by = trim($match[1]);
+                    }
+
+                    $display_type = !empty($item->collateral_type) ? $item->collateral_type : $legacy_type;
+                    $display_name = !empty($item->collateral_name)
+                        ? $item->collateral_name
+                        : (!empty($legacy_name) ? $legacy_name : $legacy_description);
+                    $display_description = !empty($item->collateral_description) ? $item->collateral_description : $legacy_detail;
+                    $display_submitted = !empty($item->submitted_at_office) ? $item->submitted_at_office : $legacy_submitted;
+                    $display_received_by = !empty($item->received_by) ? $item->received_by : $legacy_received_by;
+
+                    $type_translations = [
+                        'Land' => $this->lang->line('collateral_type_land'),
+                        'House' => $this->lang->line('collateral_type_house'),
+                        'Vehicle' => $this->lang->line('collateral_type_vehicle'),
+                        'Business Assets' => $this->lang->line('collateral_type_business_assets'),
+                        'Household Assets' => $this->lang->line('collateral_type_household_assets'),
+                        'Electronics' => $this->lang->line('collateral_type_electronics'),
+                        'Livestock' => $this->lang->line('collateral_type_livestock'),
+                        'Other' => $this->lang->line('collateral_type_other')
+                    ];
+
+                    if (!empty($display_type) && isset($type_translations[$display_type])) {
+                        $display_type = $type_translations[$display_type];
+                    }
+
+                    if ($display_submitted === 'Yes') {
+                        $display_submitted = $this->lang->line('yes');
+                    } elseif ($display_submitted === 'No') {
+                        $display_submitted = $this->lang->line('no');
+                    }
+                ?>
                 <tr>
                     <td class="px-6 py-4 text-sm font-medium text-gray-800 dark:text-gray-200"><?= $no++; ?>.</td>
-                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($item->description); ?></td>
-                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($item->co_condition); ?></td>
-                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= number_format($item->value, 2); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($display_type, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($display_name, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($item->co_condition, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($display_description, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($display_submitted, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= htmlspecialchars($display_received_by, ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td class="px-6 py-4 text-sm text-gray-800 dark:text-gray-200"><?= number_format((float) $item->value, 2); ?></td>
                     <td class="px-6 py-4">
                         <?php if (!empty($item->file_name)): ?>
                             <button 
@@ -290,7 +351,7 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
             <?php endforeach; ?>
         <?php else: ?>
             <tr>
-                <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     <?php echo $this->lang->line('no_collateral_records'); ?>
                 </td>
             </tr>
@@ -299,7 +360,7 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
     <?php if (!empty($collateral) && is_array($collateral)): ?>
     <tfoot class="bg-gray-50 dark:bg-gray-800">
         <tr>
-                <td colspan="3" class="px-6 py-4 text-sm font-semibold text-right text-gray-700 dark:text-gray-200"><?php echo $this->lang->line('total'); ?>:</td>
+                <td colspan="7" class="px-6 py-4 text-sm font-semibold text-right text-gray-700 dark:text-gray-200"><?php echo $this->lang->line('total'); ?>:</td>
             <td class="px-6 py-4 text-sm font-bold text-gray-800 dark:text-white"><?= number_format($total_value, 2); ?></td>
             <td></td>
         </tr>
