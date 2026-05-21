@@ -45,7 +45,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-6">
                    Search Customer
                 </h3>
-                <?php echo form_open("oficer/search_customerData", ['novalidate' => true]); ?>
+                <?php echo form_open("oficer/search_customerData", ['novalidate' => true, 'id' => 'tellerCustomerSearchForm']); ?>
                    
                     
                         <!-- Branch Select2 Dropdown -->
@@ -55,7 +55,7 @@ include_once APPPATH . "views/partials/officerheader.php";
         class="py-3 px-4 pe-9 block w-full bg-cyan-600 border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400 dark:placeholder-gray-500 dark:focus:ring-gray-600 select2">
         <option value="">Select customer</option>
 		<?php foreach ($customer as $customers): ?>
-    <option value="<?= $customers->customer_id ?>">
+        <option value="<?= $customers->customer_id ?>" data-work-status="<?= htmlspecialchars((string) ($customers->work_status ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
         <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
         <?= strtoupper($customers->customer_code); ?> /
         <?= strtoupper($customers->blanch_name); ?>
@@ -82,6 +82,36 @@ include_once APPPATH . "views/partials/officerheader.php";
     </div>
 </div>
 <!-- ========== END MAIN CONTENT BODY ========== -->
+
+<div id="workStatusPromptModal" class="hidden fixed inset-0 z-50 bg-black/50 p-4 sm:p-6">
+    <div class="max-w-md mx-auto mt-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Weka Hali ya Ajira</h3>
+        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Mteja huyu hana taarifa ya hali ya ajira. Tafadhali chagua moja kabla ya kuendelea.
+        </p>
+        <p class="text-sm text-gray-700 dark:text-gray-200 mb-4">
+            <span class="font-semibold">Mteja:</span>
+            <span id="modal_customer_name" class="uppercase"></span>
+        </p>
+
+        <form id="workStatusPromptForm" method="post" action="<?php echo base_url('oficer/search_customerData'); ?>">
+            <input type="hidden" name="customer_id" id="modal_customer_id" value="">
+            <input type="hidden" name="comp_id" value="<?php echo htmlspecialchars($_SESSION['comp_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
+            <label for="modal_work_status" class="block text-sm font-medium mb-2 dark:text-gray-300">Hali ya Ajira</label>
+            <select id="modal_work_status" name="work_status" required class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                <option value="">Chagua</option>
+                <option value="Mjasiriamali">Mjasiriamali</option>
+                <option value="Mwajiriwa">Mtumishi</option>
+            </select>
+
+            <div class="mt-5 flex gap-2 justify-end">
+                <button type="button" id="cancelWorkStatusPrompt" class="py-2 px-4 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+                <button type="submit" class="py-2 px-4 rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">Continue</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?php
 include_once APPPATH . "views/partials/footer.php";
@@ -223,11 +253,62 @@ $(document).ready(function () {
         containerCssClass: 'custom-select2-container'
     };
 
-    $('#branchSelect').select2({...selectConfig, placeholder: "Select Customer"});
+    const $branchSelect = $('#branchSelect').select2({...selectConfig, placeholder: "Select Customer"});
+    const $searchForm = $('#tellerCustomerSearchForm');
+    const modal = document.getElementById('workStatusPromptModal');
+    const modalCustomerInput = document.getElementById('modal_customer_id');
+    const modalWorkStatus = document.getElementById('modal_work_status');
+    const modalCustomerName = document.getElementById('modal_customer_name');
+    const cancelBtn = document.getElementById('cancelWorkStatusPrompt');
 
-    // Auto-submit on change
-    $('#branchSelect').on('change', function () {
-        $(this).closest('form').submit();
+    function openWorkStatusModal(customerId, customerName) {
+        if (!modal || !modalCustomerInput || !modalWorkStatus) {
+            return;
+        }
+        modalCustomerInput.value = customerId;
+        modalWorkStatus.value = '';
+        if (modalCustomerName) {
+            modalCustomerName.textContent = customerName || '-';
+        }
+        modal.classList.remove('hidden');
+    }
+
+    function closeWorkStatusModal() {
+        if (!modal) {
+            return;
+        }
+        modal.classList.add('hidden');
+        if (modalCustomerName) {
+            modalCustomerName.textContent = '';
+        }
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', function () {
+            closeWorkStatusModal();
+            $branchSelect.val('').trigger('change.select2');
+        });
+    }
+
+    // Auto-submit on change, but require work_status for customers that still have null/empty status.
+    $branchSelect.on('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const customerId = this.value;
+        const customerName = selectedOption ? selectedOption.text.split('/')[0].trim() : '';
+        const workStatus = (selectedOption && selectedOption.getAttribute('data-work-status'))
+            ? selectedOption.getAttribute('data-work-status').trim()
+            : '';
+
+        if (!customerId) {
+            return;
+        }
+
+        if (!workStatus) {
+            openWorkStatusModal(customerId, customerName);
+            return;
+        }
+
+        $searchForm.submit();
     });
 
     // Your existing code for AJAX loading employees, etc.

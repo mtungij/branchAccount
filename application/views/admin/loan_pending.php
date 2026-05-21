@@ -94,7 +94,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                         <label for="filter_work_status" class="block text-sm font-medium mb-1 dark:text-gray-300">Hali ya Ajira</label>
                         <select id="filter_work_status" name="work_status" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                             <option value="">Zote</option>
-                            <option value="Mwajiriwa" <?php echo (($selected_work_status ?? '') === 'Mwajiriwa') ? 'selected' : ''; ?>>Mwajiriwa</option>
+                            <option value="Mwajiriwa" <?php echo (($selected_work_status ?? '') === 'Mwajiriwa') ? 'selected' : ''; ?>>Mtumishi</option>
                             <option value="Mjasiriamali" <?php echo (($selected_work_status ?? '') === 'Mjasiriamali') ? 'selected' : ''; ?>>Mjasiriamali</option>
                         </select>
                     </div>
@@ -196,7 +196,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->blanch_name, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo number_format((float) preg_replace('/[^\d.\-]/', '', (string) ($loan_pendings->how_loan ?? 0))); ?></td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->loan_day) ? date('d M Y', strtotime($loan_pendings->loan_day)) : '-'; ?></td>
-										<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->work_status) ? htmlspecialchars($loan_pendings->work_status, ENT_QUOTES, 'UTF-8') : '-'; ?></td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->work_status) ? htmlspecialchars(($loan_pendings->work_status === 'Mwajiriwa' ? 'Mtumishi' : $loan_pendings->work_status), ENT_QUOTES, 'UTF-8') : '-'; ?></td>
 	<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?php if ($loan_pendings->day == 1): ?>
         <span><?php echo $this->lang->line('daily'); ?> (<?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?>)</span>

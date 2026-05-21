@@ -301,7 +301,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
                 class="py-2 px-3 block w-full bg-cyan-600 border border-gray-300 rounded-md text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 dark:placeholder-gray-500 select2">
                 <option value="">Search Customer</option>
                 <?php foreach ($customery as $customers): ?>
-                    <option value="<?= $customers->customer_id ?>">
+                  <option value="<?= $customers->customer_id ?>" data-work-status="<?= htmlspecialchars((string) ($customers->work_status ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                         <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
                         <?= strtoupper($customers->customer_code); ?> /
                         <?= strtoupper($customers->blanch_name); ?>
@@ -714,6 +714,36 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
 </div>
 <!-- ========== END MAIN CONTENT BODY ========== -->
 
+<div id="workStatusPromptModalSearch" class="hidden fixed inset-0 z-50 bg-black/50 p-4 sm:p-6">
+  <div class="max-w-md mx-auto mt-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Weka Hali ya Ajira</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+      Mteja huyu hana taarifa ya hali ya ajira. Tafadhali chagua moja kabla ya kuendelea.
+    </p>
+    <p class="text-sm text-gray-700 dark:text-gray-200 mb-4">
+      <span class="font-semibold">Mteja:</span>
+      <span id="modal_search_customer_name" class="uppercase"></span>
+    </p>
+
+    <form id="workStatusPromptSearchForm" method="post" action="<?php echo base_url('oficer/search_customerData'); ?>">
+      <input type="hidden" name="customer_id" id="modal_search_customer_id" value="">
+      <input type="hidden" name="comp_id" value="<?php echo htmlspecialchars($_SESSION['comp_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
+      <label for="modal_search_work_status" class="block text-sm font-medium mb-2 dark:text-gray-300">Hali ya Ajira</label>
+      <select id="modal_search_work_status" name="work_status" required class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+        <option value="">Chagua</option>
+        <option value="Mjasiriamali">Mjasiriamali</option>
+        <option value="Mwajiriwa">Mtumishi</option>
+      </select>
+
+      <div class="mt-5 flex gap-2 justify-end">
+        <button type="button" id="cancelWorkStatusPromptSearch" class="py-2 px-4 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+        <button type="submit" class="py-2 px-4 rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">Continue</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <?php
 include_once APPPATH . "views/partials/footer.php";
 ?>
@@ -828,14 +858,62 @@ $(document).ready(function () {
     };
 
     // Customer Search Select
-    $('#branchSelect').select2({...selectConfig, placeholder: "Tafuta Mteja"});
+    const $branchSelect = $('#branchSelect').select2({...selectConfig, placeholder: "Tafuta Mteja"});
+    const $searchForm = $('#customerSearchForm');
+    const modal = document.getElementById('workStatusPromptModalSearch');
+    const modalCustomerInput = document.getElementById('modal_search_customer_id');
+    const modalWorkStatus = document.getElementById('modal_search_work_status');
+    const modalCustomerName = document.getElementById('modal_search_customer_name');
+    const cancelBtn = document.getElementById('cancelWorkStatusPromptSearch');
+
+    function openWorkStatusModal(customerId, customerName) {
+      if (!modal || !modalCustomerInput || !modalWorkStatus) {
+        return;
+      }
+      modalCustomerInput.value = customerId;
+      modalWorkStatus.value = '';
+      if (modalCustomerName) {
+        modalCustomerName.textContent = customerName || '-';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeWorkStatusModal() {
+      if (!modal) {
+        return;
+      }
+      modal.classList.add('hidden');
+      if (modalCustomerName) {
+        modalCustomerName.textContent = '';
+      }
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        closeWorkStatusModal();
+        $branchSelect.val('').trigger('change.select2');
+      });
+    }
 
     // Auto-submit when customer is selected
-    $('#branchSelect').on('select2:select', function () {
-        const selected = $(this).val();
-        if (selected) {
-            $('#customerSearchForm').submit();
-        }
+    $branchSelect.on('select2:select', function () {
+      const selected = this.options[this.selectedIndex];
+      const selectedId = $(this).val();
+      const customerName = selected ? selected.text.split('/')[0].trim() : '';
+      const workStatus = selected && selected.getAttribute('data-work-status')
+        ? selected.getAttribute('data-work-status').trim()
+        : '';
+
+      if (!selectedId) {
+        return;
+      }
+
+      if (!workStatus) {
+        openWorkStatusModal(selectedId, customerName);
+        return;
+      }
+
+      $searchForm.submit();
     });
 
     // Employee Select (loaded dynamically based on branch)

@@ -43,7 +43,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                             class="py-2.5 px-4 w-full border border-gray-300 rounded-md shadow-sm text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                             <option value="">Chagua hali ya ajira</option>
                             <option value="Mjasiriamali" <?php echo ($selected_status === 'Mjasiriamali') ? 'selected' : ''; ?>>Mjasiriamali</option>
-                            <option value="Mwajiriwa" <?php echo ($selected_status === 'Mwajiriwa') ? 'selected' : ''; ?>>Mwajiriwa</option>
+                            <option value="Mwajiriwa" <?php echo ($selected_status === 'Mwajiriwa') ? 'selected' : ''; ?>>Mtumishi</option>
                         </select>
                         <?php echo form_error('work_status', '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                     </div>
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (status === 'Mwajiriwa') {
             placeLabel.textContent = '* Sehemu ya ajira:';
             placeInput.placeholder = 'Andika sehemu ya ajira';
-            placeHint.textContent = 'Kwa mwajiriwa, andika sehemu ya ajira.';
+            placeHint.textContent = 'Kwa mtumishi, andika sehemu ya ajira.';
             return;
         }
 

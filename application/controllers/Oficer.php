@@ -6444,7 +6444,7 @@ public function disburse($loan_id){
 
 // } elseif ($position === 'BRANCH MANAGER') {
 
-  $customer = $this->queries->get_allcutomerBlanch($blanch_id);
+  $customer = $this->queries->get_allcutomerblanchData($blanch_id);
 // } else {
 //   $customer=[];
 // }
@@ -6493,8 +6493,23 @@ public function disburse($loan_id){
     $empl_data = $this->queries->get_employee_data($empl_id);
 
     
-    $customer_id = $this->input->post('customer_id');
-    $comp_id = $this->input->post('comp_id');
+    $customer_id = $this->input->post('customer_id', true);
+    if (empty($customer_id)) {
+      $customer_id = $this->input->get('customer_id', true);
+    }
+
+    $comp_id = $this->input->post('comp_id', true);
+    if (empty($comp_id)) {
+      $comp_id = $this->input->get('comp_id', true);
+    }
+
+    $incoming_work_status = trim((string) $this->input->post('work_status', true));
+    if ((int) $customer_id > 0 && in_array($incoming_work_status, ['Mjasiriamali', 'Mwajiriwa'], true)) {
+      $this->queries->insert_customerData([
+        'customer_id' => (int) $customer_id,
+        'work_status' => $incoming_work_status
+      ]);
+    }
     $customer = $this->queries->search_CustomerLoan($customer_id);
     @$customer_id = $customer->customer_id;
     @$blanch_id = $customer->blanch_id;

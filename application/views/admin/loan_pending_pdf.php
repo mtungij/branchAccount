@@ -2,7 +2,7 @@
 $company_name = !empty($compdata->comp_name) ? $compdata->comp_name : 'Kampuni';
 $branch_name = !empty($blanch_data->blanch_name) ? $blanch_data->blanch_name : 'Matawi yote';
 $report_date = !empty($loan_application_date) ? $loan_application_date : 'Tarehe zote';
-$work_status_label = !empty($selected_work_status) ? $selected_work_status : 'Zote';
+$work_status_label = !empty($selected_work_status) ? ($selected_work_status === 'Mwajiriwa' ? 'Mtumishi' : $selected_work_status) : 'Zote';
 
 $logo_path = '';
 if (!empty($compdata->comp_logo) && file_exists(FCPATH . 'assets/img/' . $compdata->comp_logo)) {
@@ -186,7 +186,7 @@ if (!empty($compdata->comp_logo) && file_exists(FCPATH . 'assets/img/' . $compda
             <td><?php echo htmlspecialchars((string) ($row->blanch_name ?? '-'), ENT_QUOTES, 'UTF-8'); ?></td>
             <td class="right"><?php echo number_format((float) ($row->how_loan ?? 0)); ?></td>
             <td><?php echo htmlspecialchars($request_date, ENT_QUOTES, 'UTF-8'); ?></td>
-            <td><?php echo !empty($row->work_status) ? htmlspecialchars($row->work_status, ENT_QUOTES, 'UTF-8') : '-'; ?></td>
+            <td><?php echo !empty($row->work_status) ? htmlspecialchars(($row->work_status === 'Mwajiriwa' ? 'Mtumishi' : $row->work_status), ENT_QUOTES, 'UTF-8') : '-'; ?></td>
             <td><?php echo htmlspecialchars($duration, ENT_QUOTES, 'UTF-8'); ?></td>
           </tr>
         <?php endforeach; ?>
