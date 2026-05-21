@@ -192,7 +192,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
 
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->phone_no, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->blanch_name, ENT_QUOTES, 'UTF-8'); ?></td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo number_format(htmlspecialchars($loan_pendings->how_loan, ENT_QUOTES, 'UTF-8')); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo number_format((float) preg_replace('/[^\d.\-]/', '', (string) ($loan_pendings->how_loan ?? 0))); ?></td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->loan_day) ? date('d M Y', strtotime($loan_pendings->loan_day)) : '-'; ?></td>
 										<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->work_status) ? htmlspecialchars($loan_pendings->work_status, ENT_QUOTES, 'UTF-8') : '-'; ?></td>
 	<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
