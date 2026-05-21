@@ -273,7 +273,7 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
     <span class="text-white text-sm"><?php echo $this->lang->line('today_receivable'); ?></span>
   </a>
 
-      <a href="<?= base_url('Oficer/cash_transaction')?>" class="bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-indigo-800 text-white rounded-xl shadow p-6">
+      <a href="<?= base_url('oficer/today_officer_transaction')?>" class="bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-700 dark:to-indigo-800 text-white rounded-xl shadow p-6">
     <h4 class="text-2xl font-bold flex items-center gap-2">
         <i class="icon-wallet"></i> 	<?php echo number_format($total_lipwa); ?>
     </h4>
@@ -281,12 +281,12 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
   </a>
 
 
-<div class="bg-gradient-to-r from-orange-400 to-orange-600 dark:from-cyan-700 dark:to-teal-800 text-white rounded-xl shadow p-6">
+<a href="<?= base_url('oficer/default_payments_customers') ?>" class="bg-gradient-to-r from-orange-400 to-orange-600 dark:from-cyan-700 dark:to-teal-800 text-white rounded-xl shadow p-6 block hover:opacity-90 transition">
     <h4 class="text-2xl font-bold flex items-center gap-2">
         <i class="icon-wallet"></i> <?php echo number_format($total_default->total_default); ?>
     </h4>
     <span class="text-white text-sm"><?php echo $this->lang->line('total_default_payments'); ?></span>
-</div>
+</a>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

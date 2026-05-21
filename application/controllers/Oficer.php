@@ -6744,6 +6744,29 @@ public function today_officer_transaction(){
     $this->load->view('officer/today_officer_transaction',['empl_data'=>$empl_data,'cash_transaction'=>$cash_transaction,'sum_cashTransaction'=>$sum_cashTransaction,'account_deposit'=>$account_deposit,'default_list'=>$default_list,'toyal_default'=>$toyal_default,'withdrawal_account'=>$withdrawal_account,'total_code_no'=>$total_code_no,'deducted_fee'=>$deducted_fee,'penart_paid'=>$penart_paid,'miamala'=>$miamala,'total_miamala'=>$total_miamala,'hai_wateja'=>$hai_wateja,'sugu_wateja'=>$sugu_wateja]);
 }
 
+  public function default_payments_customers()
+  {
+    $this->load->model('queries');
+    $blanch_id = $this->session->userdata('blanch_id');
+    $empl_id = $this->session->userdata('empl_id');
+
+    $empl_data = $this->queries->get_employee_data($empl_id);
+    $privillage = $this->queries->get_position_empl($empl_id);
+    $manager = $this->queries->get_position_manager($empl_id);
+
+    // Use the exact same source as print_officer_todaycash_transaction -> MADENI SUGU section.
+    $default_list = $this->queries->get_depositing_out_blanch($blanch_id);
+    $toyal_default = $this->queries->get_depositing_out_total_blanch($blanch_id);
+
+    $this->load->view('officer/default_payments_customers', [
+      'empl_data' => $empl_data,
+      'privillage' => $privillage,
+      'manager' => $manager,
+      'default_list' => $default_list,
+      'toyal_default' => $toyal_default,
+    ]);
+  }
+
 public function print_officer_todaycash_transaction()
 
 {
