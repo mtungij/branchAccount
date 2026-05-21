@@ -2968,10 +2968,17 @@ $comp_phone = $compdata->comp_number;
 	
 			$this->load->model('queries');
 			$category_id = $data['category_id'];
-			$how_loan = $data['how_loan'];
+            $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
 			$cat = $this->queries->get_loancategoryData($category_id);
-			$loan_price = $cat->loan_price;
-			$loan_perday = $cat->loan_perday;
+            $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+            $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+            if ($how_loan <= 0) {
+                $this->session->set_flashdata('mass', 'Please enter a valid loan amount');
+                return redirect('admin/loan_applicationForm/' . $customer_id);
+            }
+
+            $data['how_loan'] = $how_loan;
 	
 			if ($how_loan < $loan_price) {
 				$this->session->set_flashdata('mass', 'Amount of Loan Is Less');
@@ -3019,10 +3026,17 @@ $comp_phone = $compdata->comp_number;
         	  
         	  $this->load->model('queries');
         	   $category_id = $data['category_id'];
-        	   $how_loan = $data['how_loan'];
+            	   $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
         	   $cat = $this->queries->get_loancategoryData($category_id);
-        	   $loan_price = $cat->loan_price;
-        	   $loan_perday = $cat->loan_perday;
+            	   $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+            	   $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+            	   if ($how_loan <= 0) {
+            	   	$this->session->set_flashdata('mass', 'Please enter a valid loan amount');
+            	   	return redirect('admin/loan_applicationForm/' . $customer_id);
+            	   }
+
+            	   $data['how_loan'] = $how_loan;
         	   $zaidi = $loan_perday;
         	      // print_r($zaidi);
         	      //       exit();
@@ -3060,15 +3074,89 @@ $comp_phone = $compdata->comp_number;
     	$this->load->model('queries');
     	$comp_id = $this->session->userdata('comp_id');
         $selected_blanch_id = $this->resolve_selected_branch_id();
-        $loan_pending = $selected_blanch_id > 0
-            ? $this->queries->get_loanPendingBlanch($selected_blanch_id)
-            : $this->queries->get_loanPending($comp_id);
+        $loan_application_date = trim((string) $this->input->get('loan_application_date', true));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $loan_application_date)) {
+            $loan_application_date = '';
+        }
+
+        $selected_work_status = trim((string) $this->input->get('work_status', true));
+        if (!in_array($selected_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+            $selected_work_status = '';
+        }
+
+        $loan_pending = $this->queries->get_loanPendingFiltered($comp_id, $selected_blanch_id, $loan_application_date, $selected_work_status);
+        $total_loan_amount = 0;
+        if (!empty($loan_pending) && is_array($loan_pending)) {
+            foreach ($loan_pending as $pending_item) {
+                $total_loan_amount += (float) ($pending_item->how_loan ?? 0);
+            }
+        }
         $blanch = $this->queries->get_blanch($comp_id);
             //     echo "<pre>";
             // print_r( $loan_pending);
             //     echo "<pre>";
             //         exit();
-        $this->load->view('admin/loan_pending',['loan_pending'=>$loan_pending,'blanch'=>$blanch,'selected_blanch_id'=>$selected_blanch_id]);
+        $this->load->view('admin/loan_pending',[
+            'loan_pending' => $loan_pending,
+            'blanch' => $blanch,
+            'selected_blanch_id' => $selected_blanch_id,
+            'loan_application_date' => $loan_application_date,
+            'selected_work_status' => $selected_work_status,
+            'total_loan_amount' => $total_loan_amount
+        ]);
+    }
+
+    public function download_loan_pending_pdf(){
+        ini_set('memory_limit', '256M');
+        $this->load->model('queries');
+
+        $comp_id = $this->session->userdata('comp_id');
+        if (!$comp_id) {
+            return redirect('login');
+        }
+
+        $selected_blanch_id = $this->resolve_selected_branch_id($this->input->get('blanch_id', true));
+        $loan_application_date = trim((string) $this->input->get('loan_application_date', true));
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $loan_application_date)) {
+            $loan_application_date = '';
+        }
+
+        $selected_work_status = trim((string) $this->input->get('work_status', true));
+        if (!in_array($selected_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+            $selected_work_status = '';
+        }
+
+        $loan_pending = $this->queries->get_loanPendingFiltered($comp_id, $selected_blanch_id, $loan_application_date, $selected_work_status);
+
+        $total_loan_amount = 0;
+        if (!empty($loan_pending) && is_array($loan_pending)) {
+            foreach ($loan_pending as $pending_item) {
+                $total_loan_amount += (float) ($pending_item->how_loan ?? 0);
+            }
+        }
+
+        $compdata = $this->queries->get_companyData($comp_id);
+        $blanch_data = $selected_blanch_id > 0 ? $this->queries->get_blanch_data($selected_blanch_id) : null;
+
+        $mpdf = new \Mpdf\Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4-L',
+            'orientation' => 'L',
+            'tempDir' => APPPATH . 'tmp/mpdf'
+        ]);
+
+        $html = $this->load->view('admin/loan_pending_pdf', [
+            'compdata' => $compdata,
+            'blanch_data' => $blanch_data,
+            'loan_pending' => $loan_pending,
+            'loan_application_date' => $loan_application_date,
+            'selected_work_status' => $selected_work_status,
+            'total_loan_amount' => $total_loan_amount
+        ], true);
+
+        $mpdf->SetFooter('Generated By Brainsoft Technology');
+        $mpdf->WriteHTML($html);
+        $mpdf->Output('loan_pending_' . date('Y-m-d') . '.pdf', 'D');
     }
 
 

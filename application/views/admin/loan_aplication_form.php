@@ -175,6 +175,19 @@ include_once APPPATH . "views/partials/footer.php";
 
 <?php // Script for cmd+a fix for DataTables search input (if used) ?>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const loanForm = document.querySelector('form[action*="admin/create_loanapplication"], form[action*="admin/modify_loanapplication"]');
+    const loanInput = document.getElementById('how_loan');
+
+    if (loanForm && loanInput) {
+        loanForm.addEventListener('submit', function () {
+            loanInput.value = String(loanInput.value || '').replace(/\D/g, '');
+        });
+    }
+});
+</script>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <!-- Include Select2 CSS -->

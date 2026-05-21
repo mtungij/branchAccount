@@ -289,8 +289,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     .replace(/\B(?=(\d{3})+(?!\d))/g, ','); // Add commas
     }
 
-    function unformatNumber(value) {
-        return value.replace(/,/g, ''); // Remove commas
+    function sanitizeNumber(value) {
+        return value.replace(/\D/g, ''); // Keep digits only for submitted value
     }
 
     // On input, format the visible field and update hidden field with raw number
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let cursorPosition = this.selectionStart;
         let originalLength = this.value.length;
 
-        let unformatted = unformatNumber(this.value);
+        let unformatted = sanitizeNumber(this.value);
         hiddenInput.value = unformatted;
 
         this.value = formatNumber(unformatted);
@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Initialize hidden input with unformatted value on page load
-    hiddenInput.value = unformatNumber(formattedInput.value);
+    hiddenInput.value = sanitizeNumber(formattedInput.value);
 });
 
 // Confirmation Modal Functions
@@ -375,6 +375,12 @@ function closeConfirmationModal() {
 }
 
 function submitForm() {
+    const formattedInput = document.getElementById('how_loan_formatted');
+    const hiddenInput = document.getElementById('how_loan');
+    if (formattedInput && hiddenInput) {
+        hiddenInput.value = formattedInput.value.replace(/\D/g, '');
+    }
+
     const submitBtn = document.querySelector('#confirmationModal button[onclick="submitForm()"]');
     if (submitBtn) {
         submitBtn.disabled = true;

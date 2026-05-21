@@ -62,6 +62,73 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('loan_requests'); ?></h2>
             </div>
 
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <form method="get" action="<?php echo base_url('admin/loan_pending'); ?>" class="flex flex-wrap items-end gap-3">
+                    <div>
+                        <label for="filter_blanch_id" class="block text-sm font-medium mb-1 dark:text-gray-300"><?php echo rtrim($this->lang->line('branch'), ':'); ?></label>
+                        <select id="filter_blanch_id" name="blanch_id" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                            <option value="all"><?php echo $this->lang->line('all') ?: 'All'; ?></option>
+                            <?php if (!empty($blanch) && is_array($blanch)): ?>
+                                <?php foreach ($blanch as $branch_item): ?>
+                                    <option value="<?php echo (int) $branch_item->blanch_id; ?>" <?php echo ((int) ($selected_blanch_id ?? 0) === (int) $branch_item->blanch_id) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($branch_item->blanch_name, ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="filter_loan_application_date" class="block text-sm font-medium mb-1 dark:text-gray-300"><?php echo $this->lang->line('loan_application_date') ?: 'Loan Application Date'; ?></label>
+                        <input
+                            type="date"
+                            id="filter_loan_application_date"
+                            name="loan_application_date"
+                            value="<?php echo htmlspecialchars($loan_application_date ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                            class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="filter_work_status" class="block text-sm font-medium mb-1 dark:text-gray-300">Hali ya Ajira</label>
+                        <select id="filter_work_status" name="work_status" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                            <option value="">Zote</option>
+                            <option value="Mwajiriwa" <?php echo (($selected_work_status ?? '') === 'Mwajiriwa') ? 'selected' : ''; ?>>Mwajiriwa</option>
+                            <option value="Mjasiriamali" <?php echo (($selected_work_status ?? '') === 'Mjasiriamali') ? 'selected' : ''; ?>>Mjasiriamali</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">
+                            <?php echo $this->lang->line('filter') ?: 'Filter'; ?>
+                        </button>
+                    </div>
+
+                    <div>
+                        <button type="submit" formaction="<?php echo base_url('admin/download_loan_pending_pdf'); ?>" formtarget="_blank" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">
+                            <?php echo $this->lang->line('download_pdf') ?: 'Download PDF'; ?>
+                        </button>
+                    </div>
+
+                    <div>
+                        <a href="<?php echo base_url('admin/loan_pending?blanch_id=all'); ?>" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                            <?php echo $this->lang->line('reset') ?: 'Reset'; ?>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
+                <div class="rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+                        <?php echo $this->lang->line('total_loan_request') ?: 'Total Loan Request'; ?>
+                    </span>
+                    <div class="mt-1 text-base font-semibold text-gray-800 dark:text-gray-100">
+                        TZS <?php echo number_format((float) ($total_loan_amount ?? 0)); ?>
+                    </div>
+                </div>
+            </div>
+
             <div class="p-4" data-hs-datatable='{
                 "pageLength": 10, "paging": true,
                 "pagingOptions": { "pageBtnClasses": "min-w-10 h-10 inline-flex justify-center items-center text-gray-800 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 py-2.5 text-sm rounded-full disabled:opacity-50 disabled:pointer-events-none dark:text-white dark:focus:bg-gray-700 dark:hover:bg-gray-700" },
@@ -86,9 +153,9 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('phone_number'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo rtrim($this->lang->line('branch'), ':'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_amount'); ?></span></div></th>
-                                           <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('interest_formula'); ?></span></div></th>
-                                        <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_duration'); ?></span></div></th>
-										<th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('number_of_repayments'); ?></span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_application_date') ?: 'Request Date'; ?></span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400">Hali ya Ajira</span></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo ($this->lang->line('loan_duration') ?: 'Muda wa Mkopo') . ' (' . ($this->lang->line('number_of_repayments') ?: 'Idadi ya Malipo') . ')'; ?></span></div></th>
 										<th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_status'); ?></span></div></th>
 										<th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('verification_status') ?? 'Verification'; ?></span></div></th>
                                         <th scope="col" class="py-3 px-6 text-end --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('action'); ?></span></div></th>
@@ -126,18 +193,20 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->phone_no, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->blanch_name, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo number_format(htmlspecialchars($loan_pendings->how_loan, ENT_QUOTES, 'UTF-8')); ?></td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_pendings->rate, ENT_QUOTES, 'UTF-8'); ?></td>
-<td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->loan_day) ? date('d M Y', strtotime($loan_pendings->loan_day)) : '-'; ?></td>
+										<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->work_status) ? htmlspecialchars($loan_pendings->work_status, ENT_QUOTES, 'UTF-8') : '-'; ?></td>
+	<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?php if ($loan_pendings->day == 1): ?>
-        <span class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('daily'); ?></span>
+        <span><?php echo $this->lang->line('daily'); ?> (<?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?>)</span>
     <?php elseif ($loan_pendings->day == 7): ?>
-        <span class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('weekly'); ?></span>
+        <span><?php echo $this->lang->line('weekly'); ?> (<?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?>)</span>
     <?php elseif (in_array($loan_pendings->day, [28, 29, 30, 31])): ?>
-        <span class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('monthly'); ?></span>
+        <span><?php echo $this->lang->line('monthly'); ?> (<?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?>)</span>
+    <?php else: ?>
+        <span><?php echo htmlspecialchars($loan_pendings->day, ENT_QUOTES, 'UTF-8'); ?> (<?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?>)</span>
     <?php endif; ?>
 	</td>
 	
-	<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo ucfirst(htmlspecialchars($loan_pendings->session, ENT_QUOTES, 'UTF-8')); ?></td>
 	
 
 

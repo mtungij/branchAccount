@@ -1433,6 +1433,49 @@ public function get_total_pay_description_acount_statement($loan_id)
 		");
 		return $loan->result();
 	}
+
+	public function get_loanPendingFiltered($comp_id, $blanch_id = 0, $loan_application_date = '', $work_status = '') {
+		$sql = "
+			SELECT
+				l.*,
+				c.*,
+				lt.*,
+				b.*,
+				s.*,
+				e.empl_name as created_by_name,
+				vb.empl_name as verifier_name
+			FROM tbl_loans l
+			LEFT JOIN tbl_customer c ON c.customer_id = l.customer_id
+			LEFT JOIN tbl_loan_category lt ON lt.category_id = l.category_id
+			LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id
+			LEFT JOIN tbl_sub_customer s ON s.customer_id = l.customer_id
+			LEFT JOIN tbl_employee e ON e.empl_id = l.created_by
+			LEFT JOIN tbl_employee vb ON vb.empl_id = l.verified_by
+			WHERE l.loan_status = 'open'
+			AND l.comp_id = ?
+		";
+
+		$params = [(int) $comp_id];
+
+		if ((int) $blanch_id > 0) {
+			$sql .= " AND l.blanch_id = ?";
+			$params[] = (int) $blanch_id;
+		}
+
+		if (!empty($loan_application_date)) {
+			$sql .= " AND DATE(l.loan_day) = ?";
+			$params[] = $loan_application_date;
+		}
+
+		if (!empty($work_status)) {
+			$sql .= " AND s.work_status = ?";
+			$params[] = $work_status;
+		}
+
+		$sql .= " ORDER BY l.loan_id DESC";
+
+		return $this->db->query($sql, $params)->result();
+	}
 	
 
          public function get_loan_request_Balnch($blanch_id){

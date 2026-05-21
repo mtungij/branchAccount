@@ -4459,10 +4459,17 @@ private function upload_file($field_name, $new_name_prefix)
   
       // Fetch category info for limits
       $category_id = $data['category_id'];
-      $how_loan = $data['how_loan'];
+      $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
       $cat = $this->queries->get_loancategoryData($category_id);
-      $loan_price = $cat->loan_price;
-      $loan_perday = $cat->loan_perday;
+        $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+        $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+        if ($how_loan <= 0) {
+          $this->session->set_flashdata('massage', 'Please enter a valid loan amount');
+          return redirect('oficer/loan_applicationForm/' . $customer_id);
+        }
+
+        $data['how_loan'] = $how_loan;
   
       if ($how_loan < $loan_price) {
           $this->session->set_flashdata('massage', 'Amount of Loan Is Less than minimum allowed');
@@ -4536,11 +4543,18 @@ public function modify_loanapplication($customer_id, $loan_id) {
         $old_loan_amount = $existing_loan->how_loan;
 
         $category_id = $data['category_id'];
-        $how_loan = $data['how_loan'];
+        $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
 
         $cat = $this->queries->get_loancategoryData($category_id);
-        $loan_price = $cat->loan_price;
-        $loan_perday = $cat->loan_perday;
+        $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+        $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+        if ($how_loan <= 0) {
+          $this->session->set_flashdata('massage', 'Please enter a valid loan amount');
+          return redirect('oficer/loan_applicationForm/' . $customer_id);
+        }
+
+        $data['how_loan'] = $how_loan;
 
         if ($how_loan < $loan_price) {
             $this->session->set_flashdata('massage', 'Amount of Loan Is Less');
