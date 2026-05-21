@@ -50,14 +50,15 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
 
         <!-- Card: Register Share Holder Form -->
 		<div class="flex flex-col">
-    <div class="-m-1.5 overflow-x-auto">
-      <div class="p-1.5 min-w-full inline-block align-middle">
-        <div class="bg-white border border-gray-200 rounded-xl shadow-2xs overflow-hidden dark:bg-neutral-800 dark:border-neutral-700">
+        <div class="w-full overflow-hidden">
+            <div class="w-full align-middle">
+                <div class="loan-pending-card-shell w-full max-w-full bg-white border border-gray-200 rounded-xl shadow-2xs overflow-hidden dark:bg-neutral-800 dark:border-neutral-700">
           <!-- Header -->
 
            
         <!-- Card: Share Holder List Table -->
         <div class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                        <div id="loan-pending-fixed-head" class="sticky top-0 z-20 bg-white dark:bg-gray-800">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('loan_requests'); ?></h2>
             </div>
@@ -127,6 +128,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                         TZS <?php echo number_format((float) ($total_loan_amount ?? 0)); ?>
                     </div>
                 </div>
+            </div>
             </div>
 
             <div class="p-4" data-hs-datatable='{
@@ -320,6 +322,16 @@ window.addEventListener('load', () => {
 
 <style>
 @media (max-width: 640px) {
+    .loan-pending-card-shell,
+    #loan-pending-fixed-head {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    #loan-pending-fixed-head form > div {
+        min-width: 0;
+    }
+
     #shareholder_table th,
     #shareholder_table td {
         padding: 0.5rem 0.5rem;
