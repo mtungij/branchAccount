@@ -62,9 +62,9 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200"><?php echo $this->lang->line('loan_requests'); ?></h2>
             </div>
 
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <form method="get" action="<?php echo base_url('admin/loan_pending'); ?>" class="flex flex-wrap items-end gap-3">
-                    <div>
+            <div class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <form method="get" action="<?php echo base_url('admin/loan_pending'); ?>" class="grid w-full grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+                    <div class="w-full">
                         <label for="filter_blanch_id" class="block text-sm font-medium mb-1 dark:text-gray-300"><?php echo rtrim($this->lang->line('branch'), ':'); ?></label>
                         <select id="filter_blanch_id" name="blanch_id" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                             <option value="all"><?php echo $this->lang->line('all') ?: 'All'; ?></option>
@@ -78,7 +78,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                         </select>
                     </div>
 
-                    <div>
+                    <div class="w-full">
                         <label for="filter_loan_application_date" class="block text-sm font-medium mb-1 dark:text-gray-300"><?php echo $this->lang->line('loan_application_date') ?: 'Loan Application Date'; ?></label>
                         <input
                             type="date"
@@ -89,7 +89,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                         >
                     </div>
 
-                    <div>
+                    <div class="w-full">
                         <label for="filter_work_status" class="block text-sm font-medium mb-1 dark:text-gray-300">Hali ya Ajira</label>
                         <select id="filter_work_status" name="work_status" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                             <option value="">Zote</option>
@@ -98,20 +98,20 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                         </select>
                     </div>
 
-                    <div>
-                        <button type="submit" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">
+                    <div class="w-full">
+                        <button type="submit" class="w-full py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">
                             <?php echo $this->lang->line('filter') ?: 'Filter'; ?>
                         </button>
                     </div>
 
-                    <div>
-                        <button type="submit" formaction="<?php echo base_url('admin/download_loan_pending_pdf'); ?>" formtarget="_blank" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">
+                    <div class="w-full">
+                        <button type="submit" formaction="<?php echo base_url('admin/download_loan_pending_pdf'); ?>" formtarget="_blank" class="w-full py-2.5 px-4 inline-flex justify-center items-center rounded-lg bg-red-600 text-white text-sm hover:bg-red-700">
                             <?php echo $this->lang->line('download_pdf') ?: 'Download PDF'; ?>
                         </button>
                     </div>
 
-                    <div>
-                        <a href="<?php echo base_url('admin/loan_pending?blanch_id=all'); ?>" class="py-2.5 px-4 inline-flex justify-center items-center rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
+                    <div class="w-full">
+                        <a href="<?php echo base_url('admin/loan_pending?blanch_id=all'); ?>" class="w-full py-2.5 px-4 inline-flex justify-center items-center rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">
                             <?php echo $this->lang->line('reset') ?: 'Reset'; ?>
                         </a>
                     </div>
@@ -135,7 +135,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                 "language": { "zeroRecords": "<div class=\"py-10 px-5 flex flex-col justify-center items-center text-center\"><svg class=\"shrink-0 size-6 text-gray-500 dark:text-gray-400\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><div class=\"max-w-sm mx-auto\"><p class=\"mt-2 text-sm text-gray-600 dark:text-gray-400\"><?php echo $this->lang->line('no_records_found'); ?></p></div></div>" }
             }'>
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <div class="relative max-w-xs w-full">
+                    <div class="relative w-full sm:max-w-xs">
                         <label for="shareholder-table-search" class="sr-only"><?php echo $this->lang->line('search'); ?></label>
                         <input type="text" name="shareholder-table-search" id="shareholder-table-search" class="py-2 px-3 ps-9 block w-full border-gray-200 shadow-sm rounded-lg text-sm focus:z-10 focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" placeholder="<?php echo $this->lang->line('search'); ?>..." data-hs-datatable-search="#shareholder_table">
                         <div class="absolute inset-y-0 start-0 flex items-center pointer-events-none ps-3"><svg class="size-4 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></div>
@@ -317,3 +317,18 @@ window.addEventListener('load', () => {
   }, 500);
 });
 </script>
+
+<style>
+@media (max-width: 640px) {
+    #shareholder_table th,
+    #shareholder_table td {
+        padding: 0.5rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    #shareholder_table .hs-dropdown-toggle {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+}
+</style>
