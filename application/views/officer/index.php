@@ -211,7 +211,7 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
 
     <!-- First Row: 4 Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <div class="bg-white shadow rounded p-4 flex items-center">
+        <a href="<?= base_url('oficer/all_customer') ?>" class="bg-white shadow rounded p-4 flex items-center hover:shadow-md transition">
             <img src="https://www.wrraptheme.com/templates/lucid/html/assets/images/coin/XRP.svg" class="w-8 h-8 mr-3" />
             <div>
                 <div class="text-xs text-gray-500 font-semibold"><?php echo $this->lang->line('total_customers'); ?></div>
@@ -219,9 +219,9 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
                    <?= $total_customers ?>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white shadow rounded p-4 flex items-center">
+        <a href="<?= base_url('oficer/active_customers_details') ?>" class="bg-white shadow rounded p-4 flex items-center hover:shadow-md transition">
             <img src="https://www.wrraptheme.com/templates/lucid/html/assets/images/coin/ETH.svg" class="w-8 h-8 mr-3" />
             <div>
                 <div class="text-xs text-gray-500 font-semibold"><?php echo $this->lang->line('total_active_customers'); ?></div>
@@ -229,9 +229,9 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
                    <?= $active_customer ?>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white shadow rounded p-4 flex items-center">
+        <a href="<?= base_url('oficer/default_customers_details') ?>" class="bg-white shadow rounded p-4 flex items-center hover:shadow-md transition">
             <img src="https://www.wrraptheme.com/templates/lucid/html/assets/images/coin/XRP.svg" class="w-8 h-8 mr-3" />
             <div>
                 <div class="text-xs text-gray-500 font-semibold"><?php echo $this->lang->line('total_default_customers'); ?></div>
@@ -239,9 +239,9 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
                    <?= $default_customer ?>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white shadow rounded p-4 flex items-center">
+        <a href="<?= base_url('oficer/customers_completed_today_details') ?>" class="bg-white shadow rounded p-4 flex items-center hover:shadow-md transition">
             <img src="https://www.wrraptheme.com/templates/lucid/html/assets/images/coin/neo.svg" class="w-8 h-8 mr-3" />
             <div>
                 <div class="text-xs text-gray-500 font-semibold"><?php echo $this->lang->line('customers_completed_today'); ?></div>
@@ -249,9 +249,9 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
                    <?= $done_customer ?>
                 </div>
             </div>
-        </div>
+        </a>
 
-        <div class="bg-white shadow rounded p-4 flex items-center">
+        <a href="<?= base_url('oficer/customers_due_tomorrow_details') ?>" class="bg-white shadow rounded p-4 flex items-center hover:shadow-md transition">
                  <img src="https://www.wrraptheme.com/templates/lucid/html/assets/images/coin/neo.svg" class="w-8 h-8 mr-3" />
             <div>
                 <div class="text-xs text-gray-500 font-semibold"><?php echo $this->lang->line('customers_due_tomorrow'); ?></div>
@@ -259,7 +259,7 @@ echo "<!-- Session comp_name: " . ($this->session->userdata('comp_name') ?? 'NUL
                    <?= $customers_due_tomorrow ?? 0 ?>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Second Row: 3 Colored Cards -->

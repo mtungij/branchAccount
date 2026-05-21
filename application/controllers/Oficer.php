@@ -201,6 +201,98 @@ class Oficer extends CI_Controller{
     'loan_feeCloseData'=>$loan_feeCloseData,'deducted'=>$deducted,'non_deducted'=>$non_deducted,'blanch_amount_balance'=>$blanch_amount_balance,'accepted_expences'=>$accepted_expences]);
     }
 
+    public function customers_due_tomorrow_details()
+    {
+      $this->load->model('queries');
+      $empl_id = $this->session->userdata('empl_id');
+      $manager_data = $this->queries->get_manager_data($empl_id);
+      $blanch_id = $manager_data->blanch_id;
+
+      $empl_data = $this->queries->get_employee_data($empl_id);
+      $privillage = $this->queries->get_position_empl($empl_id);
+      $manager = $this->queries->get_position_manager($empl_id);
+
+      $customers = $this->queries->get_customers_due_tomorrow_details($blanch_id);
+
+      $this->load->view('officer/customer_loan_card_details', [
+        'customers' => $customers,
+        'empl_data' => $empl_data,
+        'privillage' => $privillage,
+        'manager' => $manager,
+        'card_title' => 'Customers Due Tomorrow',
+        'card_type' => 'due_tomorrow'
+      ]);
+    }
+
+    public function customers_completed_today_details()
+    {
+      $this->load->model('queries');
+      $empl_id = $this->session->userdata('empl_id');
+      $manager_data = $this->queries->get_manager_data($empl_id);
+      $blanch_id = $manager_data->blanch_id;
+
+      $empl_data = $this->queries->get_employee_data($empl_id);
+      $privillage = $this->queries->get_position_empl($empl_id);
+      $manager = $this->queries->get_position_manager($empl_id);
+
+      $customers = $this->queries->get_customers_completed_today_details($blanch_id);
+
+      $this->load->view('officer/customer_loan_card_details', [
+        'customers' => $customers,
+        'empl_data' => $empl_data,
+        'privillage' => $privillage,
+        'manager' => $manager,
+        'card_title' => 'Customers Completed Today',
+        'card_type' => 'completed_today'
+      ]);
+    }
+
+    public function active_customers_details()
+    {
+      $this->load->model('queries');
+      $empl_id = $this->session->userdata('empl_id');
+      $manager_data = $this->queries->get_manager_data($empl_id);
+      $blanch_id = $manager_data->blanch_id;
+
+      $empl_data = $this->queries->get_employee_data($empl_id);
+      $privillage = $this->queries->get_position_empl($empl_id);
+      $manager = $this->queries->get_position_manager($empl_id);
+
+      $customers = $this->queries->get_active_customers_with_loans_details($blanch_id);
+
+      $this->load->view('officer/customer_loan_card_details', [
+        'customers' => $customers,
+        'empl_data' => $empl_data,
+        'privillage' => $privillage,
+        'manager' => $manager,
+        'card_title' => 'Total Active Customers',
+        'card_type' => 'active_customers'
+      ]);
+    }
+
+    public function default_customers_details()
+    {
+      $this->load->model('queries');
+      $empl_id = $this->session->userdata('empl_id');
+      $manager_data = $this->queries->get_manager_data($empl_id);
+      $blanch_id = $manager_data->blanch_id;
+
+      $empl_data = $this->queries->get_employee_data($empl_id);
+      $privillage = $this->queries->get_position_empl($empl_id);
+      $manager = $this->queries->get_position_manager($empl_id);
+
+      $customers = $this->queries->get_default_customers_with_loans_details($blanch_id);
+
+      $this->load->view('officer/customer_loan_card_details', [
+        'customers' => $customers,
+        'empl_data' => $empl_data,
+        'privillage' => $privillage,
+        'manager' => $manager,
+        'card_title' => 'Total Default Customers',
+        'card_type' => 'default_customers'
+      ]);
+    }
+
       public function my_profile(){
     	$this->load->model('queries');
            $blanch_id = $this->session->userdata('blanch_id');

@@ -3809,6 +3809,31 @@ public function count_done_loans_with_today_deposit_by_officer($empl_id) {
 
 
 
+public function get_customers_due_tomorrow_details($blanch_id) {
+	$tomorrow = date("Y-m-d", strtotime('+1 day'));
+	$query = $this->db->query("\n        SELECT\n            l.loan_id, l.customer_id, l.loan_code, l.how_loan, l.loan_int, l.loan_day, l.loan_status,\n            o.loan_end_date,\n            c.customer_code, c.f_name, c.m_name, c.l_name, c.phone_no,\n            sc.work_status,\n            b.blanch_name\n        FROM tbl_loans l\n        JOIN tbl_outstand o ON o.loan_id = l.loan_id\n        JOIN tbl_customer c ON c.customer_id = l.customer_id\n        LEFT JOIN (\n            SELECT sc1.*\n            FROM tbl_sub_customer sc1\n            JOIN (\n                SELECT customer_id, MAX(id) AS latest_id\n                FROM tbl_sub_customer\n                GROUP BY customer_id\n            ) latest_sc ON latest_sc.latest_id = sc1.id\n        ) sc ON sc.customer_id = c.customer_id\n        LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id\n        WHERE l.blanch_id = ?\n          AND l.loan_status = 'withdrawal'\n          AND DATE(o.loan_end_date) = ?\n        ORDER BY o.loan_end_date ASC, l.loan_id DESC\n    ", [$blanch_id, $tomorrow]);
+
+	return $query->result();
+}
+
+public function get_customers_completed_today_details($blanch_id) {
+	$query = $this->db->query("\n        SELECT\n            l.loan_id, l.customer_id, l.loan_code, l.how_loan, l.loan_int, l.loan_day, l.loan_status,\n            o.loan_end_date,\n            c.customer_code, c.f_name, c.m_name, c.l_name, c.phone_no,\n            sc.work_status,\n            b.blanch_name,\n            dep.depost_day AS depost_day,\n            dep.total_depost_today\n        FROM tbl_loans l\n        JOIN (\n            SELECT\n                d.loan_id,\n                MAX(d.depost_day) AS depost_day,\n                SUM(d.depost) AS total_depost_today\n            FROM tbl_depost d\n            WHERE DATE(d.depost_day) = CURDATE()\n            GROUP BY d.loan_id\n        ) dep ON dep.loan_id = l.loan_id\n        JOIN tbl_customer c ON c.customer_id = l.customer_id\n        LEFT JOIN (\n            SELECT sc1.*\n            FROM tbl_sub_customer sc1\n            JOIN (\n                SELECT customer_id, MAX(id) AS latest_id\n                FROM tbl_sub_customer\n                GROUP BY customer_id\n            ) latest_sc ON latest_sc.latest_id = sc1.id\n        ) sc ON sc.customer_id = c.customer_id\n        LEFT JOIN tbl_outstand o ON o.loan_id = l.loan_id\n        LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id\n        WHERE l.blanch_id = ?\n          AND l.loan_status = 'done'\n        ORDER BY dep.depost_day DESC, l.loan_id DESC\n    ", [$blanch_id]);
+
+	return $query->result();
+}
+
+public function get_active_customers_with_loans_details($blanch_id) {
+	$query = $this->db->query("\n        SELECT\n            l.loan_id, l.customer_id, l.loan_code, l.how_loan, l.loan_int, l.loan_day, l.loan_status,\n            o.loan_end_date,\n            c.customer_code, c.f_name, c.m_name, c.l_name, c.phone_no,\n            sc.work_status,\n            b.blanch_name\n        FROM tbl_loans l\n        JOIN tbl_customer c ON c.customer_id = l.customer_id\n        LEFT JOIN (\n            SELECT sc1.*\n            FROM tbl_sub_customer sc1\n            JOIN (\n                SELECT customer_id, MAX(id) AS latest_id\n                FROM tbl_sub_customer\n                GROUP BY customer_id\n            ) latest_sc ON latest_sc.latest_id = sc1.id\n        ) sc ON sc.customer_id = c.customer_id\n        LEFT JOIN tbl_outstand o ON o.loan_id = l.loan_id\n        LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id\n        WHERE l.blanch_id = ?\n          AND l.loan_status = 'withdrawal'\n        ORDER BY l.loan_day DESC, l.loan_id DESC\n    ", [$blanch_id]);
+
+	return $query->result();
+}
+
+public function get_default_customers_with_loans_details($blanch_id) {
+	$query = $this->db->query("\n        SELECT\n            l.loan_id, l.customer_id, l.loan_code, l.how_loan, l.loan_int, l.loan_day, l.loan_status,\n            o.loan_end_date,\n            c.customer_code, c.f_name, c.m_name, c.l_name, c.phone_no,\n            sc.work_status,\n            b.blanch_name\n        FROM tbl_loans l\n        JOIN tbl_customer c ON c.customer_id = l.customer_id\n        LEFT JOIN (\n            SELECT sc1.*\n            FROM tbl_sub_customer sc1\n            JOIN (\n                SELECT customer_id, MAX(id) AS latest_id\n                FROM tbl_sub_customer\n                GROUP BY customer_id\n            ) latest_sc ON latest_sc.latest_id = sc1.id\n        ) sc ON sc.customer_id = c.customer_id\n        LEFT JOIN tbl_outstand o ON o.loan_id = l.loan_id\n        LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id\n        WHERE l.blanch_id = ?\n          AND l.loan_status = 'out'\n        ORDER BY l.loan_day DESC, l.loan_id DESC\n    ", [$blanch_id]);
+
+	return $query->result();
+}
+
 public function get_repayment_data($comp_id){
 	$data = $this->db->query("SELECT * FROM tbl_loans l JOIN tbl_customer c ON c.customer_id = l.customer_id JOIN tbl_blanch b ON b.blanch_id = l.blanch_id JOIN tbl_loan_category lc ON lc.category_id = l.category_id WHERE l.comp_id = '$comp_id' AND l.loan_status = 'done'");
 	  return $data->result();
