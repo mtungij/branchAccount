@@ -140,6 +140,18 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
             <span class="font-bold text-base">Status</span>
             <span class="px-3 py-1 rounded-full text-xs font-medium <?= $status_class; ?>"><?= $status_label; ?></span>
           </li>
+          <li class="flex items-center justify-between py-2 px-3 font-bold text-base">
+            <span>Employee Status</span>
+            <span>
+              <?php
+                $display_work_status = trim((string) ($customer->work_status ?? ''));
+                if ($display_work_status === 'Mwajiriwa') {
+                  $display_work_status = 'Mtumishi';
+                }
+                echo $display_work_status !== '' ? htmlspecialchars($display_work_status, ENT_QUOTES, 'UTF-8') : '-';
+              ?>
+            </span>
+          </li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Customer Code</span><span><?= $customer->code; ?></span></li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Gawa Tarehe</span><span><?= $gawa_tarehe !== '' ? $gawa_tarehe : '-'; ?></span></li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Mwisho Tarehe</span><span><?= $mwisho_tarehe !== '' ? $mwisho_tarehe : '-'; ?></span></li>
