@@ -693,7 +693,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
       <input type="date" id="deposit_date" name="deposit_date"
         value="<?= date('Y-m-d'); ?>"
         class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-        readonly
+        
         required>
     </div>
 
