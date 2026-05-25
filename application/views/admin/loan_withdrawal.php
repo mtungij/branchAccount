@@ -181,6 +181,11 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
                   }
                 }
 
+                $raw_work_status = trim((string) ($loan_aproveds->work_status ?? ''));
+                if ($raw_work_status === 'Mjasiriamali') {
+                  $loan_type_label = 'Mkopo wa Mjasiriamali';
+                }
+
                 echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
               ?>
             </td>
