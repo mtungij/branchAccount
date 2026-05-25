@@ -313,6 +313,125 @@ $txt_closing_account = 'Salio la Akaunti ya Tawi - %s';
 			padding: 14px 0 0;
 		}
 	}
+	/* ---- Summary table: flex-row per row on all devices < 768px ---- */
+
+	@media (max-width: 767px) {
+		.daily-report-wrap {
+			padding: 12px;
+		}
+		.daily-report-header {
+			padding: 14px;
+			border-radius: 10px;
+			margin-bottom: 14px;
+		}
+		.daily-report-title {
+			font-size: 18px;
+		}
+		.daily-report-subtitle {
+			font-size: 12px;
+			line-height: 1.5;
+		}
+		.daily-report-header form {
+			gap: 6px;
+		}
+		.daily-report-header form input[type=date],
+		.daily-report-header form a,
+		.daily-report-header form button[type=submit] {
+			font-size: 11px;
+			padding: 5px 9px;
+		}
+		.daily-report-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			margin-bottom: 14px;
+		}
+		.daily-report-card {
+			padding: 12px;
+			border-radius: 10px;
+		}
+		.daily-report-label {
+			font-size: 10px;
+			margin-bottom: 6px;
+		}
+		.daily-report-value {
+			font-size: 18px;
+			word-break: break-all;
+		}
+		.daily-report-note {
+			font-size: 10px;
+			margin-top: 4px;
+		}
+		.daily-report-table-card {
+			border-radius: 10px;
+		}
+		.daily-report-table-title {
+			padding: 12px 14px;
+			font-size: 15px;
+		}
+		/* Each summary row is a flex row: item left, amount right */
+		.daily-report-table tr {
+			display: flex;
+			align-items: baseline;
+			flex-wrap: nowrap;
+			gap: 6px;
+			padding: 8px 12px;
+			border-bottom: 1px solid #edf2f7;
+		}
+		.daily-report-table td {
+			display: block;
+			font-size: 12px;
+			padding: 0;
+			border-bottom: none;
+			word-break: break-word;
+			line-height: 1.5;
+		}
+		/* Item column grows; reset any inline padding-left indents */
+		.daily-report-table td:first-child {
+			flex: 1;
+			min-width: 0;
+			padding-left: 0 !important;
+		}
+		/* Amount column stays on right, no wrap */
+		.daily-report-table td:last-child {
+			flex-shrink: 0;
+			text-align: right;
+			white-space: nowrap;
+			max-width: 45%;
+		}
+		/* Full-width colspan rows */
+		.daily-report-table td[colspan] {
+			flex: 1 1 100%;
+			max-width: 100%;
+		}
+		/* Smaller transfer button on mobile */
+		.transfer-open-btn {
+			font-size: 10px !important;
+			padding: 3px 8px !important;
+			margin-top: 4px;
+			display: inline-block !important;
+			white-space: normal !important;
+		}
+		.daily-report-empty {
+			padding: 12px 14px;
+		}
+	}
+
+	@media (max-width: 479px) {
+		.daily-report-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 8px;
+		}
+		.daily-report-value {
+			font-size: 15px;
+			word-break: break-all;
+		}
+		.daily-report-label {
+			font-size: 9px;
+		}
+		.daily-report-note {
+			font-size: 10px;
+		}
+	}
 
 	@media (min-width: 768px) and (max-width: 991px) {
 		.daily-report-wrap {
@@ -391,7 +510,7 @@ $txt_closing_account = 'Salio la Akaunti ya Tawi - %s';
 				<h2 class="daily-report-table-title"><?php echo $txt_today_summary; ?></h2>
 				<div class="daily-report-table-wrap">
 				<table class="daily-report-table">
-					<thead>
+					<tbody>
 					
 					
 
