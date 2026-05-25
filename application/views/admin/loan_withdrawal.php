@@ -166,7 +166,7 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
             <?php endif; ?>
             <td class="px-4 py-3 dark:text-white">
               <?php
-                $raw_loan_type = trim((string) ($loan_aproveds->loan_type ?? ''));
+                $raw_loan_type = strtolower(trim((string) ($loan_aproveds->loan_type ?? '')));
                 $loan_type_label = '-';
 
                 if ($raw_loan_type !== '') {
@@ -181,8 +181,8 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
                   }
                 }
 
-                $raw_work_status = trim((string) ($loan_aproveds->work_status ?? ''));
-                if ($raw_work_status === 'Mjasiriamali') {
+                $raw_work_status = strtolower(trim((string) ($loan_aproveds->work_status ?? '')));
+                if ($raw_work_status === 'mjasiriamali' && ($raw_loan_type === '' || $raw_loan_type === 'main')) {
                   $loan_type_label = 'Mkopo wa Mjasiriamali';
                 }
 
