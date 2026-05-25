@@ -160,7 +160,7 @@
       <th><?php echo $txt_date_of_birth; ?></th>
       <th><?php echo $txt_sex; ?></th>
       <th><?php echo $txt_branch_name; ?></th>
-   
+      <th>Hali ya Ajira</th>
       <th><?php echo $txt_joining_date; ?></th>
     </tr>
   </thead>
@@ -175,6 +175,10 @@
         <td><?php echo $customers->date_birth; ?></td>
         <td><?php echo $customers->gender; ?></td>
         <td><?php echo $customers->blanch_name; ?></td>
+        <td><?php
+          $ws = trim((string)($customers->work_status ?? ''));
+          echo htmlspecialchars($ws === 'Mwajiriwa' ? 'Mtumishi' : ($ws !== '' ? $ws : '-'), ENT_QUOTES, 'UTF-8');
+        ?></td>
         <td><?php echo substr($customers->customer_day, 0, 10); ?></td>
       </tr>
     <?php endforeach; ?>

@@ -99,8 +99,8 @@ $txt_minus_withdraw_all = $lang_line('officer_daily_minus_withdraw_all', 'GAWA (
 $txt_minus_subtracted_withdraw_account = $lang_line('officer_daily_minus_subtracted_withdraw_account', 'GAWA - %s');
 $txt_hq_transfer_in = $lang_line('officer_daily_hq_transfer_in', 'Imetoka HQ');
 $txt_hq_transfer_in_account = $lang_line('officer_daily_hq_transfer_in_account', 'Imetoka HQ - %s');
-$txt_closing_current = $lang_line('officer_daily_closing_current', 'Closing Balance (Current Accounts)');
-$txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Balance - %s');
+$txt_closing_current = 'Salio la Akaunti ya Tawi';
+$txt_closing_account = 'Salio la Akaunti ya Tawi - %s';
 ?>
 
 <style>
@@ -394,19 +394,6 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 					<thead>
 					
 					
-						<?php if (!empty($today_hq_transfer_in)): ?>
-							<?php $total_hq_transfer_in = 0.0; foreach ($today_hq_transfer_in as $hq_row) { $total_hq_transfer_in += (float) $hq_row->amount_in; } ?>
-							<tr>
-								<td data-label="<?php echo $txt_item; ?>" style="font-weight:700; background:#eef8ff; color:#1f4e79;"><?php echo $txt_hq_transfer_in; ?></td>
-								<td data-label="<?php echo $txt_amount; ?>" style="font-weight:700; background:#eef8ff; color:#1f4e79;"><?php echo number_format($total_hq_transfer_in); ?></td>
-							</tr>
-							<?php foreach ($today_hq_transfer_in as $hq_row): ?>
-								<tr>
-									<td data-label="<?php echo $txt_item; ?>" style="padding-left:28px; color:#1f4e79;"><?php echo sprintf($txt_hq_transfer_in_account, htmlspecialchars(!empty($hq_row->account_name) ? $hq_row->account_name : $txt_unknown_account)); ?></td>
-									<td data-label="<?php echo $txt_amount; ?>" style="color:#1f4e79;"><?php echo number_format((float) $hq_row->amount_in); ?></td>
-								</tr>
-							<?php endforeach; ?>
-						<?php endif; ?>
 
 						<tr>
 							<td data-label="<?php echo $txt_item; ?>" style="font-weight:600; background:#f9fbfd;"><?php echo $txt_opening_all_accounts; ?></td>
@@ -427,7 +414,14 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 							<?php foreach ($account_payment_summary as $account_row): ?>
 								<tr>
 									<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#1e8449;"><?php echo sprintf($txt_plus_added_received_account, !empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account); ?></td>
-									<td data-label="<?php echo $txt_amount; ?>" style="color:#1e8449;">+<?php echo number_format((float) $account_row->today_received); ?></td>
+									<td data-label="<?php echo $txt_amount; ?>" style="color:#1e8449;">
+										<div style="display:inline-flex; align-items:center; gap:10px; flex-wrap:wrap;">
+											<span>+<?php echo number_format((float) $account_row->today_received); ?></span>
+											<?php if ((float) $account_row->today_received > 0): ?>
+												<button type="button" class="px-3 py-1 text-xs font-semibold text-white bg-green-600 hover:bg-green-700 rounded-md transfer-open-btn" style="white-space:nowrap;" data-trans-id="<?php echo (int) $account_row->trans_id; ?>" data-account-name="<?php echo htmlspecialchars(!empty($account_row->account_name) ? $account_row->account_name : $txt_unknown_account, ENT_QUOTES, 'UTF-8'); ?>" data-account-balance="<?php echo htmlspecialchars(number_format((float) $account_row->today_received, 2, '.', ''), ENT_QUOTES, 'UTF-8'); ?>" data-report-date="<?php echo htmlspecialchars($report_date, ENT_QUOTES, 'UTF-8'); ?>">Tuma Makao Makuu</button>
+											<?php endif; ?>
+										</div>
+									</td>
 								</tr>
 								<?php if (!empty($account_row->penalty_added_to_cash) && (float) $account_row->penalty_added_to_cash > 0): ?>
 									<tr>
@@ -437,14 +431,14 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 								<?php endif; ?>
 							<?php endforeach; ?>
 						<?php endif; ?>
-						<tr>
+						<!-- <tr>
 							<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#d35400;"><?php echo $txt_penalty_payment; ?></td>
 							<td data-label="<?php echo $txt_amount; ?>" style="color:#d35400;">+<?php echo number_format($penalty_income_display_total); ?></td>
-						</tr>
-						<tr>
+						</tr> -->
+						<!-- <tr>
 							<td data-label="<?php echo $txt_item; ?>" style="padding-left:48px; color:#7d3c98;"><?php echo $txt_form_payment; ?></td>
 							<td data-label="<?php echo $txt_amount; ?>" style="color:#7d3c98;">+<?php echo number_format((float) $processing_fee_total); ?></td>
-						</tr>
+						</tr> -->
 						<?php
 						$gawa_accounts = array();
 						if (!empty($today_loan_withdraw_by_account)) {
@@ -514,6 +508,108 @@ $txt_closing_account = $lang_line('officer_daily_closing_account', 'Closing Bala
 		</div>
 	</div>
 </div>
+
+<div id="transferModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 px-4">
+	<div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden">
+		<div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+			<h3 class="text-lg font-bold text-slate-900">Tuma Makao Makuu</h3>
+			<button type="button" id="transferModalClose" class="text-slate-500 hover:text-slate-900 text-2xl leading-none">&times;</button>
+		</div>
+		<form action="<?php echo site_url('oficer/transfer_branch_repayment_to_company'); ?>" method="post" class="px-5 py-5 space-y-4">
+			<input type="hidden" name="report_date" value="<?php echo htmlspecialchars($report_date); ?>" />
+			<input type="hidden" name="selected_trans_id" id="transferSelectedTransId" value="" />
+			<div>
+				<div class="text-sm font-semibold text-slate-700">Account</div>
+				<div id="transferAccountName" class="mt-1 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-900"></div>
+			</div>
+			<div>
+				<div class="text-sm font-semibold text-slate-700">Kiasi Cha Marejesho Yaliyokusanywa</div>
+				<div id="transferAccountBalance" class="mt-1 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800"></div>
+			</div>
+			<div>
+				<label for="transferAmount" class="block text-sm font-semibold text-slate-700">Kiasi Cha Kutuma</label>
+				<input type="text" inputmode="numeric" id="transferAmount" name="transfer_amount" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-emerald-500 focus:ring-emerald-500" />
+				<p class="mt-1 text-xs text-slate-500">Hakikisha Kiasi utakachotuma hapa ndicho utakachotuma kwenye akaunti ya kampuni.</p>
+			</div>
+			<div class="flex items-center justify-end gap-3 pt-2">
+				<button type="button" id="transferModalCancel" class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200">Cancel</button>
+				<button type="submit" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">Tuma Makao Makuu</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<script>
+(function () {
+	var modal = document.getElementById('transferModal');
+	var closeBtn = document.getElementById('transferModalClose');
+	var cancelBtn = document.getElementById('transferModalCancel');
+	var selectedTransInput = document.getElementById('transferSelectedTransId');
+	var accountNameEl = document.getElementById('transferAccountName');
+	var accountBalanceEl = document.getElementById('transferAccountBalance');
+	var amountInput = document.getElementById('transferAmount');
+	var openButtons = document.querySelectorAll('.transfer-open-btn');
+
+	function openModal(button) {
+		selectedTransInput.value = button.getAttribute('data-trans-id') || '';
+		accountNameEl.textContent = button.getAttribute('data-account-name') || '';
+		var balance = button.getAttribute('data-account-balance') || '0';
+		accountBalanceEl.textContent = balance;
+		amountInput.value = formatAmount(balance);
+		amountInput.dataset.rawValue = balance;
+		modal.classList.remove('hidden');
+		modal.classList.add('flex');
+		setTimeout(function () { amountInput.focus(); }, 0);
+	}
+
+	function closeModal() {
+		modal.classList.add('hidden');
+		modal.classList.remove('flex');
+	}
+
+	function parseAmount(value) {
+		return parseFloat(String(value || '').replace(/,/g, '').replace(/[^0-9.]/g, '')) || 0;
+	}
+
+	function formatAmount(value) {
+		var parsed = parseAmount(value);
+		return parsed ? parsed.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '';
+	}
+
+	amountInput.addEventListener('input', function () {
+		var raw = parseAmount(amountInput.value);
+		amountInput.value = raw ? raw.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '';
+		amountInput.dataset.rawValue = String(raw || '');
+	});
+
+	amountInput.addEventListener('blur', function () {
+		amountInput.value = formatAmount(amountInput.value);
+	});
+
+	modal.querySelector('form').addEventListener('submit', function () {
+		amountInput.value = String(parseAmount(amountInput.value));
+	});
+
+	openButtons.forEach(function (button) {
+		button.addEventListener('click', function () {
+			openModal(button);
+		});
+	});
+
+	closeBtn.addEventListener('click', closeModal);
+	cancelBtn.addEventListener('click', closeModal);
+	modal.addEventListener('click', function (event) {
+		if (event.target === modal) {
+			closeModal();
+		}
+	});
+	document.addEventListener('keydown', function (event) {
+		if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+			closeModal();
+		}
+	});
+})();
+</script>
 
 
 <?php

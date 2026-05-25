@@ -2331,10 +2331,10 @@ public function all_customer()
             // $first_name = $customers->f_name;
             // $last_name  = $customers->m_name;
 
-          //   	     echo "<pre>";
-				  //  print_r($phone);
-				  //  echo "</pre>";
-				  //              exit();
+            	//      echo "<pre>";
+				//    print_r($customers);
+				//    echo "</pre>";
+				//                exit();
 
             // $massage = "Ndugu mteja {$first_name} {$last_name}, unatahadharishwa vikali kutochukua mkopo kwa niaba ya mtu mwingine. Endapo mkopo huo utaleta changamoto yoyote, kampuni ya NACK CREDIT haitahusika wala haitapokea maelezo au malalamiko yoyote yanayohusiana na mkopo huo.";
 
@@ -2408,14 +2408,28 @@ public function export_all_customer_pdf() {
     $comp_id    = $this->session->userdata('comp_id');
     $blanch_name = $this->input->get('blanch_name', true);
     $status      = $this->input->get('status', true);
+    $work_status = $this->input->get('work_status', true);
 
-    $customer = $this->queries->get_allcutomer_filtered($comp_id, $blanch_name, $status);
+    $customer = $this->queries->get_allcutomer_filtered($comp_id, $blanch_name, $status, $work_status);
     $compdata = $this->queries->get_companyData($comp_id);
 
     // Build a label for the title
     $filter_label = '';
-    if (!empty($blanch_name)) $filter_label .= ' | Branch: ' . $blanch_name;
-    if (!empty($status))      $filter_label .= ' | Status: ' . strtoupper($status);
+    if (!empty($blanch_name)) $filter_label .= ' | Tawi: ' . $blanch_name;
+    if (!empty($status)) {
+        $status_map = [
+            'open' => 'Ndani ya mkataba',
+            'out' => 'Nje ya mkataba',
+            'close' => 'Waliomaliza',
+            'pending' => 'Inasubiri'
+        ];
+        $status_label = isset($status_map[$status]) ? $status_map[$status] : strtoupper($status);
+        $filter_label .= ' | Hali: ' . $status_label;
+    }
+    if (!empty($work_status)) {
+        $work_status_label = ($work_status === 'Mwajiriwa') ? 'Mtumishi' : $work_status;
+        $filter_label .= ' | Hali ya Ajira: ' . $work_status_label;
+    }
 
     $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4-L', 'orientation' => 'L', 'tempDir' => APPPATH . 'tmp/mpdf']);
     $html = $this->load->view('admin/customer_report_pdf', [
@@ -3217,6 +3231,7 @@ $comp_phone = $compdata->comp_number;
          $inc_history = $this->queries->get_loanIncomeHistory($loan_id);
 
 	 $loan_history = $this->queries->get_loan_history($customer_id);
+	 $active_loans = $this->queries->get_active_loans($customer_id, $loan_id);
     	    // echo "<pre>";
     	    // print_r(   $loan_history);
     	    // echo "</pre>";
@@ -3228,6 +3243,7 @@ $comp_phone = $compdata->comp_number;
         'collateral' => $collateral,
         'local_oficer' => $local_oficer,
         'inc_history' => $inc_history,
+		'active_loans' => $active_loans,
 		]);
        
     }
@@ -3791,7 +3807,7 @@ public function loan_fee(){
 	$comp_id = $this->session->userdata('comp_id');
     $this->queries->cleanup_duplicate_loanfee_categories($comp_id);
     $this->queries->cleanup_duplicate_loanfee_types($comp_id);
-	$loan_fee = $this->queries->get_loanfee($comp_id);
+    $loan_fee = $this->queries->get_loanfee($comp_id);
 	$fee_type = $this->queries->get_loanfee_type($comp_id);
 	$fee_data = $this->queries->get_loanfee_typeData($comp_id);
 	$fee_category = $this->queries->get_loanfee_category($comp_id);
@@ -3933,7 +3949,7 @@ public function create_loan_fee(){
 		 	$this->session->set_flashdata('error','Failed');
 
 		 }
-		 return redirect('admin/loan_fee');
+         return redirect('admin/loan_fee');
 	}
 	$this->loan_fee();
 }
@@ -3974,11 +3990,11 @@ public function disburse($loan_id){
     $this->load->model('queries');
 	$comp_id = $this->session->userdata('comp_id');
 	$admin_data = $this->queries->get_admin_role($comp_id);
-	$loan_fee = $this->queries->get_loanfee($comp_id);
+    $loan_fee = $this->queries->get_loanfee($comp_id);
   $fee_category = $this->queries->get_loanfee_categoryData($comp_id);
 	$loan_data = $this->queries->get_loanDisbarsed($loan_id);
 	$loan_data_interst = $this->queries->get_loanInterest($loan_id);
-	$loan_fee_sum = $this->queries->get_sumLoanFee($comp_id);
+    $loan_fee_sum = $this->queries->get_sumLoanFee($comp_id);
 	$total_loan_fee = $loan_fee_sum->total_fee;
 
     //   print_r($loan_data);
@@ -4568,6 +4584,7 @@ public function loan_withdrawal()
         'blanch_id'   => $this->input->get_post('blanch_id', true),
         'from'        => $this->input->get_post('from', true),
         'to'          => $this->input->get_post('to', true),
+        'loan_type'   => $this->input->get_post('loan_type', true),
         'loan_name'   => $this->input->get_post('loan_name', true),
         'loan_status' => $this->input->get_post('loan_status', true),
         'paid_today'  => $this->input->get_post('paid_today', true),
@@ -4596,6 +4613,56 @@ public function loan_withdrawal()
         'loan_fee_category'    => $loan_fee_category,
         'loan_category'        => $loan_category,
         'filters'              => $filters // useful to keep selected values
+    ]);
+}
+
+public function today_withdrawal_loans()
+{
+    $this->load->model('queries');
+
+    $comp_id = $this->session->userdata('comp_id');
+    if (!$comp_id) {
+        redirect('login');
+    }
+
+    $today = date('Y-m-d');
+    $withdraw_date = trim((string) $this->input->get_post('withdraw_date', true));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $withdraw_date)) {
+        $withdraw_date = trim((string) $this->input->get_post('from', true));
+    }
+    $withdraw_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $withdraw_date) ? $withdraw_date : $today;
+
+    $filters = [
+        'blanch_id'   => $this->input->get_post('blanch_id', true),
+        'withdraw_date' => $withdraw_date,
+        'from'        => $withdraw_date,
+        'to'          => $withdraw_date,
+        'loan_type'   => $this->input->get_post('loan_type', true),
+        'loan_name'   => $this->input->get_post('loan_name', true),
+        'loan_status' => 'withdrawal',
+        'paid_today'  => $this->input->get_post('paid_today', true),
+    ];
+
+    $disburse = $this->queries->get_withdrawal_Loan($comp_id, $filters);
+    $total_loanDis = $this->queries->get_sum_loanwithdrawal_data_filtered($comp_id, $filters);
+    $total_interest_loan = $this->queries->get_sum_loanwithdrawal_interest_filtered($comp_id, $filters);
+
+    $blanch = $this->queries->get_blanch($comp_id);
+    $formular = $this->queries->get_interestFormular($comp_id);
+    $loan_fee_category = $this->queries->get_loanfee_categoryData($comp_id);
+    $loan_category = $this->queries->get_loancategory($comp_id);
+
+    $this->load->view('admin/loan_withdrawal', [
+        'disburse'             => $disburse,
+        'total_loanDis'        => $total_loanDis,
+        'total_interest_loan'  => $total_interest_loan,
+        'blanch'               => $blanch,
+        'formular'             => $formular,
+        'loan_fee_category'    => $loan_fee_category,
+        'loan_category'        => $loan_category,
+        'filters'              => $filters,
+        'filter_action'        => 'admin/today_withdrawal_loans',
+        'force_loan_status'    => 'withdrawal'
     ]);
 }
 
@@ -4759,6 +4826,9 @@ public function get_blanch_withdraw()
 			'blanch_id' => $this->input->post('blanch_id', true),
 			'from'      => $this->input->post('from',      true),
 			'to'        => $this->input->post('to',        true),
+            'loan_type' => $this->input->post('loan_type', true),
+            'loan_status' => $this->input->post('loan_status', true),
+            'paid_today'  => $this->input->post('paid_today', true),
 		];
 
 		$disburse            = $this->queries->get_withdrawal_Loan_filtered($comp_id, $filters);
@@ -5146,14 +5216,50 @@ public function get_blanch_withdraw()
 	public function search_customerData(){
 	$this->load->helper('custom');
     $this->load->model('queries');
-    $comp_id = $this->session->userdata('comp_id');
-    $customery = $this->queries->get_allcustomerDatagroup($comp_id);
-    $customer_id = $this->input->post('customer_id');
-    $comp_id = $this->input->post('comp_id');
+        $session_comp_id = $this->session->userdata('comp_id');
+        $customery = $this->queries->get_allcustomerDatagroup($session_comp_id);
+        $customer_id = $this->input->post('customer_id', true);
+        if (empty($customer_id)) {
+            $customer_id = $this->input->get('customer_id', true);
+        }
+
+        $comp_id = $this->input->post('comp_id', true);
+        if (empty($comp_id)) {
+            $comp_id = $this->input->get('comp_id', true);
+        }
+        if (empty($comp_id)) {
+            $comp_id = $session_comp_id;
+        }
+
+    $incoming_work_status = trim((string) $this->input->post('work_status', true));
+    if ((int) $customer_id > 0 && in_array($incoming_work_status, ['Mjasiriamali', 'Mwajiriwa'], true)) {
+        $this->queries->insert_customerData([
+            'customer_id' => (int) $customer_id,
+            'work_status' => $incoming_work_status
+        ]);
+    }
+
     $customer = $this->queries->search_CustomerLoan($customer_id);
     @$customer_id = $customer->customer_id;
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
+        $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+        $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+        $selected_loan = null;
+
+        if (!empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+                if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+                    $selected_loan = $loan_option;
+                    break;
+                }
+            }
+
+            if (empty($selected_loan) && count($loan_options) === 1) {
+                $selected_loan = $loan_options[0];
+                $selected_loan_id = (int) $selected_loan->loan_id;
+            }
+        }
 
    $opening_blanch = $this->queries->get_sum_total_BlanchCapital($comp_id);
    $depost_blanch_account = $this->queries->get_blanch_depost_Balance($comp_id);
@@ -5163,7 +5269,7 @@ public function get_blanch_withdraw()
     //   print_r( $customer);
     //  echo "</pre>";
     //   exit();
- $this->load->view('admin/search_loan_customer',['opening_blanch'=>$opening_blanch,'depost_blanch_account'=>$depost_blanch_account,'loan_withdrawal_blanch'=>$loan_withdrawal_blanch,'customer'=>$customer,'customery'=>$customery,'acount'=>$acount]);
+ $this->load->view('admin/search_loan_customer',['opening_blanch'=>$opening_blanch,'depost_blanch_account'=>$depost_blanch_account,'loan_withdrawal_blanch'=>$loan_withdrawal_blanch,'customer'=>$customer,'customery'=>$customery,'acount'=>$acount,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
 }
 
 public function view_aggrement($customer_id, $loan_id = null)
@@ -5385,16 +5491,142 @@ public function update_customer_info()
 public function today_transactions(){
 	$this->load->model('queries');
 	$comp_id = $this->session->userdata('comp_id');
-	$cash = $this->queries->get_cash_transaction($comp_id);
+    $selected_loan_status = trim((string) $this->input->get('loan_status', true));
+    if (!in_array($selected_loan_status, ['out', 'withdrawal', 'done', 'disbarsed'], true)) {
+        $selected_loan_status = '';
+    }
 
+    $selected_blanch_id = trim((string) $this->input->get('blanch_id', true));
+    if ($selected_blanch_id === 'all' || $selected_blanch_id === '') {
+        $selected_blanch_id = '';
+    } else {
+        $selected_blanch_id = (string) ((int) $selected_blanch_id);
+    }
 
-	$sum_depost = $this->queries->get_sumCashtransDepost($comp_id);
+    $selected_loan_type = trim((string) $this->input->get('loan_type', true));
+    if (!in_array($selected_loan_type, ['main', 'salary_advance', 'mjasiriamali'], true)) {
+        $selected_loan_type = '';
+    }
+
+    $selected_work_status = trim((string) $this->input->get('work_status', true));
+    if (!in_array($selected_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+        $selected_work_status = '';
+    }
+    if ($selected_loan_type === 'mjasiriamali') {
+        $selected_work_status = 'Mjasiriamali';
+    }
+
+    $default_date = date('Y-m-d');
+    $report_date = trim((string) $this->input->get('report_date', true));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
+        $report_date = trim((string) $this->input->get('from', true));
+    }
+    $report_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date) ? $report_date : $default_date;
+    $from_date = $report_date;
+    $to_date = $report_date;
+
+    $cash = $this->queries->get_today_received_loan(
+        $comp_id,
+        $selected_blanch_id !== '' ? (int) $selected_blanch_id : null,
+        $selected_loan_type,
+        $selected_work_status,
+        $from_date,
+		$to_date,
+		$selected_loan_status
+    );
+
+    $sum_depost = $this->queries->get_sumReceived_amount($comp_id);
 	$sum_withdrawls = $this->queries->get_sumCashtransWithdrow($comp_id);
 	$blanch = $this->queries->get_blanch($comp_id);
 	//     echo "<pre>";
 	//    print_r($sum_depost);
 	//          exit();
-	$this->load->view('admin/today_transaction',['cash'=>$cash,'sum_depost'=>$sum_depost,'sum_withdrawls'=>$sum_withdrawls,'blanch'=>$blanch]);
+	$this->load->view('admin/today_transaction',[
+        'cash'=>$cash,
+        'sum_depost'=>$sum_depost,
+        'sum_withdrawls'=>$sum_withdrawls,
+        'blanch'=>$blanch,
+        'selected_blanch_id'=>$selected_blanch_id,
+        'selected_loan_type'=>$selected_loan_type,
+        'selected_loan_status'=>$selected_loan_status,
+        'selected_work_status'=>$selected_work_status,
+        'report_date'=>$report_date,
+        'from_date'=>$from_date,
+        'to_date'=>$to_date
+    ]);
+}
+
+    public function today_defaulters_payments(){
+    	$_GET['loan_status'] = 'out';
+    	$this->today_transactions();
+    }
+
+public function download_today_transactions_pdf(){
+    $this->load->model('queries');
+    $comp_id = $this->session->userdata('comp_id');
+    $selected_loan_status = trim((string) $this->input->get('loan_status', true));
+    if (!in_array($selected_loan_status, ['out', 'withdrawal', 'done', 'disbarsed'], true)) {
+        $selected_loan_status = '';
+    }
+
+    $selected_blanch_id = trim((string) $this->input->get('blanch_id', true));
+    if ($selected_blanch_id === 'all' || $selected_blanch_id === '') {
+        $selected_blanch_id = '';
+    } else {
+        $selected_blanch_id = (string) ((int) $selected_blanch_id);
+    }
+
+    $selected_loan_type = trim((string) $this->input->get('loan_type', true));
+    if (!in_array($selected_loan_type, ['main', 'salary_advance', 'mjasiriamali'], true)) {
+        $selected_loan_type = '';
+    }
+
+    $selected_work_status = trim((string) $this->input->get('work_status', true));
+    if (!in_array($selected_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+        $selected_work_status = '';
+    }
+    if ($selected_loan_type === 'mjasiriamali') {
+        $selected_work_status = 'Mjasiriamali';
+    }
+
+    $default_date = date('Y-m-d');
+    $report_date = trim((string) $this->input->get('report_date', true));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
+        $report_date = trim((string) $this->input->get('from', true));
+    }
+    $report_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date) ? $report_date : $default_date;
+    $from_date = $report_date;
+    $to_date = $report_date;
+
+    $cash = $this->queries->get_today_received_loan(
+        $comp_id,
+        $selected_blanch_id !== '' ? (int) $selected_blanch_id : null,
+        $selected_loan_type,
+        $selected_work_status,
+        $from_date,
+		$to_date,
+		$selected_loan_status
+    );
+
+    $compdata = $this->queries->get_companyData($comp_id);
+    $report_title = ($selected_loan_status === 'out') ? 'Ripoti ya Malipo ya Waliotoka Nje ya Mkataba' : 'Ripoti ya Miamala ya Leo';
+	$pdf_file_name = ($selected_loan_status === 'out') ? 'today_defaulters_payments.pdf' : 'today_transactions.pdf';
+
+    $mpdf = new \Mpdf\Mpdf(['tempDir' => APPPATH . 'tmp/mpdf']);
+    $html = $this->load->view('admin/print_today_transactions', [
+        'cash' => $cash,
+        'compdata' => $compdata,
+        'from_date' => $from_date,
+        'to_date' => $to_date,
+        'selected_loan_type' => $selected_loan_type,
+        'selected_work_status' => $selected_work_status,
+		'selected_loan_status' => $selected_loan_status,
+		'report_title' => $report_title
+    ], true);
+
+    $mpdf->SetFooter('Generated By Brainsoft Technology');
+    $mpdf->WriteHTML($html);
+        $mpdf->Output($pdf_file_name, 'I');
 }
 
 public function print_today_cash(){
@@ -5448,6 +5680,23 @@ public function data_with_depost($customer_id){
 
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
+        $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+        $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+        $selected_loan = null;
+
+        if (!empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+                if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+                    $selected_loan = $loan_option;
+                    break;
+                }
+            }
+
+            if (empty($selected_loan) && count($loan_options) === 1) {
+                $selected_loan = $loan_options[0];
+                $selected_loan_id = (int) $selected_loan->loan_id;
+            }
+        }
 
     $this->load->view('admin/depost_withdrow', [
         'opening_blanch'=>$opening_blanch,
@@ -5455,7 +5704,10 @@ public function data_with_depost($customer_id){
         'loan_withdrawal_blanch'=>$loan_withdrawal_blanch,
         'customer'=>$customer,
         'customery'=>$customery,
-        'acount'=>$acount
+                'acount'=>$acount,
+                'loan_options'=>$loan_options,
+                'selected_loan'=>$selected_loan,
+                'selected_loan_id'=>$selected_loan_id
     ]);
 }
 
@@ -5804,6 +6056,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 
     public function deposit_loan($customer_id){
 	$empl_id = $this->session->userdata('empl_id');
+	$this->load->model('queries');
 	
     $this->form_validation->set_rules('customer_id','Customer','required');
 	$this->form_validation->set_rules('comp_id','Company','required');
@@ -5822,7 +6075,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 	      $comp_id = $depost['comp_id'];
 	      $blanch_id = $depost['blanch_id'];
 	      $p_method = $depost['p_method'];
-		  $wakala_name = $depost['wakala_name'];
+          $wakala_name = $depost['wakala_name'] ?? ($depost['wakala'] ?? '');
           $wakala_name = trim((string)$wakala_name);
 	      $loan_id = $depost['loan_id'];
 	      $deposit_date = $depost['deposit_date'];
@@ -5851,7 +6104,6 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 //    print_r($new_balance);
 // 	          exit();
 	         
-	      $this->load->model('queries');
 	      $comp_id = $this->session->userdata('comp_id');
 		  $empl_data = $this->queries->get_employee_data($empl_id);
 	      $company_data = $this->queries->get_companyData($comp_id);
@@ -7021,6 +7273,14 @@ $sqldata="UPDATE `tbl_depost` SET `depost`= '$remain_oldDepost',`sche_principal`
     $from             = $this->input->get('from');
     $to               = $this->input->get('to');
     $blanch_id_filter = $this->resolve_selected_branch_id($this->input->get('blanch_id'));
+    $mode = $this->input->get('mode', true);
+    $show_received_only = ((string) $mode === 'received');
+    $received_from = $this->input->get('received_from', true);
+    $received_to = $this->input->get('received_to', true);
+    $received_blanch_id_input = $this->input->get('received_blanch_id', true);
+    $received_blanch_id_filter = (is_numeric($received_blanch_id_input) && (int) $received_blanch_id_input > 0)
+        ? (int) $received_blanch_id_input
+        : 0;
 
     $blanch  = $this->queries->get_blanch($comp_id);
     $account = $this->queries->get_account_transaction_with_balance($comp_id);
@@ -7036,12 +7296,31 @@ $sqldata="UPDATE `tbl_depost` SET `depost`= '$remain_oldDepost',`sche_principal`
         $sum_chargers = $this->queries->get_sumTransfor_chargers($comp_id);
     }
 
+    $branch_transfer_received = $this->queries->get_branch_transfer_to_company_for_admin(
+        $comp_id,
+        $received_from,
+        $received_to,
+        $received_blanch_id_filter
+    );
+    $sum_branch_transfer_received = $this->queries->get_branch_transfer_to_company_sum_for_admin(
+        $comp_id,
+        $received_from,
+        $received_to,
+        $received_blanch_id_filter
+    );
+
     $this->load->view('admin/amount_transfor', [
         'blanch'           => $blanch,
         'float'            => $float,
         'sum_froat'        => $sum_froat,
         'account'          => $account,
         'sum_chargers'     => $sum_chargers,
+        'branch_transfer_received' => $branch_transfer_received,
+        'sum_branch_transfer_received' => $sum_branch_transfer_received,
+        'received_from'    => $received_from,
+        'received_to'      => $received_to,
+        'received_blanch_id_filter' => $received_blanch_id_filter,
+        'show_received_only' => $show_received_only,
         'from'             => $from,
         'to'               => $to,
         'blanch_id_filter' => $blanch_id_filter,
@@ -7078,6 +7357,62 @@ $sqldata="UPDATE `tbl_depost` SET `depost`= '$remain_oldDepost',`sche_principal`
 
     $mpdf->WriteHTML($html);
     $mpdf->Output('float_transfer_' . date('Ymd_His') . '.pdf', 'D');
+ }
+
+ public function download_branch_transfer_received_pdf(){
+    ini_set('memory_limit', '256M');
+    $this->load->model('queries');
+    $comp_id = $this->session->userdata('comp_id');
+    if (!$comp_id) { redirect('login'); }
+
+    $received_from = $this->input->get('received_from', true);
+    $received_to = $this->input->get('received_to', true);
+    $received_blanch_id_input = $this->input->get('received_blanch_id', true);
+    $received_blanch_id = (is_numeric($received_blanch_id_input) && (int) $received_blanch_id_input > 0)
+        ? (int) $received_blanch_id_input
+        : 0;
+
+    $branch_transfer_received = $this->queries->get_branch_transfer_to_company_for_admin(
+        $comp_id,
+        $received_from,
+        $received_to,
+        $received_blanch_id
+    );
+    $sum_branch_transfer_received = $this->queries->get_branch_transfer_to_company_sum_for_admin(
+        $comp_id,
+        $received_from,
+        $received_to,
+        $received_blanch_id
+    );
+    $compdata = $this->queries->get_companyData($comp_id);
+
+    $blanch_name = 'Branches zote';
+    if ($received_blanch_id > 0) {
+        $selected_blanch = $this->queries->get_blanch_data($received_blanch_id);
+        if (!empty($selected_blanch->blanch_name)) {
+            $blanch_name = $selected_blanch->blanch_name;
+        }
+    }
+
+    $mpdf = new \Mpdf\Mpdf([
+        'margin_left' => 10,
+        'margin_right' => 10,
+        'margin_top' => 10,
+        'margin_bottom' => 10,
+        'tempDir' => APPPATH . 'tmp/mpdf'
+    ]);
+
+    $html = $this->load->view('admin/branch_transfer_received_pdf', [
+        'compdata' => $compdata,
+        'branch_transfer_received' => $branch_transfer_received,
+        'total_received' => (float)($sum_branch_transfer_received->total_received ?? 0),
+        'received_from' => $received_from,
+        'received_to' => $received_to,
+        'blanch_name' => $blanch_name,
+    ], true);
+
+    $mpdf->WriteHTML($html);
+    $mpdf->Output('branch_transfer_received_' . date('Ymd_His') . '.pdf', 'D');
  }
 
  public function create_float(){
@@ -7903,6 +8238,15 @@ public function print_cash(){
     // $blanch = $this->queries->get_blanch($comp_id);
     // //$count = $this->queries->count_pending($comp_id);
 
+    public function out_of_contract_payments(){
+        $_GET['loan_status'] = 'out';
+        $this->today_transactions();
+    }
+
+    public function today_completed_payments(){
+        $_GET['loan_status'] = 'done';
+        $this->today_transactions();
+    }
     // $new_pending = $this->queries->get_total_loan_pendingComp($comp_id);
     // $total_pending_new = $this->queries->get_total_pend_loan_company($comp_id);
     //   //  echo "<pre>";

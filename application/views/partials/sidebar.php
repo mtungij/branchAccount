@@ -287,6 +287,8 @@ $can_staff_view_branch = $can_staff_view_all;
                 <?php if (has_permission('Gawa Float Tawini')): ?>
                 <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/transfar_amount') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/transfar_amount"); ?>"><?php echo $this->lang->line('float'); ?></a></li>
                 <?php endif; ?>
+                <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/transfar_amount') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/transfar_amount?mode=received#received-branch-section'); ?>"><?php echo $this->lang->line('branch_received_amount'); ?></a></li>
+                <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/branch_account_balances') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/branch_account_balances"); ?>"><?php echo $this->lang->line('branch_account_balances'); ?></a></li>
             </ul>
         </div>
       </li>
@@ -427,9 +429,8 @@ $can_staff_view_branch = $can_staff_view_all;
          
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/loan_pending') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/loan_pending"); ?>"><?php echo $this->lang->line('loan_pending_approve'); ?></a></li>
               
-                  <?php if (has_permission('Ruhusu Malipo Ya Mkopo')): ?>
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/get_loan_aproved') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/get_loan_aproved"); ?>"><?php echo $this->lang->line('loan_approved_not_disbursed'); ?></a></li>
-                  <?php endif; ?>
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/out_of_contract_payments') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/out_of_contract_payments'); ?>"><?php echo $this->lang->line('today_defaulters_payments'); ?></a></li>
                   <?php if (has_permission('Ona  Mikopo Iliyoruhusiwa Malipo')): ?>
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/disburse_loan') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/disburse_loan"); ?>"><?php echo $this->lang->line('loan_disbursed'); ?></a></li>
                   <?php endif; ?>
@@ -501,14 +502,7 @@ $can_staff_view_branch = $can_staff_view_all;
           </button>
           <div id="report-accordion-child" class="hs-accordion-content w-full overflow-hidden transition-[height] duration-300 <?php echo $report_submenu_active ? '' : 'hidden'; ?>">
               <ul class="pt-2 ps-2">
-              <?php if (has_permission('Report ya Malipo Ya Wateja Kampuni nzima')): ?>
-                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/cash_transaction') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/cash_transaction"); ?>">
-                                                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-        d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z"/>
-</svg>
-                  <?php echo $this->lang->line('cash_transaction'); ?></a></li>
-                    <?php endif; ?> 
+         
                     <!-- </?php if (has_permission('Report ya Malipo Ya leo Wateja Kampuni nzima')): ?> -->
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/today_transactions') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/today_transactions"); ?>">
                                                       <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -516,6 +510,26 @@ $can_staff_view_branch = $can_staff_view_all;
         d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z"/>
 </svg>
                   <?php echo $this->lang->line('today_transaction'); ?></a></li>
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/disburse_loan') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/disburse_loan'); ?>">
+                                                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z"/>
+</svg>
+                  <?php echo $this->lang->line('loan_approved_not_disbursed'); ?></a></li>
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo (is_active_link('admin/today_defaulters_payments') || is_active_link('admin/out_of_contract_payments')) ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/out_of_contract_payments'); ?>">
+                                                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M6.938 4h10.124c1.656 0 3 1.344 3 3v10c0 1.656-1.344 3-3 3H6.938c-1.656 0-3-1.344-3-3V7c0-1.656 1.344-3 3-3z"/>
+</svg>
+                  <?php echo $this->lang->line('today_defaulters_payments'); ?></a></li>
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/today_completed_payments') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/today_completed_payments'); ?>">
+                                                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z"/>
+</svg>
+                  <?php echo $this->lang->line('today_completed_payments'); ?></a></li>
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/today_withdrawal_loans') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/today_withdrawal_loans'); ?>">
+                                                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6M9 8h6m2 12H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z"/>
+</svg>
+                  <?php echo $this->lang->line('today_loan_withdraw'); ?></a></li>
                     <!-- </?php endif; ?>  -->
 
                     <?php if (has_permission('Report ya Malipo Ya kitini')): ?>
@@ -592,17 +606,7 @@ $can_staff_view_branch = $can_staff_view_all;
                     </a>
                   </li>
                   <?php endif; ?>
-                  <?php if (has_permission('Report Ya Mikopo Iliyolipika')): ?>
-                  <li>
-                    <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/repaymant_data') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/repaymant_data"); ?>">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-        d="M2 7h20M2 11h20M4 15h16M6 19h12"/>
-</svg>
-                      <?php echo $this->lang->line('loan_repayments'); ?>
-                    </a>
-                  </li>
-                  <?php endif; ?>
+
                   <?php if (has_permission('Report Ya Madeni Sugu')): ?>
                   <li>
                     <a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/get_outstand_loan') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/get_outstand_loan"); ?>">

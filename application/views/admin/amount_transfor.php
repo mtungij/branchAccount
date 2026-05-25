@@ -121,6 +121,7 @@ include_once APPPATH . "views/partials/header.php";
         </div>
         <!-- End Card: Float Transfer Form -->
 
+        <?php if (empty($show_received_only)): ?>
         <!-- Card: Float List Table -->
         <div class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
@@ -234,6 +235,104 @@ include_once APPPATH . "views/partials/header.php";
             </div>
         </div>
         <!-- End Card: Float List Table -->
+        <?php endif; ?>
+
+        <!-- Card: Amount Received From Branch -->
+        <div id="received-branch-section" class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Kiasi Kilichopokelewa Kutoka Tawi</h2>
+                <?php
+                    $received_pdf_params = array_filter([
+                        'received_from' => $received_from ?? '',
+                        'received_to' => $received_to ?? '',
+                        'received_blanch_id' => $received_blanch_id_filter ?? '',
+                    ]);
+                ?>
+                <a href="<?php echo base_url('admin/download_branch_transfer_received_pdf' . (!empty($received_pdf_params) ? '?' . http_build_query($received_pdf_params) : '')); ?>"
+                   class="inline-flex items-center px-3 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700">
+                    <?php echo $this->lang->line('download_pdf'); ?>
+                </a>
+            </div>
+
+            <div class="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+                <?php
+                    $received_reset_params = array_filter([
+                        'from'      => $from ?? '',
+                        'to'        => $to ?? '',
+                        'blanch_id' => $blanch_id_filter ?? '',
+                    ]);
+                ?>
+                <form method="get" action="<?php echo base_url('admin/transfar_amount'); ?>">
+                    <input type="hidden" name="from" value="<?php echo htmlspecialchars($from ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="to" value="<?php echo htmlspecialchars($to ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <input type="hidden" name="blanch_id" value="<?php echo htmlspecialchars($blanch_id_filter ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label for="received_from_date" class="label-sm-dt"><?php echo $this->lang->line('from'); ?></label>
+                            <input type="date" name="received_from" id="received_from_date" class="input-text-preline" value="<?php echo htmlspecialchars($received_from ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                        </div>
+                        <div>
+                            <label for="received_to_date" class="label-sm-dt"><?php echo $this->lang->line('to'); ?></label>
+                            <input type="date" name="received_to" id="received_to_date" class="input-text-preline" value="<?php echo htmlspecialchars($received_to ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                        </div>
+                        <div>
+                            <label for="received_blanch_id" class="label-sm-dt"><?php echo $this->lang->line('branch'); ?></label>
+                            <select name="received_blanch_id" id="received_blanch_id" class="input-select-preline">
+                                <option value=""><?php echo $this->lang->line('all_branches'); ?></option>
+                                <?php if(isset($blanch) && !empty($blanch)): foreach ($blanch as $bl_item): ?>
+                                <option value="<?php echo htmlspecialchars($bl_item->blanch_id, ENT_QUOTES, 'UTF-8'); ?>" <?php echo ((string)($received_blanch_id_filter ?? '') === (string)$bl_item->blanch_id) ? 'selected' : ''; ?>><?php echo htmlspecialchars($bl_item->blanch_name, ENT_QUOTES, 'UTF-8'); ?></option>
+                                <?php endforeach; endif; ?>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="flex-1 py-2.5 px-4 btn-primary-sm bg-cyan-600 hover:bg-cyan-700 text-white"><?php echo $this->lang->line('filter'); ?></button>
+                            <a href="<?php echo base_url('admin/transfar_amount' . (!empty($received_reset_params) ? '?' . http_build_query($received_reset_params) : '')); ?>" class="flex-1 text-center py-2.5 px-4 btn-secondary-sm"><?php echo $this->lang->line('reset'); ?></a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="p-4">
+                <div class="overflow-x-auto"><div class="min-w-full inline-block align-middle"><div class="border rounded-lg overflow-hidden dark:border-gray-700">
+                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead class="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th class="th-dt"><span><?php echo $this->lang->line('branch'); ?></span></th>
+                                <th class="th-dt"><span><?php echo $this->lang->line('account'); ?></span></th>
+                                <th class="th-dt"><span><?php echo $this->lang->line('amount'); ?></span></th>
+                                <th class="th-dt"><span><?php echo $this->lang->line('date'); ?></span></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <?php if (!empty($branch_transfer_received)): ?>
+                                <?php foreach ($branch_transfer_received as $received_item): ?>
+                                <tr>
+                                    <td class="td-dt"><?php echo htmlspecialchars($received_item->blanch_name); ?></td>
+                                    <td class="td-dt"><?php echo htmlspecialchars($received_item->account_name); ?></td>
+                                    <td class="td-dt"><?php echo safe_number_format($received_item->amount_received); ?></td>
+                                    <td class="td-dt"><?php echo htmlspecialchars(date('d M, Y', strtotime($received_item->movement_date))); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td class="td-dt text-center" colspan="4">Hakuna kiasi kilichotumwa makao makuu kwa vigezo vilivyochaguliwa.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td class="px-6 py-3 text-sm font-semibold text-gray-800 dark:text-gray-200" colspan="2"><?php echo $this->lang->line('total'); ?></td>
+                                <td class="px-6 py-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
+                                    <?php echo number_format((float)($sum_branch_transfer_received->total_received ?? 0)); ?>
+                                </td>
+                                <td class="px-6 py-3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div></div></div>
+            </div>
+        </div>
+        <!-- End Card: Amount Received From Branch -->
 
         <?php // Modals for Edit Float (if actions are added to the table later) ?>
         <?php if (isset($float) && is_array($float)): foreach ($float as $fl_item): ?>

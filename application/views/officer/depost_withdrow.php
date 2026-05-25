@@ -96,7 +96,30 @@ include_once APPPATH . "views/partials/officerheader.php";
 
 
         <?php
-          $customer_loan = !empty($customer->customer_id) ? $this->queries->get_loan_active_customer($customer->customer_id) : null;
+          $loan_options = $loan_options ?? (!empty($customer->customer_id) ? $this->queries->get_customer_loan_options_for_deposit($customer->customer_id) : []);
+          $selected_loan = $selected_loan ?? null;
+          $selected_loan_id = isset($selected_loan_id) ? (int) $selected_loan_id : (int) $this->input->get('loan_id', true);
+
+          if (empty($selected_loan) && $selected_loan_id > 0 && !empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if ((int) $loan_option->loan_id === $selected_loan_id) {
+                $selected_loan = $loan_option;
+                break;
+              }
+            }
+          }
+
+          if (empty($selected_loan) && count($loan_options) === 1) {
+            $selected_loan = $loan_options[0];
+            $selected_loan_id = (int) $selected_loan->loan_id;
+          }
+
+          if (empty($selected_loan) && empty($loan_options) && !empty($customer->customer_id)) {
+            $selected_loan = $this->queries->get_loan_active_customer($customer->customer_id);
+          }
+
+          $customer_loan = $selected_loan;
+          $needs_loan_selection = count($loan_options) > 1 && empty($selected_loan_id);
           $total_deposit = $this->queries->get_total_amount_paid_loan($customer_loan->loan_id ?? 0);
           $loan_int = $customer_loan->loan_int ?? 0;
           $deposit = $total_deposit->total_Deposit ?? 0;
@@ -114,8 +137,8 @@ include_once APPPATH . "views/partials/officerheader.php";
             }
           }
 
-          $status_label = 'Not Active';
-          $status_class = 'bg-blue-600 text-white';
+          $status_label = $needs_loan_selection ? 'Chagua Mkopo' : 'Not Active';
+          $status_class = $needs_loan_selection ? 'bg-yellow-500 text-white' : 'bg-blue-600 text-white';
           if (!empty($customer_loan)) {
             switch ($customer_loan->loan_status) {
               case 'withdrawal': $status_label = 'Ndani ya Mkataba'; $status_class = 'bg-teal-500 text-white'; break;
@@ -275,6 +298,35 @@ include_once APPPATH . "views/partials/officerheader.php";
         
     <div >
         <div class="flex justify-end  items-center gap-2">
+        <?php if (!empty($loan_options) && count($loan_options) > 1): ?>
+          <div class="min-w-60 w-full max-w-xs">
+            <label for="loan-selector" class="block text-sm font-medium mb-1 dark:text-gray-300">* Chagua Mkopo:</label>
+            <select id="loan-selector" onchange="if (this.value) { window.location.href = '<?= base_url('oficer/data_with_depost/' . $customer->customer_id); ?>?loan_id=' + encodeURIComponent(this.value); }"
+              class="py-2 px-3 block w-full border border-gray-300 rounded-md text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+              <option value="">Chagua mkopo</option>
+              <?php foreach ($loan_options as $loan_option): ?>
+                <?php
+                  $loan_type_label = (string) ($loan_option->loan_type ?? 'main');
+                  if ($loan_type_label === 'salary_advance') {
+                    $loan_type_label = 'Mkopo Mdogo';
+                  } elseif ($loan_type_label === 'main') {
+                    $loan_type_label = 'Mkopo Mkubwa';
+                  }
+                ?>
+                <option value="<?= $loan_option->loan_id; ?>" <?= !empty($selected_loan_id) && (int) $selected_loan_id === (int) $loan_option->loan_id ? 'selected' : ''; ?>>
+                  <?= htmlspecialchars($loan_type_label . ' (' . number_format((float) ($loan_option->loan_int ?? 0), 0) . ')', ENT_QUOTES, 'UTF-8'); ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        <?php endif; ?>
+
+        <?php if ($needs_loan_selection): ?>
+          <div class="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+            Chagua mkopo kwanza ili Weka ionekane.
+          </div>
+        <?php endif; ?>
+
         <?php if (!empty($customer_loan->loan_status)) {
     $status = $customer_loan->loan_status;
 

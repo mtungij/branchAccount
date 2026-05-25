@@ -1,6 +1,9 @@
 
 <?php
 include_once APPPATH . "views/partials/header.php";
+$filter_action = isset($filter_action) && !empty($filter_action) ? $filter_action : 'admin/loan_withdrawal';
+$force_loan_status = isset($force_loan_status) ? (string) $force_loan_status : '';
+$today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
 ?>
 
 
@@ -39,12 +42,13 @@ include_once APPPATH . "views/partials/header.php";
 <!-- Hidden form that carries the current filter values straight to the PDF endpoint -->
 <form id="pdf-download-form" method="POST" action="<?php echo base_url('admin/download_loan_withdrawal_pdf'); ?>" style="display:none;">
     <?php $csrf = $this->security->get_csrf_token_name(); ?>
+  <?php $selected_withdraw_date = isset($filters['withdraw_date']) && $filters['withdraw_date'] ? $filters['withdraw_date'] : (isset($filters['from']) && $filters['from'] ? $filters['from'] : ''); ?>
     <input type="hidden" name="<?php echo $csrf; ?>" value="<?php echo $this->security->get_csrf_hash(); ?>">
     <input type="hidden" id="pdf-blanch-id"   name="blanch_id"  value="<?php echo isset($filters['blanch_id']) ? htmlspecialchars($filters['blanch_id']) : ''; ?>">
-    <input type="hidden" id="pdf-from"         name="from"       value="<?php echo isset($filters['from']) ? htmlspecialchars($filters['from']) : ''; ?>">
-    <input type="hidden" id="pdf-to"           name="to"         value="<?php echo isset($filters['to'])   ? htmlspecialchars($filters['to'])   : ''; ?>">
-    <input type="hidden" id="pdf-paid-today"   name="paid_today" value="<?php echo !empty($filters['paid_today']) ? '1' : ''; ?>">
+  <input type="hidden" id="pdf-from"         name="from"       value="<?php echo htmlspecialchars($selected_withdraw_date, ENT_QUOTES, 'UTF-8'); ?>">
+  <input type="hidden" id="pdf-to"           name="to"         value="<?php echo htmlspecialchars($selected_withdraw_date, ENT_QUOTES, 'UTF-8'); ?>">
     <input type="hidden" id="pdf-loan-status"  name="loan_status" value="<?php echo isset($filters['loan_status']) ? htmlspecialchars($filters['loan_status']) : ''; ?>">
+    <input type="hidden" id="pdf-loan-type"  name="loan_type" value="<?php echo isset($filters['loan_type']) ? htmlspecialchars($filters['loan_type']) : ''; ?>">
 </form>
 
 <button type="button" onclick="document.getElementById('pdf-download-form').submit()" class="flex items-center justify-center text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none">
@@ -63,20 +67,29 @@ include_once APPPATH . "views/partials/header.php";
                         <tr>
                             <th scope="col" class="px-4 py-3 dark:text-white">S/No</th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('customer_name'); ?></th>
+                            <?php if (!$today_withdrawal_mode): ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('phone_number'); ?></th>
+                            <?php endif; ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('branch_name'); ?></th>
+                            <?php if (!$today_withdrawal_mode): ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('phone_number'); ?></th>
+                            <?php endif; ?>
                              <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('principal'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('loan_amount'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('duration_type'); ?></th>
-                            <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('collection'); ?></th>
+                            <th scope="col" class="px-4 py-3 dark:text-white">Kusudio</th>
+                            <?php if (!$today_withdrawal_mode): ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('product_name'); ?></th>
+                            <?php endif; ?>
+                            <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('loan_type'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('method'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('withdraw_date'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('loan_end_date'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('amount_paid'); ?></th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('remain_debt'); ?></th>
+                            <?php if (!$today_withdrawal_mode): ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('status') ?? 'Status'; ?></th>
+                            <?php endif; ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('action'); ?></th> 
                         </tr>
                     </thead>
@@ -103,9 +116,13 @@ include_once APPPATH . "views/partials/header.php";
             <td class="uppercase px-4 py-3 dark:text-white">
                 <?= $loan_aproveds->f_name; ?> <?= substr($loan_aproveds->m_name, 0,1); ?> <?= $loan_aproveds->l_name; ?>
             </td>
+            <?php if (!$today_withdrawal_mode): ?>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->phone_no; ?></td>
+            <?php endif; ?>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->blanch_name; ?></td>
+            <?php if (!$today_withdrawal_mode): ?>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->phone_no; ?></td>
+            <?php endif; ?>
 
             <!-- Principal -->
             <td class="px-4 py-3 dark:text-white"><?= number_format($loan_aproveds->loan_aprove); ?></td>
@@ -130,7 +147,32 @@ include_once APPPATH . "views/partials/header.php";
             <!-- Collection -->
             <td class="px-4 py-3 dark:text-white"><?= number_format($loan_aproveds->restration); ?></td>
 
+            <?php if (!$today_withdrawal_mode): ?>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->loan_name; ?></td>
+            <?php endif; ?>
+            <td class="px-4 py-3 dark:text-white">
+              <?php
+                $raw_loan_type = trim((string) ($loan_aproveds->loan_type ?? ''));
+                $loan_type_label = '-';
+
+                if ($raw_loan_type !== '') {
+                  if ($raw_loan_type === 'salary_advance') {
+                    $loan_type_label = 'Salary Advance';
+                  } elseif ($raw_loan_type === 'main') {
+                    $loan_type_label = 'Mkopo Mkubwa';
+                  } else {
+                    $loan_type_label = $raw_loan_type;
+                  }
+                }
+
+                $raw_work_status = trim((string) ($loan_aproveds->work_status ?? ''));
+                if ($raw_work_status === 'Mjasiriamali') {
+                  $loan_type_label = 'Mkopo wa Mjasiriamali';
+                }
+
+                echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
+              ?>
+            </td>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->account_name; ?></td>
             <td class="px-4 py-3 dark:text-white"><?= substr($loan_aproveds->loan_stat_date, 0,10); ?></td>
             <td class="px-4 py-3 dark:text-white"><?= substr($loan_aproveds->loan_end_date, 0,10); ?></td>
@@ -139,6 +181,7 @@ include_once APPPATH . "views/partials/header.php";
             <!-- Remaining Debt -->
             <td class="px-4 py-3 <?= $row_remain > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'; ?>"><?= number_format($row_remain); ?></td>
             <!-- Status -->
+            <?php if (!$today_withdrawal_mode): ?>
             <td class="px-4 py-3">
                 <?php
                     $status = $loan_aproveds->loan_status;
@@ -153,6 +196,7 @@ include_once APPPATH . "views/partials/header.php";
                 ?>
                 <span class="px-2 py-1 rounded-full text-xs font-medium <?= $badge ?>"><?= $label ?></span>
             </td>
+              <?php endif; ?>
 <td class="px-4 py-3 dark:text-white flex items-center gap-2">
     <a href="<?= base_url("admin/customer_loan_detail/{$loan_aproveds->customer_id}") ?>" 
        class="text-blue-600 hover:text-blue-900 flex items-center gap-1" title="<?php echo $this->lang->line('view_statement') ?? 'View Statement'; ?>">
@@ -175,6 +219,21 @@ include_once APPPATH . "views/partials/header.php";
     <?php endforeach; ?>
 
     <!-- Totals Row -->
+    <?php if ($today_withdrawal_mode): ?>
+    <tr class="bg-gray-100 dark:bg-gray-700 font-bold text-sm border-t-2 border-gray-400 dark:border-gray-500">
+      <td colspan="3" class="px-4 py-3 dark:text-white text-right font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-200">
+        <?php echo $this->lang->line('total'); ?>
+      </td>
+      <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_loan_aprove); ?></td>
+      <td class="px-4 py-3 text-blue-700 dark:text-blue-300 font-extrabold"><?= number_format($total_loan_int); ?></td>
+      <td></td>
+      <td class="px-4 py-3 text-purple-700 dark:text-purple-300 font-extrabold"><?= number_format($total_restoration); ?></td>
+      <td colspan="4"></td>
+      <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_paid_all); ?></td>
+      <td class="px-4 py-3 text-red-700 dark:text-red-300 font-extrabold"><?= number_format($total_remain_all); ?></td>
+      <td></td>
+    </tr>
+    <?php else: ?>
 <tr class="bg-gray-100 dark:bg-gray-700 font-bold text-sm border-t-2 border-gray-400 dark:border-gray-500">
     <td colspan="5" class="px-4 py-3 dark:text-white text-right font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-200">
         <?php echo $this->lang->line('total'); ?>
@@ -183,12 +242,13 @@ include_once APPPATH . "views/partials/header.php";
     <td class="px-4 py-3 text-blue-700 dark:text-blue-300 font-extrabold"><?= number_format($total_loan_int); ?></td>
     <td></td>
     <td class="px-4 py-3 text-purple-700 dark:text-purple-300 font-extrabold"><?= number_format($total_restoration); ?></td>
-    <td colspan="4"></td>
+    <td colspan="5"></td>
     <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_paid_all); ?></td>
     <td class="px-4 py-3 text-red-700 dark:text-red-300 font-extrabold"><?= number_format($total_remain_all); ?></td>
     <td></td>
     <td></td>
 </tr>
+  <?php endif; ?>
 
 
 
@@ -211,7 +271,7 @@ include_once APPPATH . "views/partials/header.php";
           </svg>
         </button>
       </div>
-	  <?php echo form_open("admin/loan_withdrawal"); ?>
+    <?php echo form_open($filter_action); ?>
   <div class="p-4 overflow-y-auto space-y-4">
 
     <!-- Branch -->
@@ -225,26 +285,27 @@ include_once APPPATH . "views/partials/header.php";
       </select>
     </div>
 
-    <!-- Loan Status -->
+    <?php if ($force_loan_status !== ''): ?>
+    <input type="hidden" name="loan_status" value="<?php echo htmlspecialchars($force_loan_status, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php endif; ?>
+
+    <!-- Loan Type -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-white"><?php echo $this->lang->line('status') ?? 'Status'; ?></label>
-      <select name="loan_status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+      <label class="block text-sm font-medium text-gray-700 dark:text-white"><?php echo $this->lang->line('loan_type'); ?></label>
+      <select name="loan_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
         <option value=""><?php echo $this->lang->line('all') ?? 'All'; ?></option>
-        <?php
-          $statuses = [
-            'open' => 'Open',
-            'aproved' => 'Approved',
-            'disbarsed' => 'Disbursed',
-            'withdrawal' => 'Active',
-            'out' => 'Expired',
-            'done' => 'Full Paid',
-          ];
-          foreach ($statuses as $val => $lbl): ?>
-          <option value="<?= $val ?>" <?php echo (isset($filters['loan_status']) && $filters['loan_status'] == $val) ? 'selected' : ''; ?>><?= $lbl ?></option>
-        <?php endforeach; ?>
+        <option value="main" <?php echo (isset($filters['loan_type']) && $filters['loan_type'] === 'main') ? 'selected' : ''; ?>>Mkopo Mkubwa</option>
+        <option value="salary_advance" <?php echo (isset($filters['loan_type']) && $filters['loan_type'] === 'salary_advance') ? 'selected' : ''; ?>>Salary Advance</option>
+        <option value="mjasiriamali" <?php echo (isset($filters['loan_type']) && $filters['loan_type'] === 'mjasiriamali') ? 'selected' : ''; ?>>Mkopo wa Mjasiriamali</option>
       </select>
     </div>
 
+    <?php if ($today_withdrawal_mode): ?>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-white"><?php echo $this->lang->line('withdraw_date') ?: 'Withdraw Date'; ?></label>
+      <input type="date" name="withdraw_date" value="<?php echo htmlspecialchars($selected_withdraw_date ?: date('Y-m-d'), ENT_QUOTES, 'UTF-8'); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+    </div>
+    <?php else: ?>
     <!-- Date Range -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
@@ -256,16 +317,7 @@ include_once APPPATH . "views/partials/header.php";
         <input type="date" name="to" value="<?php echo isset($filters['to']) && $filters['to'] ? htmlspecialchars($filters['to']) : ''; ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
       </div>
     </div>
-
-    <!-- Paid Today -->
-    <div class="flex items-center gap-3">
-      <input type="checkbox" id="paid_today" name="paid_today" value="1"
-        <?php echo (!empty($filters['paid_today'])) ? 'checked' : ''; ?>
-        class="w-4 h-4 text-blue-600 rounded border-gray-300 dark:border-gray-600">
-      <label for="paid_today" class="text-sm font-medium text-gray-700 dark:text-white">
-        <?php echo $this->lang->line('paid_today_label') ?? 'Paid Today'; ?>
-      </label>
-    </div>
+    <?php endif; ?>
 
   </div>
 

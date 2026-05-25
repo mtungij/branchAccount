@@ -227,6 +227,23 @@ class Oficer extends CI_Controller{
     public function customers_completed_today_details()
     {
       $this->load->model('queries');
+      $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+
+      $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+      $selected_loan = null;
+      if (!empty($loan_options)) {
+        foreach ($loan_options as $loan_option) {
+          if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+            $selected_loan = $loan_option;
+            break;
+          }
+        }
+
+        if (empty($selected_loan) && count($loan_options) === 1) {
+          $selected_loan = $loan_options[0];
+          $selected_loan_id = (int) $selected_loan->loan_id;
+        }
+      }
       $empl_id = $this->session->userdata('empl_id');
       $manager_data = $this->queries->get_manager_data($empl_id);
       $blanch_id = $manager_data->blanch_id;
@@ -362,26 +379,6 @@ public function mycustomer ()
         $loan_depost = $this->queries->get_totalDepostBlanch($blanch_id);
         $receive_Amount = $this->queries->get_sumReceveBlanch($blanch_id);
         $loan_fee = $this->queries->get_total_loanFeeBlanchOpen($blanch_id);
-        $request_expences = $this->queries->get_expencesDataBlanch($blanch_id);
-          // print_r($manager_data);
-          //        exit();
-        $this->load->view('officer/blanch_panel',['branch'=>$branch,'blanch_datas'=>$blanch_datas,'blanch_walet_data'=>$blanch_walet_data,'principal'=>$principal,'interst_principal'=>$interst_principal,'loan_return'=>$loan_return,'income'=>$income,'expences'=>$expences,'toal_customer'=>$toal_customer,'active_customerBlanch'=>$active_customerBlanch,'pending_customerBlanch'=>$pending_customerBlanch,'loan_request'=>$loan_request,'loan_aproved'=>$loan_aproved,'loan_disbursed'=>$loan_disbursed,'loan_pend'=>$loan_pend,'receivable_blanch'=>$receivable_blanch,'outstand_sum'=>$outstand_sum,'customer_closed'=>$customer_closed,'pend_total'=>$pend_total,'dep_bla'=>$dep_bla,'requet_number'=>$requet_number,'loanAprove'=>$loanAprove,'withdrawal'=>$withdrawal,'loan_depost'=>$loan_depost,'receive_Amount'=>$receive_Amount,'loan_fee'=>$loan_fee,'request_expences'=>$request_expences,'manager'=>$manager,'privillage'=>$privillage,'empl_data'=>$empl_data,'manager_data'=>$manager_data]);
-      }
-
-
-
-    public function group(){
-    $this->load->model('queries');
-    $blanch_id = $this->session->userdata('blanch_id');
-    $empl_id = $this->session->userdata('empl_id');
-    $manager_data = $this->queries->get_manager_data($empl_id);
-    $comp_id = $manager_data->comp_id;
-    $company_data = $this->queries->get_companyData($comp_id);
-    $blanch_data = $this->queries->get_blanchData($blanch_id);
-    $empl_data = $this->queries->get_employee_data($empl_id);
-
-    $blanch = $this->queries->get_blanchMyBlanch($blanch_id);
-    $group = $this->queries->get_groupDataBlanch($blanch_id);
     $privillage = $this->queries->get_position_empl($empl_id);
            // print_r($blanch);
            //    exit();
@@ -447,7 +444,25 @@ public function mycustomer ()
         $this->upload->initialize($config);
         
         if (!$this->upload->do_upload('passport')) {
-            $this->session->set_flashdata('error', $this->upload->display_errors('', ''));
+          $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+          $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+          $selected_loan = null;
+
+          if (!empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+                $selected_loan = $loan_option;
+                break;
+              }
+            }
+
+            if (empty($selected_loan) && count($loan_options) === 1) {
+              $selected_loan = $loan_options[0];
+              $selected_loan_id = (int) $selected_loan->loan_id;
+            }
+          }
+
+          $this->load->view('officer/depost_withdrow',['customer'=>$customer,'customery'=>$customery,'acount'=>$acount,'blanch_amount_balance'=>$blanch_amount_balance,'depost'=>$depost,'withdraw'=>$withdraw,'empl_data'=>$empl_data,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
             redirect('oficer/my_profile');
             return;
         }
@@ -868,7 +883,6 @@ $this->load->model('queries');
             $this->queries->record_account_balance_movement(array(
               'comp_id' => $comp_id,
               'blanch_id' => $blanch_id,
-              'trans_id' => $trans_id,
               'reference_type' => 'daily_allowance_approved',
               'reference_id' => null,
               'movement_date' => date('Y-m-d'),
@@ -1154,6 +1168,8 @@ $this->load->model('queries');
     $processing_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id, $report_date);
     $today_accepted_expenses = $this->queries->get_daily_accepted_expenses_blanch($blanch_id, $report_date);
     $today_hq_transfer_in = $this->queries->get_daily_hq_transfer_in_by_account_blanch($blanch_id, $report_date);
+    $today_branch_transfer_to_company = $this->queries->get_daily_branch_transfer_to_company_by_account_blanch($blanch_id, $report_date);
+    $today_branch_transfer_to_company = $this->queries->get_daily_branch_transfer_to_company_by_account_blanch($blanch_id, $report_date);
 
       // echo "<pre>";
       //      print_r( $total_today_with);
@@ -1176,7 +1192,141 @@ $this->load->model('queries');
       'processing_fee' => $processing_fee,
       'today_accepted_expenses' => $today_accepted_expenses,
       'today_hq_transfer_in' => $today_hq_transfer_in,
+      'today_branch_transfer_to_company' => $today_branch_transfer_to_company,
     ]);
+  }
+
+  public function transfer_branch_repayment_to_company(){
+    $this->load->model('queries');
+
+    $blanch_id = (int) $this->session->userdata('blanch_id');
+    $empl_id = (int) $this->session->userdata('empl_id');
+    $report_date = $this->normalize_report_date(trim((string) $this->input->post('report_date', true)));
+    $selected_trans_id = (int) $this->input->post('selected_trans_id', true);
+    $transfer_amount = (float) $this->input->post('transfer_amount', true);
+
+    if ($blanch_id <= 0 || $empl_id <= 0) {
+      $this->session->set_flashdata('error', 'Invalid branch session.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    if ($selected_trans_id <= 0) {
+      $this->session->set_flashdata('error', 'Please select an account to transfer.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    $comp_id = !empty($manager_data->comp_id) ? (int) $manager_data->comp_id : (int) $this->session->userdata('comp_id');
+
+    if ($comp_id <= 0) {
+      $this->session->set_flashdata('error', 'Company account not found.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $company_cash_trans_id = (int) $this->get_cash_account_id($comp_id);
+    if ($company_cash_trans_id <= 0) {
+      $this->session->set_flashdata('error', 'Cash account not found for company transfer.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $payment_summary = $this->queries->get_daily_account_payment_summary_blanch($blanch_id, $report_date);
+    if (empty($payment_summary)) {
+      $this->session->set_flashdata('error', 'No Leo Summary payments found for transfer.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $selected_row = null;
+    foreach ($payment_summary as $row) {
+      if ((int) ($row->trans_id ?? 0) === $selected_trans_id) {
+        $selected_row = $row;
+        break;
+      }
+    }
+
+    if (empty($selected_row)) {
+      $this->session->set_flashdata('error', 'Selected account was not found in Leo Summary.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $amount = (float) ($selected_row->today_received ?? 0);
+    if ($amount <= 0) {
+      $this->session->set_flashdata('error', 'Selected account has no received amount to transfer.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    if ($transfer_amount > 0) {
+      $amount = $transfer_amount;
+    }
+
+    if ($amount > (float) ($selected_row->today_received ?? 0)) {
+      $this->db->trans_rollback();
+      $this->session->set_flashdata('error', 'Transfer amount cannot exceed the loan payment amount.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $source_trans_id = (int) ($selected_row->trans_id ?? 0);
+    $selected_account_name = !empty($selected_row->account_name) ? $selected_row->account_name : 'Account ' . $source_trans_id;
+
+    $company_account_row = $this->queries->get_account_balance($company_cash_trans_id);
+    $company_balance = !empty($company_account_row->comp_balance) ? (float) $company_account_row->comp_balance : 0.0;
+
+    $this->db->trans_begin();
+
+    $ledger_description = 'Leo Summary transferred to company account: ' . $selected_account_name;
+    $created_by = $empl_id;
+    $current_company_balance = $company_balance;
+
+    $branch_balance_row = $this->queries->get_amount_remainAmountBlanch($blanch_id, $source_trans_id);
+    $branch_balance_before = !empty($branch_balance_row->blanch_capital) ? (float) $branch_balance_row->blanch_capital : 0.0;
+    if ($branch_balance_before < $amount) {
+      $this->db->trans_rollback();
+      $this->session->set_flashdata('error', 'Branch balance is not enough for transfer.');
+      return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
+    }
+
+    $branch_balance_after = $branch_balance_before - $amount;
+    $current_company_balance += $amount;
+
+    $this->update_blanch_account_balance($comp_id, $blanch_id, $source_trans_id, $branch_balance_after);
+    $this->update_company_account_balance_by_trans_id($comp_id, $company_cash_trans_id, $current_company_balance);
+
+    $this->queries->record_account_balance_movement(array(
+      'comp_id' => $comp_id,
+      'blanch_id' => $blanch_id,
+      'trans_id' => $source_trans_id,
+      'reference_type' => 'branch_balance_company_receive',
+      'reference_id' => $source_trans_id,
+      'movement_date' => $report_date,
+      'amount_out' => $amount,
+      'balance_before' => $branch_balance_before,
+      'balance_after' => $branch_balance_after,
+      'description' => $ledger_description,
+      'created_by' => $created_by,
+    ));
+
+    $this->queries->record_account_balance_movement(array(
+      'comp_id' => $comp_id,
+      'blanch_id' => $blanch_id,
+      'trans_id' => $company_cash_trans_id,
+      'reference_type' => 'branch_balance_company_receive',
+      'reference_id' => $source_trans_id,
+      'movement_date' => $report_date,
+      'amount_in' => $amount,
+      'balance_before' => $current_company_balance - $amount,
+      'balance_after' => $current_company_balance,
+      'description' => $ledger_description,
+      'created_by' => $created_by,
+    ));
+
+    if ($this->db->trans_status() === false) {
+      $this->db->trans_rollback();
+      $this->session->set_flashdata('error', 'Transfer failed. Please try again.');
+    } else {
+      $this->db->trans_commit();
+      $this->session->set_flashdata('massage', 'Leo Summary transferred to company account successfully.');
+    }
+
+    return redirect('oficer/daily_report?report_date=' . urlencode($report_date));
   }
 
   public function daily_report_pdf(){
@@ -1227,6 +1377,7 @@ $this->load->model('queries');
       'processing_fee' => $processing_fee,
       'today_accepted_expenses' => $today_accepted_expenses,
       'today_hq_transfer_in' => $today_hq_transfer_in,
+      'today_branch_transfer_to_company' => $today_branch_transfer_to_company,
     ], true);
 
     $mpdf->SetFooter('Generated By Brainsoft Technology');
@@ -3468,6 +3619,102 @@ public function loan_application(){
     $this->load->view('officer/loan_application',['customer'=>$customer,'empl_data'=>$empl_data,'privillage'=>$privillage,'manager'=>$manager]);
 }
 
+public function salary_advance_loan(){
+  $this->load->model('queries');
+  $blanch_id = $this->session->userdata('blanch_id');
+  $empl_id = $this->session->userdata('empl_id');
+  $manager_data = $this->queries->get_manager_data($empl_id);
+  $comp_id = $manager_data->comp_id;
+  $company_data = $this->queries->get_companyData($comp_id);
+  $blanch_data = $this->queries->get_blanchData($blanch_id);
+  $empl_data = $this->queries->get_employee_data($empl_id);
+
+  $privillage = $this->queries->get_position_empl($empl_id);
+  $manager = $this->queries->get_position_manager($empl_id);
+
+  // Mtumishi customers with active loan records only.
+  $customer = $this->queries->get_salary_advance_customers($blanch_id);
+
+  $this->load->view('officer/loan_application', [
+    'customer' => $customer,
+    'empl_data' => $empl_data,
+    'privillage' => $privillage,
+    'manager' => $manager,
+    'is_salary_advance' => true,
+    'loan_page_title' => 'Mkopo Mdogo',
+    'loan_page_subtitle' => 'Chagua mtumishi mwenye mkopo unaoendelea kuomba mkopo mwingine.'
+  ]);
+}
+
+public function salary_advance_loanForm($customer_id = null){
+  if (!isset($_SESSION)) {
+      session_start();
+  }
+
+  if (empty($customer_id)) {
+      $customer_id = (int) $this->input->post('customer_id');
+  }
+
+  if ((int) $customer_id <= 0) {
+      $this->session->set_flashdata('error', 'Tafadhali chagua mteja.');
+      return redirect('oficer/salary_advance_loan');
+  }
+
+  $_SESSION['loan_form_token'] = bin2hex(random_bytes(32));
+
+  $this->load->model('queries');
+  $blanch_id = $this->session->userdata('blanch_id');
+  $empl_id = $this->session->userdata('empl_id');
+  $manager_data = $this->queries->get_manager_data($empl_id);
+  if (!$manager_data) {
+      $this->session->set_flashdata('error', 'Taarifa za meneja hazijapatikana.');
+      return redirect('oficer/salary_advance_loan');
+  }
+
+  $comp_id = $manager_data->comp_id;
+  $customer = $this->queries->get_customer_data($customer_id);
+  if (!$customer) {
+      $this->session->set_flashdata('error', 'Mteja hakupatikana.');
+      return redirect('oficer/salary_advance_loan');
+  }
+
+  $active_loan = $this->queries->get_latest_active_loan_by_customer($customer_id);
+  if (!$active_loan) {
+      $this->session->set_flashdata('error', 'Mteja hana mkopo hai wa salary advance.');
+      return redirect('oficer/salary_advance_loan');
+  }
+
+    $existing_salary_advance_loan = $this->queries->get_open_salary_advance_loan_by_customer($customer_id);
+
+  $data = [
+      'customer' => $customer,
+      'active_loan' => $active_loan,
+      'existing_loan' => $existing_salary_advance_loan,
+      'loan_category' => $this->queries->get_loancategory($comp_id),
+      'group' => $this->queries->get_groupDataBlanchData($blanch_id),
+      'region' => $this->queries->get_region(),
+      'blanch' => $this->queries->get_blanch($comp_id),
+      'loan_form_request' => $this->queries->get_customerDataLOANform($customer_id),
+      'loan_option' => $this->queries->get_loan_done($customer_id),
+      'skip_next' => $this->queries->get_loanOpen_skip($customer_id),
+      'reject_skip' => $this->queries->get_loanOpen_skipReject($customer_id),
+      'empl_data' => $this->queries->get_employee_data($empl_id),
+      'privillage' => $this->queries->get_position_empl($empl_id),
+      'manager' => $this->queries->get_position_manager($empl_id),
+      'formular' => $this->queries->get_interestFormular($comp_id),
+      'loan_fee_category' => $this->queries->get_loanfee_categoryData($comp_id),
+      'empl_blanch' => $this->queries->get_employee_blanch($blanch_id),
+      'loan_form_token' => $_SESSION['loan_form_token'],
+      'salary_advance_mode' => true,
+      'loan_page_title' => 'Mkopo Mdogo',
+        'loan_page_subtitle' => !empty($existing_salary_advance_loan)
+          ? 'Ombi la salary advance lipo tayari, hapa ni kusasisha tu.'
+          : 'Mkopo wa sasa unaonekana juu, kisha unaweza kuingiza mkopo mpya.'
+  ];
+
+  $this->load->view('officer/loan_aplication_form', $data);
+}
+
 
 public function manager_loanApplication(){
 $this->load->model('queries');
@@ -4542,6 +4789,7 @@ private function upload_file($field_name, $new_name_prefix)
         }
 
       $data['loan_code'] = random_string('numeric', 14);
+      $data['loan_type'] = 'main';
       $data['created_by'] = $this->session->userdata('user_id');
   
       if (!$data['created_by']) {
@@ -4606,9 +4854,196 @@ private function upload_file($field_name, $new_name_prefix)
             }
   
       // Redirect with success message
-      $this->session->set_flashdata('massage', 'Loan application created successfully!');
-      return redirect('oficer/collelateral_session/' . $loan_id);
+        $this->session->set_flashdata('massage', 'Loan application created successfully!');
+        return redirect('oficer/loan_pending');
   }
+
+      public function create_salary_advance_loanapplication($customer_id) {
+        $this->load->helper(['form', 'string']);
+        $this->load->library('form_validation');
+        $this->load->model('queries');
+
+        if (!isset($_SESSION)) {
+          session_start();
+        }
+
+        $post_token = $this->input->post('loan_form_token');
+        if (!$post_token || $post_token !== ($_SESSION['loan_form_token'] ?? null)) {
+          $this->session->set_flashdata('error', 'Invalid or duplicate loan form submission.');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        unset($_SESSION['loan_form_token']);
+
+        $this->form_validation->set_rules('comp_id', 'Company', 'required');
+        $this->form_validation->set_rules('empl_id', 'Employee', 'required');
+        $this->form_validation->set_rules('blanch_id', 'Blanch', 'required');
+        $this->form_validation->set_rules('customer_id', 'Customer', 'required');
+        $this->form_validation->set_rules('category_id', 'Category', 'required');
+        $this->form_validation->set_rules('how_loan', 'How Loan', 'required');
+        $this->form_validation->set_rules('day', 'Day', 'required|integer');
+        $this->form_validation->set_rules('session', 'Session', 'required');
+        $this->form_validation->set_rules('rate', 'Rate', 'required');
+        $this->form_validation->set_rules('reason', 'Reason', 'required');
+        $this->form_validation->set_rules('check_number', 'Check Number', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+          $this->session->set_flashdata('error', validation_errors());
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $data = $this->input->post();
+        $check_number = trim((string)($data['check_number'] ?? ''));
+        unset($data['loan_form_token']);
+        unset($data['check_number']);
+
+        $data['loan_code'] = random_string('numeric', 14);
+        $data['loan_type'] = 'salary_advance';
+        $data['created_by'] = $this->session->userdata('user_id');
+
+        if (!$data['created_by']) {
+          $this->session->set_flashdata('error', 'Session expired. Please log in again.');
+          return redirect('login');
+        }
+
+        $category_id = $data['category_id'];
+        $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
+        $cat = $this->queries->get_loancategoryData($category_id);
+        $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+        $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+        if ($how_loan <= 0) {
+          $this->session->set_flashdata('massage', 'Please enter a valid loan amount');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $data['how_loan'] = $how_loan;
+
+        if ($how_loan < $loan_price) {
+          $this->session->set_flashdata('massage', 'Amount of Loan Is Less than minimum allowed');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        if ($how_loan > $loan_perday) {
+          $this->session->set_flashdata('massage', 'Amount of Loan Is Greater than daily limit');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        // Save or update check number on customer profile.
+        $this->queries->update_member_status(['member_status' => $check_number], $customer_id);
+
+        // Salary advance must be a single open request per customer.
+        $existing_salary_advance_loan = $this->queries->get_open_salary_advance_loan_by_customer($customer_id);
+        if (!empty($existing_salary_advance_loan)) {
+          $this->session->set_flashdata('error', 'Ombi la salary advance lipo tayari, tafadhali fanya update badala ya kuongeza jingine.');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $loan_id = $this->queries->insert_loan($data);
+
+        $comp_id_val = $data['comp_id'];
+        $this->queries->link_sponsors_to_loan($customer_id, $comp_id_val, $loan_id);
+
+        $new_customer = $this->queries->get_loan_by_loan_id($loan_id);
+
+        $first_name   = $new_customer->f_name;
+        $middle_name  = $new_customer->m_name;
+        $last_name    = $new_customer->l_name;
+        $phone_number = $new_customer->phone_no;
+        $employee_name = $new_customer->empl_name;
+        $blanch_name  = $new_customer->blanch_name;
+
+        $message = "Habari! Kuna maombi ya mkopo katika tawi la $blanch_name. 
+    Jina la mteja ni $first_name $middle_name $last_name, nambari ya simu ni $phone_number. 
+    Afisa aliyesajili ni $employee_name. Kiasi cha mkopo kilichoombwa ni TZS " . number_format($how_loan, 0);
+
+        $admins_numbers = $this->queries->get_admin_numbers();
+        $phone_numbers = [];
+        foreach ($admins_numbers as $admin) {
+          $phone_numbers[] = $admin->phone_number;
+        }
+
+        foreach ($phone_numbers as $phone) {
+          $this->sendsms($phone, $message);
+        }
+
+        $this->session->set_flashdata('massage', 'Salary advance loan application created successfully!');
+        return redirect('oficer/loan_pending');
+      }
+
+      public function modify_salary_advance_loanapplication($customer_id, $loan_id) {
+        $this->load->helper(['form', 'string']);
+        $this->load->library('form_validation');
+        $this->load->model('queries');
+
+        if (!isset($_SESSION)) {
+          session_start();
+        }
+
+        $post_token = $this->input->post('loan_form_token');
+        if (!$post_token || $post_token !== ($_SESSION['loan_form_token'] ?? null)) {
+          $this->session->set_flashdata('error', 'Invalid or duplicate loan form submission.');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        unset($_SESSION['loan_form_token']);
+
+        $this->form_validation->set_rules('comp_id', 'Company', 'required');
+        $this->form_validation->set_rules('blanch_id', 'Blanch', 'required');
+        $this->form_validation->set_rules('customer_id', 'Customer', 'required');
+        $this->form_validation->set_rules('category_id', 'Category', 'required');
+        $this->form_validation->set_rules('how_loan', 'How loan', 'required');
+        $this->form_validation->set_rules('day', 'Day', 'required');
+        $this->form_validation->set_rules('session', 'Session', 'required');
+        $this->form_validation->set_rules('rate', 'Rate', 'required');
+        $this->form_validation->set_rules('reason', 'Reason', 'required');
+        $this->form_validation->set_rules('check_number', 'Check Number', 'required|trim');
+
+        if ($this->form_validation->run() === FALSE) {
+          $this->session->set_flashdata('error', validation_errors());
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $data = $this->input->post();
+        $check_number = trim((string)($data['check_number'] ?? ''));
+        unset($data['loan_form_token']);
+        unset($data['check_number']);
+
+        $category_id = $data['category_id'];
+        $how_loan = (int) preg_replace('/\D+/', '', (string) ($data['how_loan'] ?? ''));
+        $cat = $this->queries->get_loancategoryData($category_id);
+        $loan_price = (int) preg_replace('/\D+/', '', (string) ($cat->loan_price ?? ''));
+        $loan_perday = (int) preg_replace('/\D+/', '', (string) ($cat->loan_perday ?? ''));
+
+        if ($how_loan <= 0) {
+          $this->session->set_flashdata('massage', 'Please enter a valid loan amount');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $data['how_loan'] = $how_loan;
+
+        if ($how_loan < $loan_price) {
+          $this->session->set_flashdata('massage', 'Amount of Loan Is Less than minimum allowed');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+        if ($how_loan > $loan_perday) {
+          $this->session->set_flashdata('massage', 'Amount of Loan Is Greater than daily limit');
+          return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $loan_data = $this->queries->get_loan_by_id($loan_id);
+        if (empty($loan_data) || (int)$loan_data->customer_id !== (int)$customer_id || (string)$loan_data->loan_type !== 'salary_advance') {
+          $this->session->set_flashdata('error', 'Ombi la salary advance halikupatikana kwa mteja huyu.');
+          return redirect('oficer/salary_advance_loan');
+        }
+
+        $data['loan_type'] = 'salary_advance';
+        $this->queries->upadete_loan($data, $loan_id);
+        $this->queries->update_member_status(['member_status' => $check_number], $customer_id);
+
+        $this->session->set_flashdata('massage', 'Salary advance loan updated successfully!');
+        return redirect('oficer/loan_pending');
+      }
   
   
 
@@ -6606,6 +7041,23 @@ public function disburse($loan_id){
     @$customer_id = $customer->customer_id;
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
+    $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+
+    $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+    $selected_loan = null;
+    if (!empty($loan_options)) {
+      foreach ($loan_options as $loan_option) {
+        if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+          $selected_loan = $loan_option;
+          break;
+        }
+      }
+
+      if (empty($selected_loan) && count($loan_options) === 1) {
+        $selected_loan = $loan_options[0];
+        $selected_loan_id = (int) $selected_loan->loan_id;
+      }
+    }
     
     $deposts = $this->queries->get_sumTodayDepostBlanch($blanch_id);
     $withdraw = $this->queries->get_sumTodayWithdrawalBlanch($blanch_id);
@@ -6627,7 +7079,7 @@ public function disburse($loan_id){
 
 
    
-   $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage]);
+  $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
 }
 
 
@@ -6711,38 +7163,73 @@ public function today_officer_transaction(){
  $this->load->model('queries');
     $blanch_id = $this->session->userdata('blanch_id');
     $empl_id = $this->session->userdata('empl_id');
+  $report_date = $this->input->get('report_date') ?: date('Y-m-d');
     $manager_data = $this->queries->get_manager_data($empl_id);
     $comp_id = $manager_data->comp_id;
     $company_data = $this->queries->get_companyData($comp_id);
     $blanch_data = $this->queries->get_blanchData($blanch_id);
     $empl_data = $this->queries->get_employee_data($empl_id);
     
-    $cash_transaction = $this->queries->get_cash_transaction_blanch($blanch_id);
-    $sum_cashTransaction = $this->queries->get_cash_transaction_sum_blanch($blanch_id);
+  $cash_transaction = $this->queries->get_cash_transaction_blanch($blanch_id, $report_date, $report_date);
+  $sum_cashTransaction = $this->queries->get_cash_transaction_sum_blanch($blanch_id, $report_date, $report_date);
 
 
-    $account_deposit = $this->queries->get_deposit_sunnary_account_blanch($blanch_id);
-    $default_list = $this->queries->get_depositing_out_blanch($blanch_id);
-    $toyal_default = $this->queries->get_depositing_out_total_blanch($blanch_id);
+  $account_deposit = $this->queries->get_deposit_sunnary_account_blanch($blanch_id, $report_date, $report_date);
+  $default_list = $this->queries->get_depositing_out_blanch($blanch_id, $report_date, $report_date);
+  $toyal_default = $this->queries->get_depositing_out_total_blanch($blanch_id, $report_date, $report_date);
 
-    $withdrawal_account = $this->queries->get_withdrawal_summary_account_blanch_data($blanch_id);
-    $total_code_no = $this->queries->get_total_code_number_blanch_data($blanch_id);
-    $deducted_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id);
+  $withdrawal_account = $this->queries->get_withdrawal_summary_account_blanch_data($blanch_id, $report_date, $report_date);
+  $total_code_no = $this->queries->get_total_code_number_blanch_data($blanch_id, $report_date, $report_date);
+  $deducted_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id, $report_date, $report_date);
 
-    $penart_paid = $this->queries->get_total_penart_paid_blanch_data($blanch_id);
+  $penart_paid = $this->queries->get_total_penart_paid_blanch_data($blanch_id, $report_date, $report_date);
 
-    $miamala = $this->queries->get_miamala_hewa_blanch_data($blanch_id);
-    $total_miamala = $this->queries->get_miamala_hewa_total_blanch_data($blanch_id);
+  $miamala = $this->queries->get_miamala_hewa_blanch_data($blanch_id, $report_date, $report_date);
+  $total_miamala = $this->queries->get_miamala_hewa_total_blanch_data($blanch_id, $report_date, $report_date);
 
 
-    $hai_wateja = $this->queries->get_depositing_hai_blanch($blanch_id);
-    $sugu_wateja = $this->queries->get_depositing_sugu_blanch($blanch_id);
+  $hai_wateja = $this->queries->get_depositing_hai_blanch($blanch_id, $report_date, $report_date);
+  $sugu_wateja = $this->queries->get_depositing_sugu_blanch($blanch_id, $report_date, $report_date);
     //        echo "<pre>";
     // print_r($sugu_wateja);
     //            exit();
 
-    $this->load->view('officer/today_officer_transaction',['empl_data'=>$empl_data,'cash_transaction'=>$cash_transaction,'sum_cashTransaction'=>$sum_cashTransaction,'account_deposit'=>$account_deposit,'default_list'=>$default_list,'toyal_default'=>$toyal_default,'withdrawal_account'=>$withdrawal_account,'total_code_no'=>$total_code_no,'deducted_fee'=>$deducted_fee,'penart_paid'=>$penart_paid,'miamala'=>$miamala,'total_miamala'=>$total_miamala,'hai_wateja'=>$hai_wateja,'sugu_wateja'=>$sugu_wateja]);
+    $this->load->view('officer/today_officer_transaction',['empl_data'=>$empl_data,'cash_transaction'=>$cash_transaction,'sum_cashTransaction'=>$sum_cashTransaction,'account_deposit'=>$account_deposit,'default_list'=>$default_list,'toyal_default'=>$toyal_default,'withdrawal_account'=>$withdrawal_account,'total_code_no'=>$total_code_no,'deducted_fee'=>$deducted_fee,'penart_paid'=>$penart_paid,'miamala'=>$miamala,'total_miamala'=>$total_miamala,'hai_wateja'=>$hai_wateja,'sugu_wateja'=>$sugu_wateja,'report_date'=>$report_date]);
 }
+
+  public function branch_account_balances(){
+    $this->load->model('queries');
+
+    $blanch_id = (int) $this->session->userdata('blanch_id');
+    $empl_id = (int) $this->session->userdata('empl_id');
+
+    if ($blanch_id <= 0 || $empl_id <= 0) {
+      redirect('oficer/index');
+      return;
+    }
+
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    $comp_id = (int) ($manager_data->comp_id ?? 0);
+
+    if ($comp_id <= 0) {
+      redirect('oficer/index');
+      return;
+    }
+
+    $balances = $this->queries->get_branch_account_balances_filtered($comp_id, null, null, $blanch_id, []);
+    $branch = $this->queries->get_blanchData($blanch_id);
+
+    $total_balance_amount = 0;
+    foreach ($balances as $balance_row) {
+      $total_balance_amount += (float) ($balance_row->blanch_capital ?? 0);
+    }
+
+    $this->load->view('officer/branch_account_balances', [
+      'balances' => $balances,
+      'branch' => $branch,
+      'total_balance_amount' => $total_balance_amount,
+    ]);
+  }
 
   public function default_payments_customers()
   {
@@ -6773,30 +7260,33 @@ public function print_officer_todaycash_transaction()
     $this->load->model('queries');
     $blanch_id = $this->session->userdata('blanch_id');
     $empl_id = $this->session->userdata('empl_id');
+    $report_date = $this->input->get('report_date') ?: ($this->input->get('from_date') ?: date('Y-m-d'));
+    $from_date = $report_date;
+    $to_date = $report_date;
     $manager_data = $this->queries->get_manager_data($empl_id);
     $comp_id = $manager_data->comp_id;
     $company_data = $this->queries->get_companyData($comp_id);
     $blanch_data = $this->queries->get_blanchData($blanch_id);
     $empl_data = $this->queries->get_employee_data($empl_id);
 
-    $cash_transaction = $this->queries->get_cash_transaction_blanch($blanch_id);
-    $sum_cashTransaction = $this->queries->get_cash_transaction_sum_blanch($blanch_id);
+  $cash_transaction = $this->queries->get_cash_transaction_blanch($blanch_id, $from_date, $to_date);
+  $sum_cashTransaction = $this->queries->get_cash_transaction_sum_blanch($blanch_id, $from_date, $to_date);
 
-    $account_deposit = $this->queries->get_deposit_sunnary_account_blanch($blanch_id);
-    $default_list = $this->queries->get_depositing_out_blanch($blanch_id);
-    $toyal_default = $this->queries->get_depositing_out_total_blanch($blanch_id);
+  $account_deposit = $this->queries->get_deposit_sunnary_account_blanch($blanch_id, $from_date, $to_date);
+  $default_list = $this->queries->get_depositing_out_blanch($blanch_id, $from_date, $to_date);
+  $toyal_default = $this->queries->get_depositing_out_total_blanch($blanch_id, $from_date, $to_date);
 
-    $withdrawal_account = $this->queries->get_withdrawal_summary_account_blanch_data($blanch_id);
-    $total_code_no = $this->queries->get_total_code_number_blanch_data($blanch_id);
-    $deducted_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id);
+  $withdrawal_account = $this->queries->get_withdrawal_summary_account_blanch_data($blanch_id, $from_date, $to_date);
+  $total_code_no = $this->queries->get_total_code_number_blanch_data($blanch_id, $from_date, $to_date);
+  $deducted_fee = $this->queries->get_total_deducted_income_blanch_data($blanch_id, $from_date);
 
-    $penart_paid = $this->queries->get_total_penart_paid_blanch_data($blanch_id);
+  $penart_paid = $this->queries->get_total_penart_paid_blanch_data($blanch_id, $from_date, $to_date);
 
-    $miamala = $this->queries->get_miamala_hewa_blanch_data($blanch_id);
-    $total_miamala = $this->queries->get_miamala_hewa_total_blanch_data($blanch_id);
+  $miamala = $this->queries->get_miamala_hewa_blanch_data($blanch_id, $from_date, $to_date);
+  $total_miamala = $this->queries->get_miamala_hewa_total_blanch_data($blanch_id, $from_date, $to_date);
 
-    $hai_wateja = $this->queries->get_depositing_hai_blanch($blanch_id);
-    $sugu_wateja = $this->queries->get_depositing_sugu_blanch($blanch_id);
+  $hai_wateja = $this->queries->get_depositing_hai_blanch($blanch_id, $from_date, $to_date);
+  $sugu_wateja = $this->queries->get_depositing_sugu_blanch($blanch_id, $from_date, $to_date);
     $detail_income = $this->queries->get_income_detailBlanchData($blanch_id);
     $fine_keywords = ['penart', 'faini', 'fine', 'faini kulala', 'faini (penalty)', 'penalt', 'faini lala', 'penati', 'adhabu', 'penalty', 'penarty'];
     $faini = array_values(array_filter($detail_income, function ($item) use ($fine_keywords) {
@@ -6840,6 +7330,8 @@ public function print_officer_todaycash_transaction()
       'hai_wateja' => $hai_wateja,
       'sugu_wateja' => $sugu_wateja,
       'faini' => $faini,
+      'from_date' => $from_date,
+      'to_date' => $to_date,
     ], true);
 
     $mpdf->SetFooter('Generated By Brainsoft Technology | {PAGENO} of {nbpg}');
@@ -7036,6 +7528,8 @@ public function print_officer_todaycash_transaction()
     $this->form_validation->set_rules('description','description','trim');
     $this->form_validation->set_rules('deposit_date','deposit date','required');
     $this->form_validation->set_error_delimiters('<div class="text-danger">','</div>');
+    $posted_loan_id = (int) $this->input->post('loan_id');
+    $loan_redirect_query = $posted_loan_id > 0 ? ('?loan_id=' . $posted_loan_id) : '';
        if ($this->form_validation->run()) {
           $depost = $this->input->post();
 $wakala = trim((string)$this->input->post('wakala')); // may be empty for cash
@@ -7070,7 +7564,7 @@ $wakala = trim((string)$this->input->post('wakala')); // may be empty for cash
         $this->form_validation->set_rules('wakala','Wakala','required|trim');
 		if ($wakala !== '' && ctype_digit($wakala)) {
 			$this->session->set_flashdata('error', 'Tafadhali andika jina la wakala sahihi, sio ID au namba pekee.');
-			return redirect('oficer/data_with_depost/' . $customer_id);
+      return redirect('oficer/data_with_depost/' . $customer_id . '?loan_id=' . (int) $loan_id);
 		}
     }
 
@@ -7533,12 +8027,12 @@ $massage = 'Ndugu ' . $first_name . ' ' . $last_name .
           }
            }
            }              
-         return redirect('oficer/data_with_depost/'.$customer_id);
+         return redirect('oficer/data_with_depost/'.$customer_id . '?loan_id=' . (int) $loan_id);
              
        }
 
        $this->session->set_flashdata('error', validation_errors('<div class="text-danger">', '</div>'));
-       return redirect('oficer/data_with_depost/'.$customer_id);
+      return redirect('oficer/data_with_depost/'.$customer_id.$loan_redirect_query);
 
       }
 
@@ -7831,13 +8325,30 @@ public function insert_comp_balance($comp_id,$new_depost){
     $comp_id = $this->input->post('comp_id');
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
+    $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+    $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+    $selected_loan = null;
+
+    if (!empty($loan_options)) {
+      foreach ($loan_options as $loan_option) {
+        if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+          $selected_loan = $loan_option;
+          break;
+        }
+      }
+
+      if (empty($selected_loan) && count($loan_options) === 1) {
+        $selected_loan = $loan_options[0];
+        $selected_loan_id = (int) $selected_loan->loan_id;
+      }
+    }
 
   
 
 
        // print_r($loan_id);
        //          exit();
-    $this->load->view('officer/depost_withdrow',['customer'=>$customer,'customery'=>$customery,'acount'=>$acount,'blanch_amount_balance'=>$blanch_amount_balance,'depost'=>$depost,'withdraw'=>$withdraw,'empl_data'=>$empl_data,'privillage'=>$privillage]);
+    $this->load->view('officer/depost_withdrow',['customer'=>$customer,'customery'=>$customery,'acount'=>$acount,'blanch_amount_balance'=>$blanch_amount_balance,'depost'=>$depost,'withdraw'=>$withdraw,'empl_data'=>$empl_data,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
 }
 
 
@@ -10584,6 +11095,27 @@ public function print_allCustomer(){
 
 }
 
+public function download_allCustomer_pdf(){
+    $this->load->model('queries');
+    $blanch_id = $this->session->userdata('blanch_id');
+    $empl_id   = $this->session->userdata('empl_id');
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    $comp_id   = $manager_data->comp_id;
+    $customer  = $this->queries->get_customer_blanch($blanch_id);
+    $compdata  = $this->queries->get_companyData($comp_id);
+    $blanch    = $this->queries->get_blanchData($blanch_id);
+
+    if (ob_get_length()) ob_end_clean();
+
+    $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4-L', 'orientation' => 'L', 'tempDir' => APPPATH . 'tmp/mpdf']);
+    $html = $this->load->view('officer/customer_report_pdf', ['compdata' => $compdata, 'customer' => $customer, 'blanch' => $blanch], true);
+    $mpdf->SetFooter('Generated By Brainsoft Technology');
+    $mpdf->WriteHTML($html);
+    $filename = 'All_Customers_' . ($blanch->blanch_name ?? 'Branch') . '_' . date('d-m-Y') . '.pdf';
+    $mpdf->Output($filename, 'D');
+    exit;
+}
+
 
 
 public function download_yesterday_defaulters_pdf()
@@ -11197,6 +11729,12 @@ exit();
   $sqldata="UPDATE `tbl_ac_company` SET `comp_balance`= '$adjust_balance' WHERE `comp_id`= '$comp_id'";
     // print_r($sqldata);
     //    exit();
+  $query = $this->db->query($sqldata);
+  return true;
+}
+
+  public function update_company_account_balance_by_trans_id($comp_id, $trans_id, $adjust_balance){
+  $sqldata="UPDATE `tbl_ac_company` SET `comp_balance`= '$adjust_balance' WHERE `comp_id`= '$comp_id' AND `trans_id`= '$trans_id'";
   $query = $this->db->query($sqldata);
   return true;
 }

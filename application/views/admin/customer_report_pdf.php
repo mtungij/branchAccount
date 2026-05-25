@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title><?php echo $compdata->comp_name; ?> | ALL CUSTOMER REPORT</title>
+  <title><?php echo $compdata->comp_name; ?> | RIPOTI YA WATEJA WOTE</title>
   <style>
     body {
       font-family: DejaVu Sans, sans-serif;
@@ -127,13 +127,13 @@
         <?php endif; ?>
       </td>
       <td>
-        <p class="report-title">All Customer Report</p>
+        <p class="report-title">Ripoti Ya Wateja Wote</p>
         <p class="company-name"><?php echo $compdata->comp_name; ?></p>
         <p class="company-address"><?php echo $compdata->adress; ?></p>
         <?php if (!empty($filter_label)): ?>
           <p class="filter-label"><?php echo $filter_label; ?></p>
         <?php endif; ?>
-        <p class="report-date">Generated: <?php echo date('d M Y'); ?></p>
+        <p class="report-date">Imetengenezwa: <?php echo date('d M Y'); ?></p>
       </td>
     </tr>
   </table>
@@ -144,18 +144,19 @@
     <table class="report-table">
       <thead>
         <tr>
-          <th>S/No.</th>
-          <th>Customer ID</th>
-          <th>Customer Name</th>
-          <th>Phone Number</th>
-          <th>Date Of Birth</th>
-          <th>Sex</th>
-          <th>Branch</th>
-          <th>Region</th>
-          <th>District</th>
+          <th>Na.</th>
+          <th>Namba Ya Mteja</th>
+          <th>Jina La Mteja</th>
+          <th>Namba Ya Simu</th>
+          <th>Tarehe Ya Kuzaliwa</th>
+          <th>Jinsia</th>
+          <th>Tawi</th>
+          <th>Mkoa</th>
+          <th>Wilaya</th>
           <th>Ward</th>
-          <th>Street</th>
-          <th>Status</th>
+          <th>Mtaa</th>
+          <th>Hali</th>
+          <th>Hali ya Ajira</th>
         </tr>
       </thead>
       <tbody>
@@ -176,24 +177,28 @@
             <td class="status">
               <?php
                 if ($customers->customer_status == 'open') {
-                    echo 'Active';
+                echo 'Ndani ya mkataba';
                 } elseif ($customers->customer_status == 'close') {
-                    echo 'Closed';
+                echo 'Waliomaliza';
                 } elseif ($customers->customer_status == 'pending') {
-                    echo 'Pending';
+                echo 'Inasubiri';
                 } elseif ($customers->customer_status == 'out') {
-                    echo 'Default';
+                echo 'Nje ya mkataba';
                 } else {
                     echo ucfirst($customers->customer_status);
                 }
               ?>
             </td>
+            <td><?php
+              $ws = trim((string)($customers->work_status ?? ''));
+              echo htmlspecialchars($ws === 'Mwajiriwa' ? 'Mtumishi' : ($ws !== '' ? $ws : '-'), ENT_QUOTES, 'UTF-8');
+            ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
   <?php else: ?>
-    <div class="empty-state">No customers found for the selected filter.</div>
+    <div class="empty-state">Hakuna wateja waliopatikana kwa chujio ulilochagua.</div>
   <?php endif; ?>
 </div>
 

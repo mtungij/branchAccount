@@ -82,8 +82,33 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
         <p class="text-center mt-2 text-gray-800 font-medium"><?= $customer->phone_no; ?></p>
 
         <?php
-          $customer_loan = !empty($customer->customer_id) ? $this->queries->get_loan_active_customer($customer->customer_id) : null;
-          $total_deposit = $this->queries->get_total_amount_paid_loan($customer_loan->loan_id ?? 0);
+          $loan_options = $loan_options ?? [];
+          $selected_loan = $selected_loan ?? null;
+          $selected_loan_id = (int) ($selected_loan_id ?? 0);
+
+          if (empty($selected_loan) && count($loan_options) === 1) {
+            $selected_loan = $loan_options[0];
+            $selected_loan_id = (int) ($selected_loan->loan_id ?? 0);
+          }
+
+          $default_display_loan = null;
+          if (!empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if (($loan_option->loan_type ?? '') === 'main') {
+                $default_display_loan = $loan_option;
+                break;
+              }
+            }
+
+            if (empty($default_display_loan)) {
+              $default_display_loan = $loan_options[0];
+            }
+          }
+
+          $needs_loan_selection = count($loan_options) > 1 && empty($selected_loan_id);
+
+          $customer_loan = !empty($selected_loan) ? $selected_loan : $default_display_loan;
+          $total_deposit = !empty($customer_loan) ? $this->queries->get_total_amount_paid_loan($customer_loan->loan_id ?? 0) : null;
           $loan_int = $customer_loan->loan_int ?? 0;
           $deposit = $total_deposit->total_Deposit ?? 0;
           $status_label = 'Not Active';
@@ -263,11 +288,34 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
 
         
     <div >
-        <div class="flex justify-end  items-center gap-2">
-        <?php if (!empty($customer_loan->loan_status)) {
-    $status = $customer_loan->loan_status;
+        <div class="flex justify-end items-center gap-2 flex-wrap">
+        <?php if (!empty($loan_options) && count($loan_options) > 1): ?>
+        <form method="get" action="<?= base_url('oficer/search_customerData'); ?>" class="inline-flex items-center gap-2">
+          <input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer->customer_id, ENT_QUOTES, 'UTF-8'); ?>">
+          <input type="hidden" name="comp_id" value="<?= htmlspecialchars($customer->comp_id, ENT_QUOTES, 'UTF-8'); ?>">
+          <select id="loan_selector" name="loan_id" onchange="this.form.submit()" class="py-3 px-4 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm min-w-[250px]">
+            <option value="">Chagua Mkopo wa kufanya deposit</option>
+            <?php foreach ($loan_options as $loan_option): ?>
+              <?php
+                $loan_type_label = (string) ($loan_option->loan_type ?? 'main');
+                if ($loan_type_label === 'salary_advance') {
+                  $loan_type_label = 'Mkopo Mdogo';
+                } elseif ($loan_type_label === 'main') {
+                  $loan_type_label = 'Mkopo Mkubwa';
+                }
+              ?>
+              <option value="<?= (int) $loan_option->loan_id; ?>" <?= ((int) ($selected_loan_id ?? 0) === (int) $loan_option->loan_id) ? 'selected' : ''; ?>>
+                <?= htmlspecialchars($loan_type_label . ' (' . number_format((float) ($loan_option->loan_int ?? 0), 0) . ')', ENT_QUOTES, 'UTF-8'); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </form>
+        <?php endif; ?>
 
-    if ($status === 'withdrawal' || $status === 'out') { ?>
+        <?php if (!empty($customer_loan->loan_status)): ?>
+        <?php $status = $customer_loan->loan_status; ?>
+        <?php if ($status === 'withdrawal' || $status === 'out'): ?>
+        <?php if (!$needs_loan_selection && !empty($customer_loan->loan_id)): ?>
           <button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-hidden focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-scale-animation-modal" data-hs-overlay="#hs-edit-deposit-modal">
             <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -276,7 +324,8 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
           </svg>
       Deposit
     </button>
-    <?php } elseif ($status === 'disbarsed') { ?>
+        <?php endif; ?>
+        <?php elseif ($status === 'disbarsed'): ?>
         <button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-green-600 text-white hover:bg-blue-700 focus:outline-hidden focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-basic-modal" data-hs-overlay="#hs-edit-shareholder-modal-<?= $customer->customer_id; ?>">
         <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -285,12 +334,12 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
           </svg>
         Withdraw
       </button>
-    <?php } elseif ($status === 'done') { ?>
+        <?php elseif ($status === 'done'): ?>
         <a href="#" class="btn btn-info" data-toggle="modal" data-target="#addcontact3">
             <i class="icon-pencil"></i> Penalt
         </a>
-<?php }
-} ?>
+        <?php endif; ?>
+        <?php endif; ?>
         </div>
     </div>
   
@@ -481,7 +530,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
   <!-- Hidden Inputs -->
   <input type="hidden" value="CASH WITHDRAWALS" name="description">
   <input type="hidden" value="withdrawal" name="loan_status">
-  <input type="hidden" value="<?php echo $customer_loan->loan_id; ?>" name="loan_id">
+  <input type="hidden" value="<?php echo $customer_loan->loan_id ?? ''; ?>" name="loan_id">
   <input type="hidden" value="<?php echo $customer->customer_id; ?>" name="customer_id">
   <input type="hidden" value="<?php echo $customer->comp_id; ?>" name="comp_id">
   <input type="hidden" value="<?php echo $customer->blanch_id; ?>" name="blanch_id">
@@ -596,7 +645,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
 
 
       <?php
-        $out_stand_modal = $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0);
+        $out_stand_modal = !empty($customer_loan->loan_id) ? $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0) : null;
       ?>
       <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}"); ?>
 <!-- Modal Body -->
@@ -700,13 +749,13 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
   </div>
 
   
-                   
+                                                                                                                                                                                                                                                                                                                                                                                          
 
   <!-- Hidden Inputs -->
                    <input type="hidden" value="<?php echo $customer->customer_id; ?>" name="customer_id">
                     <input type="hidden" value="<?php echo $customer->comp_id; ?>" name="comp_id">
                     <input type="hidden" value="<?php echo $customer->blanch_id; ?>" name="blanch_id">
-                    <input type="hidden" value="<?php echo $customer_loan->loan_id; ?>" name="loan_id">
+                    <input type="hidden" value="<?php echo $customer_loan->loan_id ?? ''; ?>" name="loan_id">
                      <input type="hidden" value="LOAN RETURN" name="description">
 
   <!-- Action Buttons -->

@@ -108,7 +108,44 @@ $error_msg   = $this->session->flashdata('error');
 </div>
 
         <?php
-          $customer_loan = !empty($customer->customer_id) ? $this->queries->get_loan_active_customer($customer->customer_id) : null;
+          $loan_options = $loan_options ?? (!empty($customer->customer_id) ? $this->queries->get_customer_loan_options_for_deposit($customer->customer_id) : []);
+          $selected_loan = $selected_loan ?? null;
+          $selected_loan_id = isset($selected_loan_id) ? (int) $selected_loan_id : (int) $this->input->get('loan_id', true);
+
+          if (empty($selected_loan) && $selected_loan_id > 0 && !empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if ((int) $loan_option->loan_id === $selected_loan_id) {
+                $selected_loan = $loan_option;
+                break;
+              }
+            }
+          }
+
+          if (empty($selected_loan) && count($loan_options) === 1) {
+            $selected_loan = $loan_options[0];
+            $selected_loan_id = (int) ($selected_loan->loan_id ?? 0);
+          }
+
+          $default_display_loan = null;
+          if (!empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if (($loan_option->loan_type ?? '') === 'main') {
+                $default_display_loan = $loan_option;
+                break;
+              }
+            }
+
+            if (empty($default_display_loan)) {
+              $default_display_loan = $loan_options[0];
+            }
+          }
+
+          if (empty($selected_loan) && empty($default_display_loan) && !empty($customer->customer_id)) {
+            $default_display_loan = $this->queries->get_loan_active_customer($customer->customer_id);
+          }
+
+          $customer_loan = !empty($selected_loan) ? $selected_loan : $default_display_loan;
+          $needs_loan_selection = count($loan_options) > 1 && empty($selected_loan_id);
           $total_deposit = $this->queries->get_total_amount_paid_loan($customer_loan->loan_id ?? 0);
           $loan_int = $customer_loan->loan_int ?? 0;
           $deposit = $total_deposit->total_Deposit ?? 0;
@@ -271,11 +308,37 @@ $error_msg   = $this->session->flashdata('error');
 
         
 <div >
-    <div class="flex justify-end  items-center gap-2">
+    <div class="flex justify-end  items-center gap-2 flex-wrap">
+    <?php if (!empty($loan_options) && count($loan_options) > 1): ?>
+      <form method="get" action="<?= base_url('admin/data_with_depost/' . $customer->customer_id); ?>" class="inline-flex items-center gap-2">
+        <input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer->customer_id, ENT_QUOTES, 'UTF-8'); ?>">
+        <input type="hidden" name="comp_id" value="<?= htmlspecialchars($customer->comp_id, ENT_QUOTES, 'UTF-8'); ?>">
+        <select id="loan_selector" name="loan_id" onchange="this.form.submit()" class="py-3 px-4 rounded-lg border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 text-sm min-w-[250px]">
+          <option value="">Chagua Mkopo wa kufanya deposit</option>
+          <?php foreach ($loan_options as $loan_option): ?>
+            <?php
+              $loan_type_label = (string) ($loan_option->loan_type ?? 'main');
+              if ($loan_type_label === 'mjasiriamali') {
+                $loan_type_label = 'Mkopo wa Mjasiriamali';
+              } elseif ($loan_type_label === 'salary_advance') {
+                $loan_type_label = 'Mkopo Mdogo';
+              } elseif ($loan_type_label === 'main') {
+                $loan_type_label = 'Mkopo Mkubwa';
+              }
+            ?>
+            <option value="<?= (int) $loan_option->loan_id; ?>" <?= ((int) ($selected_loan_id ?? 0) === (int) $loan_option->loan_id) ? 'selected' : ''; ?>>
+              <?= htmlspecialchars($loan_type_label . ' (' . number_format((float) ($loan_option->loan_int ?? 0), 0) . ')', ENT_QUOTES, 'UTF-8'); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </form>
+    <?php endif; ?>
+
     <?php if (!empty($customer_loan->loan_status)) {
 $status = $customer_loan->loan_status;
 
 if ($status === 'withdrawal' || $status === 'out') { ?>
+      <?php if (!$needs_loan_selection): ?>
       <button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-hidden focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-scale-animation-modal" data-hs-overlay="#hs-edit-deposit-modal">
         <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -284,6 +347,7 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
       </svg>
   Deposit
 </button>
+<?php endif; ?>
 <?php } elseif ($status === 'disbarsed') { ?>
     <button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-green-600 text-white hover:bg-blue-700 focus:outline-hidden focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-basic-modal" data-hs-overlay="#hs-edit-shareholder-modal-<?= $customer->customer_id; ?>">
     <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -321,7 +385,7 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
                 class="py-2 px-3 block w-full bg-cyan-600 border border-gray-300 rounded-md text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300 dark:placeholder-gray-500 select2">
                 <option value="">Search Customer</option>
                 <?php foreach ($customery as $customers): ?>
-                    <option value="<?= $customers->customer_id ?>">
+                  <option value="<?= $customers->customer_id ?>" data-work-status="<?= htmlspecialchars((string) ($customers->work_status ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
                         <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
                         <?= strtoupper($customers->customer_code); ?> /
                         <?= strtoupper($customers->blanch_name); ?>
@@ -342,6 +406,36 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
     <input type="hidden" name="comp_id" value="<?php echo $_SESSION['comp_id']; ?>">
 
     <?php echo form_close(); ?>
+</div>
+
+<div id="workStatusPromptDepostModal" class="hidden fixed inset-0 z-50 bg-black/50 p-4 sm:p-6">
+  <div class="max-w-md mx-auto mt-16 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+    <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Weka Hali ya Ajira</h3>
+    <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+      Mteja huyu hana taarifa ya hali ya ajira. Tafadhali chagua moja kabla ya kuendelea.
+    </p>
+    <p class="text-sm text-gray-700 dark:text-gray-200 mb-4">
+      <span class="font-semibold">Mteja:</span>
+      <span id="modal_depost_customer_name" class="uppercase"></span>
+    </p>
+
+    <form id="workStatusPromptDepostForm" method="post" action="<?php echo base_url('admin/search_customerData'); ?>">
+      <input type="hidden" name="customer_id" id="modal_depost_customer_id" value="">
+      <input type="hidden" name="comp_id" value="<?php echo htmlspecialchars($_SESSION['comp_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
+      <label for="modal_depost_work_status" class="block text-sm font-medium mb-2 dark:text-gray-300">Hali ya Ajira</label>
+      <select id="modal_depost_work_status" name="work_status" required class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+        <option value="">Chagua</option>
+        <option value="Mjasiriamali">Mjasiriamali</option>
+        <option value="Mwajiriwa">Mtumishi</option>
+      </select>
+
+      <div class="mt-5 flex gap-2 justify-end">
+        <button type="button" id="cancelWorkStatusDepostPrompt" class="py-2 px-4 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button>
+        <button type="submit" class="py-2 px-4 rounded-lg bg-cyan-700 text-white text-sm hover:bg-cyan-800">Continue</button>
+      </div>
+    </form>
+  </div>
 </div>
 
        
@@ -541,27 +635,45 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
       
       <!-- Modal Header -->
       <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-white">Jina La Mteja: <?= htmlspecialchars($customer->f_name, ENT_QUOTES, 'UTF-8'); ?></h3>
+        <h7 class="font-bold text-gray-800 dark:text-white"><?php echo strtoupper($customer->f_name ?? ''); ?> <?php echo strtoupper($customer->m_name ?? ''); ?> <?php echo strtoupper($customer->l_name ?? ''); ?><br>With Date: <?php if (!empty($customer_loan->loan_stat_date)) { ?><?php echo $customer_loan->loan_stat_date; ?><?php } else { ?>YY-MM-DD<?php } ?> - End Date: <?php if (!empty($customer_loan->loan_end_date)) { ?><?php echo substr($customer_loan->loan_end_date, 0, 10); ?><?php } else { ?>YY-MM-DD<?php } ?><br> End Deposit Amount : <?php echo number_format(@$end_deposit->depost); ?><br>Deposit Time : <?php echo @$end_deposit->deposit_day; ?></h7>
         <button type="button" class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" data-hs-overlay="#hs-edit-deposit-modal">
           <span class="sr-only">Close</span>
           <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
       </div>
 
-      <?php echo form_open("admin/deposit_loan/{$customer_loan->customer_id}"); ?>
+      <?php echo form_open("admin/deposit_loan/" . (int) ($customer->customer_id ?? 0)); ?>
 <!-- Modal Body -->
 <div class="p-4 sm:p-6">
   <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
 
-    <!-- Total Withdraw -->
+    <!-- Loan Applied -->
     <div class="sm:col-span-6">
-      <label for=depost" class="block text-sm font-medium mb-2 dark:text-gray-300">
-        * Deposit:
+      <label for="loan_applied" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+        * Loan Applied:
       </label>
-      <input type="text" id=depost" name="depost"
+      <input type="text" id="loan_applied" name="loan_applied"
   class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-  required>
+  value="<?= number_format((float) ($customer_loan->loan_int ?? 0), 0); ?>" readonly>
 
+    </div>
+
+    <div class="sm:col-span-6">
+      <label for="amount_paid" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+        * Amount Paid:
+      </label>
+      <input type="text" id="amount_paid" name="amount_paid"
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
+        value="<?php if (@$total_deposit->total_Deposit > @$customer_loan->loan_int) { echo number_format(@$customer_loan->loan_int); echo ' (' . number_format(@$total_deposit->total_Deposit - @$customer_loan->loan_int) . ')'; } else { echo number_format(@$total_deposit->total_Deposit); } ?>" readonly>
+    </div>
+
+    <div class="sm:col-span-6">
+      <label for="due_amount" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+        * Due Amount:
+      </label>
+      <input type="text" id="due_amount" name="due_amount"
+        class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
+        value="<?php if (@$total_deposit->total_Deposit > @$customer_loan->loan_int) { echo '0.00'; } else { echo number_format(@$customer_loan->loan_int - @$total_deposit->total_Deposit); } ?>" readonly>
     </div>
 
     <!-- Payment Method -->
@@ -586,7 +698,7 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
 
 
     <div class="sm:col-span-6" id="wakala_field" style="display:none;">
-  <label for="wakala_name" class="block text-sm font-medium mb-2 dark:text-gray-300">
+  <label for="wakala_name" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
     * Jina la Wakala:
   </label>
   <input type="text" id="wakala_name" name="wakala_name" 
@@ -595,25 +707,28 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
 
 
     <div class="sm:col-span-6">
-    <?php if ($customer_loan->loan_status == 'withdrawal') { ?>
-        <label for="pending" class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-               value="<?php echo number_format($total_recovery->total_pending, 2); ?>" 
-               readonly style="color:red"> 
+      <?php if (($customer_loan->loan_status ?? '') === 'withdrawal') { ?>
+        <label for="recovery_amount" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">Recovery Amount</label>
+        <input type="text" id="recovery_amount" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?= number_format($total_recovery->total_pending ?? 0, 2); ?>" readonly style="color:red">
+      <?php } elseif (($customer_loan->loan_status ?? '') === 'out') { ?>
+        <label for="recovery_amount" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200" style="color:red">Default Amount</label>
+        <input type="text" id="recovery_amount" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?= number_format($out_stand->total_out ?? 0, 2); ?>" readonly style="color:red">
+      <?php } else { ?>
+        <label for="recovery_amount" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">Recovery Amount</label>
+        <input type="text" id="recovery_amount" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="0.00" readonly style="color:red">
+      <?php } ?>
+    </div>
 
-    <?php } elseif ($customer_loan->loan_status == 'out') { ?>
-        <span style="color:red;">Default Amount</span>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-               value="<?php echo number_format($out_stand->total_out, 2); ?>" 
-               readonly style="color:red"> 
+    <div class="sm:col-span-6">
+      <label for="penalty_display" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">* Penalt:</label>
+      <input type="text" id="penalty_display" name="penalty_display" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" value="<?= number_format((float) (($total_penart->total_penart ?? 0) - ($total_deposit_penart->total_penart_paid ?? 0))); ?>.00" readonly style="color:red">
+    </div>
 
-    <?php } else { ?>
-        <label for="pending" class="block text-sm font-medium mb-2 dark:text-gray-300">Recovery Amount</label>
-        <input type="text" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600"
-                value="<?php echo number_format($total_recovery->pending, 2); ?>"
-               readonly style="color:red"> 
-    <?php } ?>
-</div>
+    <div class="sm:col-span-6">
+      <label for="depost_display" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">* Deposit:</label>
+      <input type="text" id="depost_display" name="depost_display" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600" placeholder="0" required>
+      <input type="hidden" name="depost" id="depost">
+    </div>
 
 
 
@@ -622,7 +737,7 @@ if ($status === 'withdrawal' || $status === 'out') { ?>
 
     <!-- Date -->
     <div class="sm:col-span-6">
-      <label for="deposit_date" class="block text-sm font-medium mb-2 dark:text-gray-300">
+      <label for="deposit_date" class="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
         * Tarehe:
       </label>
       <input type="date" id="deposit_date" name="deposit_date"
@@ -746,14 +861,81 @@ $(document).ready(function () {
     };
 
     // Customer Search Select
-    $('#branchSelect').select2({...selectConfig, placeholder: "Tafuta Mteja"});
+    const $branchSelect = $('#branchSelect').select2({...selectConfig, placeholder: "Tafuta Mteja"});
+    const $searchForm = $('#customerSearchForm');
+    const modal = document.getElementById('workStatusPromptDepostModal');
+    const modalCustomerInput = document.getElementById('modal_depost_customer_id');
+    const modalWorkStatus = document.getElementById('modal_depost_work_status');
+    const modalCustomerName = document.getElementById('modal_depost_customer_name');
+    const cancelBtn = document.getElementById('cancelWorkStatusDepostPrompt');
 
-    // Auto-submit when customer is selected
-    $('#branchSelect').on('select2:select', function () {
-        const selected = $(this).val();
-        if (selected) {
-            $('#customerSearchForm').submit();
-        }
+    function openWorkStatusModal(customerId, customerName) {
+      if (!modal || !modalCustomerInput || !modalWorkStatus) {
+        return;
+      }
+      modalCustomerInput.value = customerId;
+      modalWorkStatus.value = '';
+      if (modalCustomerName) {
+        modalCustomerName.textContent = customerName || '-';
+      }
+      modal.classList.remove('hidden');
+    }
+
+    function closeWorkStatusModal() {
+      if (!modal) {
+        return;
+      }
+      modal.classList.add('hidden');
+      if (modalCustomerName) {
+        modalCustomerName.textContent = '';
+      }
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function () {
+        closeWorkStatusModal();
+        $branchSelect.val('').trigger('change.select2');
+      });
+    }
+
+    function handleCustomerSelection() {
+      const branchSelectElement = document.getElementById('branchSelect');
+      const selectedOption = branchSelectElement ? branchSelectElement.options[branchSelectElement.selectedIndex] : null;
+      const customerId = branchSelectElement ? branchSelectElement.value : '';
+      const customerName = selectedOption ? selectedOption.text.split('/')[0].trim() : '';
+      const workStatus = (selectedOption && selectedOption.getAttribute('data-work-status'))
+        ? selectedOption.getAttribute('data-work-status').trim()
+        : '';
+
+      if (!customerId) {
+        return;
+      }
+
+      if (!workStatus) {
+        openWorkStatusModal(customerId, customerName);
+        return;
+      }
+
+      $searchForm.submit();
+    }
+
+    $branchSelect.on('select2:select', function () {
+      handleCustomerSelection();
+    });
+
+    $searchForm.on('submit', function (event) {
+      const branchSelectElement = document.getElementById('branchSelect');
+      const selectedOption = branchSelectElement ? branchSelectElement.options[branchSelectElement.selectedIndex] : null;
+      const customerId = branchSelectElement ? branchSelectElement.value : '';
+      const customerName = selectedOption ? selectedOption.text.split('/')[0].trim() : '';
+      const workStatus = (selectedOption && selectedOption.getAttribute('data-work-status'))
+        ? selectedOption.getAttribute('data-work-status').trim()
+        : '';
+
+      if (customerId && !workStatus) {
+        event.preventDefault();
+        openWorkStatusModal(customerId, customerName);
+      }
     });
 
     // Employee Select (loaded dynamically based on branch)
@@ -803,6 +985,15 @@ function handlePaymentChange(select) {
     wakalaInput.setAttribute('disabled', 'disabled');  // disable input
     wakalaInput.removeAttribute('required');      // remove required
   }
+}
+
+const depostDisplay = document.getElementById('depost_display');
+const depostHidden = document.getElementById('depost');
+
+if (depostDisplay && depostHidden) {
+  depostDisplay.addEventListener('input', function () {
+    depostHidden.value = this.value;
+  });
 }
 
 </script>

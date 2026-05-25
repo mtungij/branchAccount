@@ -2,6 +2,13 @@
 <?php
 include_once APPPATH . "views/partials/officerheader.php";
 
+$page_title = isset($loan_page_title) && $loan_page_title !== ''
+    ? $loan_page_title
+    : ($this->lang->line('search_customer_for_loan') ?: 'Search Customer For Loan');
+$page_subtitle = isset($loan_page_subtitle) && $loan_page_subtitle !== ''
+    ? $loan_page_subtitle
+    : ($this->lang->line('loan_incomplete_note') ?: 'Select customer to continue loan process.');
+
 // --- DUMMY DATA - REMOVE AND LOAD FROM YOUR CONTROLLER ---
 // Controller should pass $share, an array of shareholder objects.
 // Each object should have 'share_id', 'share_name', 'share_mobile', 'share_email', 'share_sex', 'share_dob'.
@@ -21,10 +28,10 @@ include_once APPPATH . "views/partials/officerheader.php";
         <!-- Page Title / Subheader -->
         <div class="mb-6">
             <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200">
-               <?php echo $this->lang->line('search_customer_for_loan'); ?>
+               <?php echo $page_title; ?>
             </h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                <?php echo $this->lang->line('loan_incomplete_note'); ?>
+                <?php echo $page_subtitle; ?>
             </p>
         </div>
         <!-- End Page Title / Subheader -->
@@ -95,7 +102,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-6">
                    <?php echo $this->lang->line('select_customer'); ?>
                 </h3>
-                <?php echo form_open("oficer/loan_guarantee_option", ['novalidate' => true]); ?>
+                <?php echo form_open(!empty($is_salary_advance) ? "oficer/salary_advance_loanForm" : "oficer/loan_guarantee_option", ['novalidate' => true]); ?>
                    
                     
                         <!-- Branch Select2 Dropdown -->
@@ -106,9 +113,22 @@ include_once APPPATH . "views/partials/officerheader.php";
         <option value=""><?php echo $this->lang->line('select_customer'); ?></option>
 		<?php foreach ($customer as $customers): ?>
     <option value="<?= $customers->customer_id ?>">
-        <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
-        <?= strtoupper($customers->customer_code); ?> /
-        <?= strtoupper($customers->blanch_name); ?>
+        <?php if (!empty($is_salary_advance)): ?>
+            <?php
+            $loan_amount = isset($customers->active_loan_amount) ? number_format((float)$customers->active_loan_amount, 2) : '0.00';
+            $loan_day = isset($customers->active_loan_day) ? trim((string)$customers->active_loan_day) : '';
+            $loan_day_label = ($loan_day === '1') ? 'Siku' : (($loan_day === '7') ? 'Wiki' : (($loan_day === '30') ? 'Mwezi' : 'Day'));
+            $loan_session = isset($customers->active_loan_session) ? trim((string)$customers->active_loan_session) : '-';
+            ?>
+            <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
+            <?= strtoupper($customers->blanch_name); ?> /
+            MKOPO HAI: <?= $loan_amount; ?> /
+            <?= strtoupper($loan_day_label); ?> (<?= strtoupper($loan_session); ?>)
+        <?php else: ?>
+            <?= strtoupper($customers->f_name . " " . $customers->m_name . " " . $customers->l_name); ?> /
+            <?= strtoupper($customers->customer_code); ?> /
+            <?= strtoupper($customers->blanch_name); ?>
+        <?php endif; ?>
     </option>
 <?php endforeach; ?>
 

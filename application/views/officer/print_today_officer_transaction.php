@@ -71,18 +71,15 @@
 	<div><?= htmlspecialchars($companyAddress); ?></div>
 	<div><?= htmlspecialchars($companyEmail); ?> <?= !empty($companyPhone) ? ' | ' . htmlspecialchars($companyPhone) : ''; ?></div>
 	<div><strong>Today Officer Transaction Report</strong> - <?= $today; ?></div>
-	<?php if (!empty($branchCode)): ?>
-		<div>Branch Code: <?= htmlspecialchars($branchCode); ?></div>
-	<?php endif; ?>
 </div>
 
 <table>
 	<thead>
 		<tr>
 			<th>S/No</th>
-			<th>Afisa</th>
 			<th>Jina La Mteja</th>
-			<th>Namba Ya Simu</th>
+			<th>Hali ya Ajira</th>
+			<th>Aina ya Mkopo</th>
 			<th>Lipwa</th>
 			<th>Account ya kulipisha</th>
 			<th>Gawa</th>
@@ -94,11 +91,45 @@
 		<?php $sno = 1; ?>
 		<?php if (!empty($cash_transaction)): ?>
 			<?php foreach ($cash_transaction as $cashs): ?>
+				<?php
+					$is_collection_dash = !($cashs->depost == TRUE);
+					$is_loan_amount_dash = !($cashs->withdraw == TRUE);
+					if ($is_collection_dash && $is_loan_amount_dash) {
+						continue;
+					}
+				?>
 				<tr>
 					<td><?= $sno++; ?></td>
-					<td><?= htmlspecialchars($cashs->empl_name ?? ''); ?></td>
-					<td><?= htmlspecialchars(($cashs->f_name ?? '') . ' ' . ($cashs->m_name ?? '') . ' ' . ($cashs->l_name ?? '')); ?></td>
-					<td><?= htmlspecialchars($cashs->phone_no ?? ''); ?></td>
+					<td><?= htmlspecialchars(strtoupper(trim((string) (($cashs->f_name ?? '') . ' ' . ($cashs->m_name ?? '') . ' ' . ($cashs->l_name ?? ''))))); ?></td>
+					<td>
+						<?php
+							$work_status_label = trim((string) ($cashs->work_status ?? ''));
+							if ($work_status_label === 'Mwajiriwa') {
+								$work_status_label = 'Mtumishi';
+							}
+							echo $work_status_label !== '' ? htmlspecialchars($work_status_label) : '-';
+						?>
+					</td>
+					<td>
+						<?php
+							$loan_type_label = trim((string) ($cashs->loan_type ?? ''));
+							if ($loan_type_label === 'salary_advance') {
+								$loan_type_label = 'Mkopo Mdogo';
+							} elseif ($loan_type_label === 'main') {
+								if (($cashs->work_status ?? '') === 'Mwajiriwa') {
+									$loan_type_label = 'Mkopo Mkubwa';
+								} elseif (($cashs->work_status ?? '') === 'Mjasiriamali') {
+									$loan_type_label = 'Mkopo wa Mjasiriamali';
+								} else {
+									$loan_type_label = 'Main';
+								}
+							} elseif ($loan_type_label !== '') {
+								$loan_type_label = ucwords(str_replace('_', ' ', $loan_type_label));
+							}
+
+							echo $loan_type_label !== '' ? htmlspecialchars($loan_type_label) : '-';
+						?>
+					</td>
 					<td><?= $cashs->depost ? number_format($cashs->depost) : '-'; ?></td>
 					<td><?= !empty($cashs->deposit_account) ? htmlspecialchars($cashs->deposit_account) : '-'; ?></td>
 					<td><?= $cashs->withdraw ? number_format($cashs->loan_aprov) : '-'; ?></td>
@@ -111,11 +142,11 @@
 			<td></td>
 			<td></td>
 			<td></td>
+			<td></td>
 			<td><strong>JUMLA</strong></td>
 			<td><strong><?= number_format($totalDeposit); ?></strong></td>
 			<td></td>
 			<td><strong><?= number_format($totalApprove); ?></strong></td>
-			<td></td>
 			<td></td>
 		</tr>
 	</tbody>
@@ -154,7 +185,7 @@
 		<?php if (!empty($default_list)): ?>
 			<?php foreach ($default_list as $default_lists): ?>
 				<tr>
-					<td><?= htmlspecialchars(($default_lists->f_name ?? '') . ' ' . ($default_lists->m_name ?? '') . ' ' . ($default_lists->l_name ?? '')); ?></td>
+					<td><?= htmlspecialchars(strtoupper(trim((string) (($default_lists->f_name ?? '') . ' ' . ($default_lists->m_name ?? '') . ' ' . ($default_lists->l_name ?? ''))))); ?></td>
 					<td><?= number_format($default_lists->depost ?? 0); ?></td>
 					<td><?= htmlspecialchars($default_lists->account_name ?? ''); ?></td>
 				</tr>
@@ -186,7 +217,7 @@
 			<?php foreach ($faini as $detail): $total_fine += (float) ($detail->receve_amount ?? 0); ?>
 				<tr>
 					<td><?= $sno++; ?></td>
-					<td><?= htmlspecialchars(trim((string) (($detail->f_name ?? '') . ' ' . ($detail->m_name ?? '') . ' ' . ($detail->l_name ?? '')))); ?></td>
+					<td><?= htmlspecialchars(strtoupper(trim((string) (($detail->f_name ?? '') . ' ' . ($detail->m_name ?? '') . ' ' . ($detail->l_name ?? ''))))); ?></td>
 					<td><?= htmlspecialchars($detail->phone_no ?? ''); ?></td>
 					<td><?= htmlspecialchars($detail->inc_name ?? ''); ?></td>
 					<td><?= number_format((float) ($detail->receve_amount ?? 0)); ?></td>

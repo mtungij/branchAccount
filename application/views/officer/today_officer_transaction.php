@@ -20,7 +20,14 @@ if (function_exists('has_permission')) {
       <div class="relative overflow-hidden bg-white shadow-md dark:bg-gray-800 sm:rounded-lg">
       <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-start lg:space-y-0 lg:space-x-4">
 
-  <a href="<?php echo base_url("oficer/print_officer_todaycash_transaction") ?>" target="_blank" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-900">
+  <?php $report_date = !empty($report_date) ? $report_date : ($this->input->get('report_date') ?: date('Y-m-d')); ?>
+  <?php echo form_open('oficer/today_officer_transaction', ['method' => 'get', 'class' => 'flex flex-wrap items-end gap-3', 'id' => 'report-date-filter-form']); ?>
+    <div>
+      <label for="report_date" class="block text-sm font-medium mb-2 dark:text-gray-300">DATE</label>
+      <input type="date" id="report_date" name="report_date" value="<?php echo htmlspecialchars($report_date, ENT_QUOTES, 'UTF-8'); ?>" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-500 dark:focus:ring-gray-600">
+    </div>
+  <?php echo form_close(); ?>
+  <a href="<?php echo base_url('oficer/print_officer_todaycash_transaction?report_date=' . rawurlencode($report_date)); ?>" target="_blank" class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-900">
     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
     </svg>
@@ -68,16 +75,16 @@ if (function_exists('has_permission')) {
     <thead class="text-xs text-cyan-500 uppercase bg-gray-50 dark:bg-cyan-500 dark:text-gray-50">
         <tr class="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
             <th class="px-4 py-3"><?php echo $this->lang->line('s_no'); ?></th>
-            <th class="px-4 py-3"><?php echo $this->lang->line('employee_label'); ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('customer_name'); ?></th>
-            <th class="px-4 py-3"><?php echo $this->lang->line('phone_number'); ?></th>
+          <th class="px-4 py-3"><?php echo $this->lang->line('work_status') ?: 'Work Status'; ?></th>
+          <th class="px-4 py-3"><?php echo $this->lang->line('loan_type') ?: 'Loan Type'; ?></th>
             <th class="px-4 py-3"><?php echo ($this->lang->line('paid') ?: 'Paid') . ' (' . ($this->lang->line('rejesho') ?: 'Collection') . ')'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('loan_return_amount') ?: 'Loan Return Amount'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('payment_account_label') ?: 'Payment Account'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('mkopo') ?: 'Mkopo'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('withdrawal_account_label') ?: 'Withdrawal Account'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('date'); ?></th>
-            <th class="px-4 py-3"><?php echo $this->lang->line('action'); ?></th>
+            
         </tr>
     </thead>
     <tbody>
@@ -88,21 +95,48 @@ if (function_exists('has_permission')) {
 
                  <?php $no = 1; ?>
                                 <?php foreach ($cash_transaction as $cashs): ?>
-         
-          
-               
-            
+                <?php
+                  // Hide rows where both collection and loan amount columns are empty ('-').
+                  $is_collection_dash = !($cashs->depost == TRUE);
+                  $is_loan_amount_dash = !($cashs->withdraw == TRUE);
+                  if ($is_collection_dash && $is_loan_amount_dash) {
+                    continue;
+                  }
+                ?>
 
            <tr class="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
              <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
                    <?= $sno++; ?>
                 </td>
-                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?php echo $cashs->empl_name; ?></td>
                     <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
                        <?php echo $cashs->f_name; ?> <?php echo $cashs->m_name; ?> <?php echo $cashs->l_name; ?>
                     </td>
 
-                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?php echo $cashs->phone_no; ?></td>
+                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
+                      <?php
+                        $work_status_label = trim((string) ($cashs->work_status ?? ''));
+                        if ($work_status_label === 'Mwajiriwa') {
+                          $work_status_label = 'Mtumishi';
+                        }
+                        echo $work_status_label !== '' ? htmlspecialchars($work_status_label, ENT_QUOTES, 'UTF-8') : '-';
+                      ?>
+                    </td>
+
+                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
+                      <?php
+                      $loan_type_label = (string) ($cashs->loan_type ?? 'main');
+                      $work_status = trim((string) ($cashs->work_status ?? ''));
+                      if ($work_status === 'Mjasiriamali') {
+                        $loan_type_label = 'Mkopo wa Mjasiriamali';
+                      } elseif ($loan_type_label === 'salary_advance') {
+                            $loan_type_label = 'Mkopo Mdogo';
+                      } elseif ($loan_type_label === 'main') {
+                        $loan_type_label = 'Mkopo Mkubwa';
+                        }
+                        echo $loan_type_label !== '' ? htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8') : '-';
+                      ?>
+                    </td>
+
                     <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
                         <?php if ($cashs->depost == TRUE) {
                                          ?>
@@ -152,20 +186,7 @@ if (function_exists('has_permission')) {
                       <?php echo $cashs->time_rec; ?>
                     </td>
 
-                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
-                      <?php if ($can_delete_paid_transactions && !empty($cashs->pay_id) && !empty($cashs->depost) && (float)$cashs->depost > 0): ?>
-                        <a href="<?php echo base_url("oficer/delete_depost_data/{$cashs->pay_id}") ?>"
-                           onclick="return confirm('Are you sure you want to delete this paid transaction?')"
-                           class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-hidden focus:bg-red-700 disabled:opacity-50 disabled:pointer-events-none">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0h8m-8 0a1 1 0 01-1-1V5a1 1 0 011-1h6a1 1 0 011 1v1"/>
-                          </svg>
-                          <?php echo $this->lang->line('delete'); ?>
-                        </a>
-                      <?php else: ?>
-                        -
-                      <?php endif; ?>
-                    </td>
+                 
 
                     
                 </tr>
@@ -181,17 +202,18 @@ if (function_exists('has_permission')) {
                                     </tbody>
                                      <tr>
                                     
-                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"></td>
+                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"></td>
+                                       <td></td>
+                                       <td></td>
+                                       <td><b>JUMLA</b></td>
+                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format($sum_cashTransaction->total_deposit); ?></b></td>
+                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format(($sum_cashTransaction->total_principal_return ?? 0) + ($sum_cashTransaction->total_interest_return ?? 0)); ?></b></td>
+                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"></td>
+                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?php echo number_format($sum_cashTransaction->total_aprove); ?></td>
                                         <td></td>
-                                        <td><b></b></td>
-                                        <td></td>
-                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format($sum_cashTransaction->total_deposit); ?></b></b></td>
-                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format(($sum_cashTransaction->total_principal_return ?? 0) + ($sum_cashTransaction->total_interest_return ?? 0)); ?></b></td>
-                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b></td>
-                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?php echo number_format($sum_cashTransaction->total_aprove); ?></td>
                                         <td></td>
                                         <td></td>
-                                        <td></td>
+                                       <td></td>
                                     
                                     </tr>
 
@@ -316,30 +338,6 @@ if (function_exists('has_permission')) {
                                          <td></td>
                                      </tr>
                                      <?php endforeach; ?>
-                                      <tr>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b>Code No</b></td>
-                                         <td></td>
-                                         <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format($total_code_no->total_interest); ?></b></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                     </tr>
-                                     <tr>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b>JUMLA YA FOMU</b></td>
-                                         <td></td>
-                                         <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format($deducted_fee->total_deducted); ?></b></td>
-                                         <td></td>
-                                         <td></td>
-                                         <td></td>
-                                     </tr>
                                      <tr>
                                          <td></td>
                                          <td></td>
@@ -496,6 +494,13 @@ include_once APPPATH . "views/partials/footer.php";
 ?>
 
 <script>
+document.getElementById('report_date')?.addEventListener('change', function() {
+  const form = document.getElementById('report-date-filter-form');
+  if (form) {
+    form.requestSubmit();
+  }
+});
+
 document.getElementById('shareholder-table-search').addEventListener('keyup', function() {
     const filter = this.value.toLowerCase();
     const table = document.getElementById('shareholder_table');

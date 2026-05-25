@@ -331,6 +331,8 @@ $selected_empl_id = isset($filters['empl_id']) ? $filters['empl_id'] : null;
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('s_no', 'S/No')); ?></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('customer_name', 'Customer Name')); ?></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('phone_number', 'Phone Number')); ?></th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('work_status', 'Work Status')); ?></th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('loan_type', 'Loan Type')); ?></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('duration_type', 'Duration')); ?></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('receivable_label', 'Receivable')); ?></th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-200"><?php echo htmlspecialchars($t('received_label', 'Received')); ?></th>
@@ -352,6 +354,27 @@ $selected_empl_id = isset($filters['empl_id']) ? $filters['empl_id'] : null;
                         <td class="px-4 py-3 text-sm text-slate-700 teller-muted"><?php echo $no++; ?>.</td>
                         <td class="px-4 py-3 text-sm font-medium text-slate-800 teller-strong"><?php echo htmlspecialchars($empl_loans->f_name . ' ' . $empl_loans->m_name . ' ' . $empl_loans->l_name); ?></td>
                         <td class="px-4 py-3 text-sm text-slate-700 teller-muted"><?php echo htmlspecialchars($empl_loans->phone_no); ?></td>
+                        <td class="px-4 py-3 text-sm text-slate-700 teller-muted"><?php echo htmlspecialchars($empl_loans->work_status ?? '-'); ?></td>
+                        <td class="px-4 py-3 text-sm text-slate-700 teller-muted">
+                          <?php
+                          $loan_type_label = '-';
+                          $raw_loan_type = (string) ($empl_loans->loan_type ?? 'main');
+                          $raw_work_status = trim((string) ($empl_loans->work_status ?? ''));
+
+                          if ($raw_loan_type === 'salary_advance') {
+                            $loan_type_label = 'Salary Advance';
+                          } elseif ($raw_loan_type === 'main') {
+                            $loan_type_label = 'Mkopo Mkubwa';
+                          } elseif ($raw_loan_type !== '') {
+                            $loan_type_label = $raw_loan_type;
+                          }
+
+                          if ($raw_work_status === 'Mjasiriamali') {
+                            $loan_type_label = 'mkopo wa Mjasiriamali';
+                          }
+                          echo htmlspecialchars($loan_type_label !== '' ? $loan_type_label : '-', ENT_QUOTES, 'UTF-8');
+                          ?>
+                        </td>
                         <td class="px-4 py-3 text-sm text-slate-700 teller-muted">
                           <?php
                           if ($empl_loans->day == '1') {
@@ -378,6 +401,8 @@ $selected_empl_id = isset($filters['empl_id']) ? $filters['empl_id'] : null;
                       <td class="px-4 py-3 text-sm font-semibold text-slate-900 teller-strong"><?php echo htmlspecialchars($t('total', 'TOTAL')); ?></td>
                       <td class="px-4 py-3"></td>
                       <td class="px-4 py-3"></td>
+                      <td class="px-4 py-3"></td>
+                      <td class="px-4 py-3"></td>
                       <td class="px-4 py-3 text-sm font-bold text-slate-900 teller-strong"><?php echo number_format($total_restration); ?></td>
                       <td class="px-4 py-3 text-sm font-bold text-slate-900 teller-strong"><?php echo number_format($total_received); ?></td>
                       <td class="px-4 py-3"></td>
@@ -386,7 +411,7 @@ $selected_empl_id = isset($filters['empl_id']) ? $filters['empl_id'] : null;
                     </tr>
                   <?php else: ?>
                     <tr>
-                      <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500 teller-muted"><?php echo htmlspecialchars($t('no_customer_records_officer', 'No customer records found for this officer.')); ?></td>
+                      <td colspan="11" class="px-4 py-8 text-center text-sm text-slate-500 teller-muted"><?php echo htmlspecialchars($t('no_customer_records_officer', 'No customer records found for this officer.')); ?></td>
                     </tr>
                   <?php endif; ?>
                 </tbody>

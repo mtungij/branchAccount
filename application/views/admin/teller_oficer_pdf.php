@@ -121,6 +121,8 @@ $t = function ($key, $fallback) {
               <th><?php echo htmlspecialchars($t('s_no', 'S/No')); ?></th>
               <th><?php echo htmlspecialchars($t('customer_name', 'Customer Name')); ?></th>
               <th><?php echo htmlspecialchars($t('phone_number', 'Phone Number')); ?></th>
+              <th><?php echo htmlspecialchars($t('work_status', 'Work Status')); ?></th>
+              <th><?php echo htmlspecialchars($t('loan_type', 'Loan Type')); ?></th>
               <th><?php echo htmlspecialchars($t('duration_type', 'Duration')); ?></th>
               <th><?php echo htmlspecialchars($t('receivable_label', 'Receivable')); ?></th>
               <th><?php echo htmlspecialchars($t('received_label', 'Received')); ?></th>
@@ -141,6 +143,27 @@ $t = function ($key, $fallback) {
                 <td><?php echo $no++; ?>.</td>
                 <td><?php echo htmlspecialchars($empl_loans->f_name . ' ' . $empl_loans->m_name . ' ' . $empl_loans->l_name); ?></td>
                 <td><?php echo htmlspecialchars($empl_loans->phone_no); ?></td>
+                <td><?php echo htmlspecialchars($empl_loans->work_status ?? '-'); ?></td>
+                <td>
+                  <?php
+                  $loan_type_label = '-';
+                  $raw_loan_type = (string) ($empl_loans->loan_type ?? 'main');
+                  $raw_work_status = trim((string) ($empl_loans->work_status ?? ''));
+
+                  if ($raw_loan_type === 'salary_advance') {
+                    $loan_type_label = 'Salary Advance';
+                  } elseif ($raw_loan_type === 'main') {
+                    $loan_type_label = 'Mkopo Mkubwa';
+                  } elseif ($raw_loan_type !== '') {
+                    $loan_type_label = $raw_loan_type;
+                  }
+
+                  if ($raw_work_status === 'Mjasiriamali') {
+                    $loan_type_label = 'mkopo wa Mjasiriamali';
+                  }
+                  echo htmlspecialchars($loan_type_label !== '' ? $loan_type_label : '-', ENT_QUOTES, 'UTF-8');
+                  ?>
+                </td>
                 <td>
                   <?php
                   if ($empl_loans->day == '1') {
@@ -165,6 +188,8 @@ $t = function ($key, $fallback) {
             <tr class="total-row">
               <td></td>
               <td><?php echo htmlspecialchars($t('total', 'TOTAL')); ?></td>
+              <td></td>
+              <td></td>
               <td></td>
               <td></td>
               <td><?php echo number_format($total_restration); ?></td>

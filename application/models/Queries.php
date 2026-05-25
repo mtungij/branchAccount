@@ -524,17 +524,25 @@ public function get_allcutomer($comp_id){
 	  return $customer->result(); 
 	}
 
-	public function get_allcutomer_filtered($comp_id, $blanch_name = '', $status = '') {
-		$this->db->select('c.*, b.blanch_name, b.blanch_id, r.region_name');
+	public function get_allcutomer_filtered($comp_id, $blanch_name = '', $status = '', $work_status = '') {
+		$this->db->select('c.*, b.blanch_name, b.blanch_id, r.region_name, sc.work_status');
 		$this->db->from('tbl_customer c');
 		$this->db->join('tbl_blanch b', 'b.blanch_id = c.blanch_id', 'left');
 		$this->db->join('tbl_region r', 'r.region_id = c.region_id', 'left');
+		$this->db->join(
+			'(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) lsc ON lsc.latest_id = sc1.id) sc',
+			'sc.customer_id = c.customer_id',
+			'left'
+		);
 		$this->db->where('c.comp_id', $comp_id);
 		if (!empty($blanch_name)) {
 			$this->db->where('b.blanch_name', $blanch_name);
 		}
 		if (!empty($status)) {
 			$this->db->where('c.customer_status', $status);
+		}
+		if (!empty($work_status)) {
+			$this->db->where('sc.work_status', $work_status);
 		}
 		$this->db->order_by('c.customer_id', 'DESC');
 		return $this->db->get()->result();
@@ -1077,6 +1085,38 @@ public function get_monthly_received_loan($comp_id, $blanch_id = null)
     return $query->result();
 }
 
+public function get_latest_active_loan_by_customer($customer_id)
+{
+	return $this->db
+		->select('l.*, lc.loan_name, e.empl_name, o.loan_end_date AS active_loan_end_date')
+		->from('tbl_loans l')
+		->join('tbl_loan_category lc', 'lc.category_id = l.category_id', 'left')
+		->join('tbl_employee e', 'e.empl_id = l.empl_id', 'left')
+		->join('tbl_outstand o', 'o.loan_id = l.loan_id', 'left')
+		->where('l.customer_id', $customer_id)
+		->where_in('l.loan_status', ['withdrawal', 'out'])
+		->order_by('l.loan_id', 'DESC')
+		->limit(1)
+		->get()
+		->row();
+}
+
+public function get_open_salary_advance_loan_by_customer($customer_id)
+{
+	return $this->db
+		->select('l.*, lc.loan_name, e.empl_name')
+		->from('tbl_loans l')
+		->join('tbl_loan_category lc', 'lc.category_id = l.category_id', 'left')
+		->join('tbl_employee e', 'e.empl_id = l.empl_id', 'left')
+		->where('l.customer_id', $customer_id)
+		->where('l.loan_status', 'open')
+		->where('l.loan_type', 'salary_advance')
+		->order_by('l.loan_id', 'DESC')
+		->limit(1)
+		->get()
+		->row();
+}
+
 
 public function get_loan_by_id($loan_id)
 {
@@ -1111,6 +1151,41 @@ public function get_loan_by_id($loan_id)
 		ORDER BY c.customer_id DESC"); 
 	return $customer->result(); 
 	}
+
+		public function get_salary_advance_customers($blanch_id){
+			$customer = $this->db->query("SELECT DISTINCT c.*, sc.work_status, b.blanch_name,
+				al.loan_aprove AS active_loan_amount,
+				al.session AS active_loan_session,
+				al.day AS active_loan_day,
+				al.date_show AS active_loan_date
+				FROM tbl_customer c
+				LEFT JOIN (
+					SELECT sc1.*
+					FROM tbl_sub_customer sc1
+					JOIN (
+						SELECT customer_id, MAX(id) AS latest_id
+						FROM tbl_sub_customer
+						GROUP BY customer_id
+					) latest_sc ON latest_sc.latest_id = sc1.id
+				) sc ON sc.customer_id = c.customer_id
+				LEFT JOIN tbl_blanch b ON b.blanch_id = c.blanch_id
+				LEFT JOIN (
+					SELECT l1.*
+					FROM tbl_loans l1
+					JOIN (
+						SELECT customer_id, MAX(loan_id) AS latest_loan_id
+						FROM tbl_loans
+						WHERE loan_status IN ('withdrawal', 'out')
+						GROUP BY customer_id
+					) ll ON ll.latest_loan_id = l1.loan_id
+				) al ON al.customer_id = c.customer_id
+				WHERE c.blanch_id = ?
+				  AND sc.work_status = 'Mwajiriwa'
+				  AND al.loan_id IS NOT NULL
+				ORDER BY c.customer_id DESC", [$blanch_id]);
+
+			return $customer->result();
+		}
 
 	public function get_allcutomerofficerData($blanch_id, $empl_id)
 {
@@ -1799,8 +1874,8 @@ public function get_total_pay_description_acount_statement($loan_id)
 
 
        public function get_loanfee($comp_id){
-       	$data = $this->db->query("SELECT * FROM tbl_loan_fee WHERE comp_id = '$comp_id'");
-       	   return $data->result();
+	       	$data = $this->db->query("SELECT * FROM tbl_loan_fee WHERE comp_id = '$comp_id'");
+	       	   return $data->result();
        }
 
        public function get_loanDisbarsed($loan_id){
@@ -1921,6 +1996,10 @@ public function get_total_pay_description_acount_statement($loan_id)
         $this->db->like('l.loan_name', $filters['loan_name']);
     }
 
+	if (!empty($filters['loan_type'])) {
+		$this->db->where('l.loan_type', $filters['loan_type']);
+	}
+
     if (!empty($filters['loan_status'])) {
         $this->db->where('l.loan_status', $filters['loan_status']);
     }
@@ -2033,6 +2112,19 @@ public function get_sum_loanwithdrawal_data_filtered($comp_id, $filters = [])
         $this->db->where('ot.loan_stat_date <=', $filters['to'] . ' 23:59:59');
     }
 
+	if (!empty($filters['loan_status'])) {
+		$this->db->where('l.loan_status', $filters['loan_status']);
+	}
+
+	if (!empty($filters['loan_type'])) {
+		$this->db->where('l.loan_type', $filters['loan_type']);
+	}
+
+	if (!empty($filters['paid_today'])) {
+		$paidToday = date('Y-m-d');
+		$this->db->where("EXISTS (SELECT 1 FROM tbl_depost d WHERE d.loan_id = l.loan_id AND DATE(d.depost_day) = '$paidToday')", NULL, FALSE);
+	}
+
     return $this->db->get()->row()->loan_aprove ?? 0;
 }
 
@@ -2065,6 +2157,14 @@ public function get_withdrawal_Loan_filtered($comp_id, $filters = [])
         $this->db->where('ot.loan_stat_date <=', $filters['to'] . ' 23:59:59');
     }
 
+	if (!empty($filters['loan_status'])) {
+		$this->db->where('l.loan_status', $filters['loan_status']);
+	}
+
+	if (!empty($filters['loan_type'])) {
+		$this->db->where('l.loan_type', $filters['loan_type']);
+	}
+
     // Filter: only loans with a deposit made today
     if (!empty($filters['paid_today'])) {
         $paidToday = date('Y-m-d');
@@ -2096,6 +2196,23 @@ public function get_sum_loanwithdrawal_interest_filtered($comp_id, $filters = []
     if (!empty($filters['to'])) {
         $this->db->where('ot.loan_stat_date <=', $filters['to'] . ' 23:59:59');
     }
+
+	if (!empty($filters['loan_status'])) {
+		$this->db->where('l.loan_status', $filters['loan_status']);
+	}
+
+	if (!empty($filters['loan_type'])) {
+		$this->db->where('l.loan_type', $filters['loan_type']);
+	}
+
+	if (!empty($filters['loan_status'])) {
+		$this->db->where('l.loan_status', $filters['loan_status']);
+	}
+
+	if (!empty($filters['paid_today'])) {
+		$paidToday = date('Y-m-d');
+		$this->db->where("EXISTS (SELECT 1 FROM tbl_depost d WHERE d.loan_id = l.loan_id AND DATE(d.depost_day) = '$paidToday')", NULL, FALSE);
+	}
 
     $query = $this->db->get();
     $result = $query->row();
@@ -2603,6 +2720,23 @@ public function get_today_disbursed_loans($comp_id, $blanch_id = null)
 			AND d.depost_day = (SELECT MAX(depost_day) FROM tbl_depost WHERE loan_id = l.loan_id)
 		");
 	
+		return $data->result();
+	}
+
+	public function get_active_loans($customer_id, $exclude_loan_id = null){
+		$exclude_clause = $exclude_loan_id ? "AND l.loan_id != " . (int)$exclude_loan_id : '';
+		$data = $this->db->query("
+			SELECT l.*, lc.loan_name, ot.loan_stat_date AS ot_stat_date, ot.loan_end_date AS ot_end_date,
+			COALESCE((SELECT SUM(d.depost) FROM tbl_depost d WHERE d.loan_id = l.loan_id), 0) AS total_paid_amount,
+			COALESCE((SELECT SUM(ol.remain_amount) FROM tbl_outstand_loan ol WHERE ol.loan_id = l.loan_id), 0) AS remain_debt_amount
+			FROM tbl_loans l
+			LEFT JOIN tbl_loan_category lc ON lc.category_id = l.category_id
+			LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id
+			WHERE l.customer_id = '$customer_id'
+			AND l.loan_status = 'withdrawal'
+			$exclude_clause
+			ORDER BY l.loan_id DESC
+		");
 		return $data->result();
 	}
 
@@ -4153,6 +4287,73 @@ public function get_daily_hq_transfer_in_by_account_blanch($blanch_id, $date){
 	return $result->result();
 }
 
+public function get_daily_branch_transfer_to_company_by_account_blanch($blanch_id, $date){
+	$result = $this->db->query(
+		"SELECT l.trans_id, COALESCE(at.account_name, CONCAT('Account ', l.trans_id)) AS account_name, COALESCE(SUM(l.amount_in), 0) AS amount_in FROM tbl_account_balance_ledger l LEFT JOIN tbl_account_transaction at ON at.trans_id = l.trans_id WHERE l.blanch_id = ? AND l.movement_date = ? AND l.reference_type = 'branch_balance_company_receive' GROUP BY l.trans_id, at.account_name ORDER BY at.account_name ASC",
+		array($blanch_id, $date)
+	);
+	return $result->result();
+}
+
+public function get_branch_transfer_to_company_for_admin($comp_id, $from = null, $to = null, $blanch_id = null){
+	$this->db->select("l.blanch_id, b.blanch_name, l.trans_id, COALESCE(at.account_name, CONCAT('Account ', l.trans_id)) AS account_name, l.movement_date, COALESCE(SUM(l.amount_in), 0) AS amount_received");
+	$this->db->from('tbl_account_balance_ledger l');
+	$this->db->join('tbl_blanch b', 'b.blanch_id = l.blanch_id', 'left');
+	$this->db->join('tbl_account_transaction at', 'at.trans_id = l.trans_id', 'left');
+	$this->db->where('l.comp_id', $comp_id);
+	$this->db->where('l.reference_type', 'branch_balance_company_receive');
+	$this->db->where('l.amount_in >', 0);
+
+	if (!empty($from)) {
+		$this->db->where('DATE(l.movement_date) >=', $from);
+	}
+
+	if (!empty($to)) {
+		$this->db->where('DATE(l.movement_date) <=', $to);
+	}
+
+	if (!empty($blanch_id)) {
+		$this->db->where('l.blanch_id', $blanch_id);
+	}
+
+	if (empty($from) && empty($to) && empty($blanch_id)) {
+		$this->db->where('DATE(l.movement_date)', date('Y-m-d'));
+	}
+
+	$this->db->group_by(array('l.blanch_id', 'b.blanch_name', 'l.trans_id', 'at.account_name', 'l.movement_date'));
+	$this->db->order_by('l.movement_date', 'DESC');
+	$this->db->order_by('b.blanch_name', 'ASC');
+	$this->db->order_by('at.account_name', 'ASC');
+
+	return $this->db->get()->result();
+}
+
+public function get_branch_transfer_to_company_sum_for_admin($comp_id, $from = null, $to = null, $blanch_id = null){
+	$this->db->select('COALESCE(SUM(l.amount_in), 0) AS total_received');
+	$this->db->from('tbl_account_balance_ledger l');
+	$this->db->where('l.comp_id', $comp_id);
+	$this->db->where('l.reference_type', 'branch_balance_company_receive');
+	$this->db->where('l.amount_in >', 0);
+
+	if (!empty($from)) {
+		$this->db->where('DATE(l.movement_date) >=', $from);
+	}
+
+	if (!empty($to)) {
+		$this->db->where('DATE(l.movement_date) <=', $to);
+	}
+
+	if (!empty($blanch_id)) {
+		$this->db->where('l.blanch_id', $blanch_id);
+	}
+
+	if (empty($from) && empty($to) && empty($blanch_id)) {
+		$this->db->where('DATE(l.movement_date)', date('Y-m-d'));
+	}
+
+	return $this->db->get()->row();
+}
+
 public function get_daily_penalty_income_ledger_blanch($blanch_id, $date){
 	$result = $this->db->query(
 		"SELECT COALESCE(SUM(l.amount_in), 0) AS total_penalty_income FROM tbl_account_balance_ledger l WHERE l.blanch_id = ? AND l.movement_date = ? AND l.reference_type = 'penalty_income'",
@@ -4909,9 +5110,10 @@ public function get_next7days_ending_loans_restriction($comp_id, $blanch_id = nu
 
 
 
-		public function get_depositing_out_total_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT SUM(d.depost) AS total_default FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id LEFT JOIN tbl_account_transaction at ON at.trans_id = d.depost_method LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day = '$date' AND d.dep_status = 'out'");
+		public function get_depositing_out_total_blanch($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+		$data = $this->db->query("SELECT SUM(d.depost) AS total_default FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id LEFT JOIN tbl_account_transaction at ON at.trans_id = d.depost_method LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day BETWEEN '$start_date' AND '$end_date' AND d.dep_status = 'out'");
 		return $data->row();
 	}
 
@@ -4935,9 +5137,10 @@ public function get_next7days_ending_loans_restriction($comp_id, $blanch_id = nu
 
 
 
-public function get_depositing_sugu_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT COUNT(d.dep_id) AS total_sugu FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id  LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day = '$date' AND d.dep_status = 'out'");
+		public function get_depositing_sugu_blanch($blanch_id, $from_date = null, $to_date = null){
+			$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+			$end_date = empty($to_date) ? $start_date : $to_date;
+			$data = $this->db->query("SELECT COUNT(d.dep_id) AS total_sugu FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id  LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day BETWEEN '$start_date' AND '$end_date' AND d.dep_status = 'out'");
 		return $data->row();
 	}
 
@@ -5074,11 +5277,51 @@ public function get_total_recevableBlanch_by_officer($blanch_id, $empl_id){
    }
 
 
-    public function get_today_received_loan($comp_id){
-    	$date = date("Y-m-d");
-    	$data = $this->db->query("SELECT * FROM tbl_depost p JOIN tbl_loans l ON l.loan_id = p.loan_id JOIN tbl_customer c ON c.customer_id = l.customer_id JOIN tbl_blanch b ON b.blanch_id = l.blanch_id JOIN tbl_account_transaction at ON at.trans_id = p.depost_method WHERE p.comp_id = '$comp_id' AND p.depost_day = '$date'");
-    	return $data->result();
-    }
+	public function get_today_received_loan($comp_id, $blanch_id = null, $loan_type = '', $work_status = '', $from_date = '', $to_date = '', $loan_status = ''){
+		$default_date = date("Y-m-d");
+		$from = !empty($from_date) ? $from_date : $default_date;
+		$to = !empty($to_date) ? $to_date : $default_date;
+
+		$this->db->select('p.*, l.*, c.*, b.*, at.account_name, sc.work_status');
+		$this->db->from('tbl_depost p');
+		$this->db->join('tbl_loans l', 'l.loan_id = p.loan_id');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id');
+		$this->db->join('tbl_blanch b', 'b.blanch_id = l.blanch_id');
+		$this->db->join('tbl_account_transaction at', 'at.trans_id = p.depost_method', 'left');
+		$this->db->join(
+			'(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) latest_sc ON latest_sc.latest_id = sc1.id) sc',
+			'sc.customer_id = c.customer_id',
+			'left'
+		);
+
+		$this->db->where('p.comp_id', $comp_id);
+		$this->db->where('DATE(p.depost_day) >=', $from);
+		$this->db->where('DATE(p.depost_day) <=', $to);
+
+		if (!empty($blanch_id)) {
+			$this->db->where('l.blanch_id', (int) $blanch_id);
+		}
+
+		if (!empty($loan_type)) {
+			if (in_array($loan_type, ['main', 'salary_advance'], true)) {
+				$this->db->where('l.loan_type', $loan_type);
+			} elseif ($loan_type === 'mjasiriamali') {
+				$this->db->where('sc.work_status', 'Mjasiriamali');
+			}
+		}
+
+		if (!empty($work_status) && in_array($work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+			$this->db->where('sc.work_status', $work_status);
+		}
+
+		if (!empty($loan_status) && in_array($loan_status, ['out', 'withdrawal', 'done', 'disbarsed'], true)) {
+			$this->db->where('l.loan_status', $loan_status);
+		}
+
+		$this->db->order_by('p.depost_day', 'DESC');
+
+		return $this->db->get()->result();
+	}
 
 	public function get_received_loanBlanch($blanch_id, $empl_id = null, $from_date = null, $to_date = null, $loan_status = null)
 	{
@@ -5359,82 +5602,93 @@ public function get_today_withdrawal_loanBlanch($blanch_id){
 	  return $data->row();
 }
 
-public function get_cash_transaction_blanch($blanch_id){
-		 $date = date("Y-m-d");
-		 $data = $this->db->query("SELECT pr.prev_id,pr.pay_id,pr.empl_id,pr.customer_id,pr.loan_id,pr.depost,pr.withdraw,pr.with_trans,pr.lecod_day,pr.day_id,pr.total_loan,e.empl_name,c.f_name,c.m_name,c.l_name,c.phone_no,b.blanch_name,pr.time_rec,pr.loan_aprov,COALESCE(d.sche_principal,0) AS principal_return,COALESCE(d.sche_interest,0) AS interest_return,dat.account_name AS deposit_account,wat.account_name AS withdrawal_account FROM tbl_prev_lecod pr LEFT JOIN tbl_customer c ON c.customer_id = pr.customer_id LEFT JOIN tbl_blanch b ON b.blanch_id = pr.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = pr.empl_id LEFT JOIN tbl_depost d ON d.dep_id = pr.pay_id LEFT JOIN tbl_account_transaction dat ON dat.trans_id = pr.trans_id  LEFT JOIN tbl_account_transaction wat ON wat.trans_id = pr.with_trans WHERE pr.blanch_id = '$blanch_id' AND date(pr.time_rec) = '$date' ORDER BY prev_id DESC");
+public function get_cash_transaction_blanch($blanch_id, $from_date = null, $to_date = null){
+		 $start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		 $end_date = empty($to_date) ? $start_date : $to_date;
+		 $data = $this->db->query("SELECT pr.prev_id,pr.pay_id,pr.empl_id,pr.customer_id,pr.loan_id,pr.depost,pr.withdraw,pr.with_trans,pr.lecod_day,pr.day_id,pr.total_loan,e.empl_name,c.f_name,c.m_name,c.l_name,c.phone_no,b.blanch_name,pr.time_rec,pr.loan_aprov,COALESCE(d.sche_principal,0) AS principal_return,COALESCE(d.sche_interest,0) AS interest_return,dat.account_name AS deposit_account,wat.account_name AS withdrawal_account,l.loan_type,sc.work_status FROM tbl_prev_lecod pr LEFT JOIN tbl_customer c ON c.customer_id = pr.customer_id LEFT JOIN tbl_blanch b ON b.blanch_id = pr.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = pr.empl_id LEFT JOIN tbl_depost d ON d.dep_id = pr.pay_id LEFT JOIN tbl_account_transaction dat ON dat.trans_id = pr.trans_id LEFT JOIN tbl_account_transaction wat ON wat.trans_id = pr.with_trans LEFT JOIN tbl_loans l ON l.loan_id = COALESCE(NULLIF(d.loan_id, 0), NULLIF(pr.loan_id, 0)) LEFT JOIN (SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) latest_sc ON latest_sc.latest_id = sc1.id) sc ON sc.customer_id = pr.customer_id WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day BETWEEN '$start_date' AND '$end_date' ORDER BY prev_id DESC");
 		 return $data->result();
 	}
 
-	public function get_cash_transaction_sum_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT SUM(pr.loan_aprov) AS total_aprove,SUM(pr.depost) AS total_deposit,SUM(COALESCE(d.sche_principal,0)) AS total_principal_return,SUM(COALESCE(d.sche_interest,0)) AS total_interest_return FROM tbl_prev_lecod pr LEFT JOIN tbl_customer c ON c.customer_id = pr.customer_id LEFT JOIN tbl_blanch b ON b.blanch_id = pr.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = pr.empl_id LEFT JOIN tbl_depost d ON d.dep_id = pr.pay_id WHERE pr.blanch_id = '$blanch_id' AND date(pr.time_rec) = '$date' ORDER BY prev_id DESC");
+	public function get_cash_transaction_sum_blanch($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+			$data = $this->db->query("SELECT SUM(pr.loan_aprov) AS total_aprove,SUM(pr.depost) AS total_deposit,SUM(COALESCE(d.sche_principal,0)) AS total_principal_return,SUM(COALESCE(d.sche_interest,0)) AS total_interest_return FROM tbl_prev_lecod pr LEFT JOIN tbl_customer c ON c.customer_id = pr.customer_id LEFT JOIN tbl_blanch b ON b.blanch_id = pr.blanch_id LEFT JOIN tbl_employee e ON e.empl_id = pr.empl_id LEFT JOIN tbl_depost d ON d.dep_id = pr.pay_id WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day BETWEEN '$start_date' AND '$end_date' ORDER BY prev_id DESC");
 		 return $data->row();
 	}
 
-		public function get_deposit_sunnary_account_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT at.account_name,SUM(pr.depost) AS total_deposit_acc FROM tbl_prev_lecod pr LEFT JOIN tbl_account_transaction at ON at.trans_id = pr.trans_id  WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day = '$date' AND pr.trans_id IS TRUE GROUP BY pr.trans_id");
+		public function get_deposit_sunnary_account_blanch($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+		$data = $this->db->query("SELECT at.account_name,SUM(pr.depost) AS total_deposit_acc FROM tbl_prev_lecod pr LEFT JOIN tbl_account_transaction at ON at.trans_id = pr.trans_id  WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day BETWEEN '$start_date' AND '$end_date' AND pr.trans_id IS TRUE GROUP BY pr.trans_id");
 		return $data->result();
 	}
 
-		public function get_depositing_out_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT * FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id LEFT JOIN tbl_account_transaction at ON at.trans_id = d.depost_method LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day = '$date' AND d.dep_status = 'out'");
+		public function get_depositing_out_blanch($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+		$data = $this->db->query("SELECT * FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id LEFT JOIN tbl_account_transaction at ON at.trans_id = d.depost_method LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day BETWEEN '$start_date' AND '$end_date' AND d.dep_status = 'out'");
 		return $data->result();
 	}
 
 
-		public function get_withdrawal_summary_account_blanch_data($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT at.account_name,SUM(pr.loan_aprov) AS total_with_acc FROM tbl_prev_lecod pr LEFT JOIN tbl_account_transaction at ON at.trans_id = pr.with_trans  WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day = '$date' AND pr.with_trans IS TRUE GROUP BY pr.with_trans");
+		public function get_withdrawal_summary_account_blanch_data($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+		$data = $this->db->query("SELECT at.account_name,SUM(pr.loan_aprov) AS total_with_acc FROM tbl_prev_lecod pr LEFT JOIN tbl_account_transaction at ON at.trans_id = pr.with_trans  WHERE pr.blanch_id = '$blanch_id' AND pr.lecod_day BETWEEN '$start_date' AND '$end_date' AND pr.with_trans IS TRUE GROUP BY pr.with_trans");
 		return $data->result();
 	}
 
-	public function get_total_code_number_blanch_data($blanch_id)
+	public function get_total_code_number_blanch_data($blanch_id, $from_date = null, $to_date = null)
 {
-    $date = date("Y-m-d");
+    $start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+    $end_date = empty($to_date) ? $start_date : $to_date;
 
     $sql = "
         SELECT SUM(pr.total_int) AS total_interest
         FROM tbl_prev_lecod pr
         JOIN tbl_loans l ON l.loan_id = pr.loan_id
         WHERE pr.blanch_id = ?
-          AND pr.lecod_day = ?
+          AND pr.lecod_day BETWEEN ? AND ?
           AND l.loan_status = 'withdrawal'
     ";
 
-    $query = $this->db->query($sql, [$blanch_id, $date]);
+    $query = $this->db->query($sql, [$blanch_id, $start_date, $end_date]);
     return $query->row();
 }
 
 
-	  public function get_total_deducted_income_blanch_data($blanch_id, $date = null){
-	$report_date = empty($date) ? date("Y-m-d") : $date;
-	$data = $this->db->query("SELECT SUM(deducted_balance) AS total_deducted FROM tbl_deducted_fee WHERE blanch_id = '$blanch_id' AND deducted_date = '$report_date'");
+	  public function get_total_deducted_income_blanch_data($blanch_id, $from_date = null, $to_date = null){
+	$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+	$end_date = empty($to_date) ? $start_date : $to_date;
+	$data = $this->db->query("SELECT SUM(deducted_balance) AS total_deducted FROM tbl_deducted_fee WHERE blanch_id = '$blanch_id' AND deducted_date BETWEEN '$start_date' AND '$end_date'");
  	return $data->row();
  }
 
- 		public function get_total_penart_paid_blanch_data($blanch_id){
-		$date = date("Y-m-d");
-		$data_penart = $this->db->query("SELECT SUM(penart_paid) AS total_penart FROM tbl_pay_penart WHERE blanch_id = '$blanch_id' AND penart_date = '$date'");
+		public function get_total_penart_paid_blanch_data($blanch_id, $from_date = null, $to_date = null){
+			$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+			$end_date = empty($to_date) ? $start_date : $to_date;
+			$data_penart = $this->db->query("SELECT SUM(penart_paid) AS total_penart FROM tbl_pay_penart WHERE blanch_id = '$blanch_id' AND penart_date BETWEEN '$start_date' AND '$end_date'");
 		return $data_penart->row();
 	}
 
-		public  function get_miamala_hewa_blanch_data($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT * FROM tbl_miamala m LEFT JOIN tbl_account_transaction at ON at.trans_id = m.provider LEFT JOIN tbl_blanch b ON b.blanch_id = m.blanch_id WHERE m.blanch_id = '$blanch_id' AND m.date = '$date' AND m.status = 'open'");
+		public  function get_miamala_hewa_blanch_data($blanch_id, $from_date = null, $to_date = null){
+			$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+			$end_date = empty($to_date) ? $start_date : $to_date;
+			$data = $this->db->query("SELECT * FROM tbl_miamala m LEFT JOIN tbl_account_transaction at ON at.trans_id = m.provider LEFT JOIN tbl_blanch b ON b.blanch_id = m.blanch_id WHERE m.blanch_id = '$blanch_id' AND m.date BETWEEN '$start_date' AND '$end_date' AND m.status = 'open'");
 		return $data->result();
 	}
 
-		public  function get_miamala_hewa_total_blanch_data($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT SUM(m.amount) AS total_miamala FROM tbl_miamala m LEFT JOIN tbl_account_transaction at ON at.trans_id = m.provider LEFT JOIN tbl_blanch b ON b.blanch_id = m.blanch_id WHERE m.blanch_id = '$blanch_id' AND m.date = '$date' AND m.status = 'open'");
+		public  function get_miamala_hewa_total_blanch_data($blanch_id, $from_date = null, $to_date = null){
+			$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+			$end_date = empty($to_date) ? $start_date : $to_date;
+			$data = $this->db->query("SELECT SUM(m.amount) AS total_miamala FROM tbl_miamala m LEFT JOIN tbl_account_transaction at ON at.trans_id = m.provider LEFT JOIN tbl_blanch b ON b.blanch_id = m.blanch_id WHERE m.blanch_id = '$blanch_id' AND m.date BETWEEN '$start_date' AND '$end_date' AND m.status = 'open'");
 		return $data->row();
 	}
 
-	public function get_depositing_hai_blanch($blanch_id){
-		$date = date("Y-m-d");
-		$data = $this->db->query("SELECT COUNT(d.dep_id) AS total_hai FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id  LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day = '$date' AND d.dep_status = 'withdrawal'");
+	public function get_depositing_hai_blanch($blanch_id, $from_date = null, $to_date = null){
+		$start_date = empty($from_date) ? date("Y-m-d") : $from_date;
+		$end_date = empty($to_date) ? $start_date : $to_date;
+		$data = $this->db->query("SELECT COUNT(d.dep_id) AS total_hai FROM tbl_depost d LEFT JOIN tbl_customer c ON c.customer_id = d.customer_id  LEFT JOIN tbl_blanch b ON b.blanch_id = d.blanch_id WHERE d.blanch_id = '$blanch_id' AND d.depost_day BETWEEN '$start_date' AND '$end_date' AND d.dep_status = 'withdrawal'");
 		return $data->row();
 	}
 
@@ -6988,8 +7242,8 @@ public function defaulters_customer($blanch_id){
 
 
        public function get_sumLoanFee($comp_id){
-       	$loanfee = $this->db->query("SELECT SUM(fee_interest) AS total_fee FROM tbl_loan_fee WHERE comp_id = '$comp_id'");
-       	return $loanfee->row();
+	       	$loanfee = $this->db->query("SELECT SUM(fee_interest) AS total_fee FROM tbl_loan_fee WHERE comp_id = '$comp_id'");
+	       	return $loanfee->row();
        }
 
 
@@ -9272,7 +9526,7 @@ public function get_loan_empl_data($empl_id, $from = null, $to = null, $blanch_i
 		$to = date('Y-m-d');
 	}
 
-	$this->db->select('SUM(pr.depost) AS total_received,SUM(withdraw) AS total_withdrawal,c.f_name,c.m_name,c.l_name,l.restration,c.phone_no,l.day,pr.prev_id,pr.trans_id,at.account_name AS depost_account,pr.with_trans,wa.account_name AS with_account');
+	$this->db->select("SUM(pr.depost) AS total_received,SUM(withdraw) AS total_withdrawal,c.f_name,c.m_name,c.l_name,l.restration,c.phone_no,l.day,l.loan_type,pr.prev_id,pr.trans_id,at.account_name AS depost_account,pr.with_trans,wa.account_name AS with_account,(SELECT sc.work_status FROM tbl_sub_customer sc WHERE sc.customer_id = pr.customer_id ORDER BY sc.id DESC LIMIT 1) AS work_status", false);
 	$this->db->from('tbl_prev_lecod pr');
 	$this->db->join('tbl_loans l', 'l.loan_id = pr.loan_id');
 	$this->db->join('tbl_customer c', 'c.customer_id = pr.customer_id');
@@ -9767,6 +10021,18 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 		array($blanch_id, $today)
 	)->result();
 
+	$transferred_out_rows = $this->db->query(
+		"SELECT
+			l.trans_id,
+			COALESCE(SUM(l.amount_out), 0) AS total_transferred_out
+		 FROM tbl_account_balance_ledger l
+		 WHERE l.blanch_id = ?
+			AND l.movement_date = ?
+			AND l.reference_type = 'branch_balance_company_receive'
+		 GROUP BY l.trans_id",
+		array($blanch_id, $today)
+	)->result();
+
 	$withdraw_rows = $this->db->query(
 		"SELECT
 			l.trans_id,
@@ -9874,8 +10140,17 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 
 		$loan_payment_received = (float) $row->loan_payment_received;
 		$penalty_received = (float) $row->penalty_received;
-		$account_map[$trans_id]->today_received = $loan_payment_received + $penalty_received;
+		$account_map[$trans_id]->today_received = $loan_payment_received;
 		$account_map[$trans_id]->penalty_added_to_cash = $penalty_received;
+	}
+
+	foreach ($transferred_out_rows as $row) {
+		$trans_id = (string) $row->trans_id;
+		if (!isset($account_map[$trans_id])) {
+			continue;
+		}
+		$remaining_received = (float) $account_map[$trans_id]->today_received - (float) $row->total_transferred_out;
+		$account_map[$trans_id]->today_received = $remaining_received > 0 ? $remaining_received : 0.0;
 	}
 
 	foreach ($withdraw_rows as $row) {
@@ -11167,6 +11442,11 @@ public function get_remain_amount($loan_id) {
 	    	$data = $this->db->query("SELECT l.loan_id,l.loan_int,l.restration,l.customer_id,l.disburse_day,ot.loan_stat_date,ot.loan_end_date,l.loan_status FROM tbl_loans l LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id WHERE l.customer_id = '$customer_id' ORDER BY CASE WHEN l.loan_status = 'withdrawal' THEN 1 WHEN l.loan_status = 'out' THEN 2 WHEN l.loan_status = 'disbarsed' THEN 3 WHEN l.loan_status = 'disbursed' THEN 4 ELSE 9 END, l.loan_id DESC LIMIT 1");
      	return $data->row();
      }
+
+		public function get_customer_loan_options_for_deposit($customer_id){
+			$data = $this->db->query("SELECT l.loan_id, l.loan_type, l.loan_status, l.loan_int, l.restration, l.loan_code, l.day, l.session, l.loan_day, ot.loan_stat_date, ot.loan_end_date, lc.loan_name, COALESCE((SELECT SUM(d.depost) FROM tbl_depost d WHERE d.loan_id = l.loan_id), 0) AS total_Deposit FROM tbl_loans l LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id LEFT JOIN tbl_loan_category lc ON lc.category_id = l.category_id WHERE l.customer_id = '$customer_id' AND l.loan_status IN ('withdrawal', 'out', 'disbarsed') ORDER BY CASE WHEN l.loan_status = 'withdrawal' THEN 1 WHEN l.loan_status = 'out' THEN 2 WHEN l.loan_status = 'disbarsed' THEN 3 ELSE 9 END, l.loan_id DESC");
+			return $data->result();
+		}
 
 
 	 

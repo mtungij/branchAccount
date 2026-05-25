@@ -215,6 +215,13 @@ if (!empty($companyLogo) && file_exists(FCPATH . 'assets/images/company_logo/' .
         <tr>
             <td class="strong" colspan="2"><?php echo $txt_today_summary; ?></td>
         </tr>
+        <?php if (!empty($today_branch_transfer_to_company)): ?>
+            <?php $total_branch_transfer_to_company = 0.0; foreach ($today_branch_transfer_to_company as $branch_transfer_row) { $total_branch_transfer_to_company += (float) $branch_transfer_row->amount_in; } ?>
+            <tr><td class="strong">Branch Transfer to Company</td><td class="strong"><?php echo number_format($total_branch_transfer_to_company); ?></td></tr>
+            <?php foreach ($today_branch_transfer_to_company as $branch_transfer_row): ?>
+                <tr><td><?php echo sprintf('Transfer from %s', htmlspecialchars(!empty($branch_transfer_row->account_name) ? $branch_transfer_row->account_name : $txt_unknown_account)); ?></td><td><?php echo number_format((float) $branch_transfer_row->amount_in); ?></td></tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
         <?php if (!empty($today_hq_transfer_in)): ?>
             <?php $total_hq_transfer_in = 0.0; foreach ($today_hq_transfer_in as $hq_row) { $total_hq_transfer_in += (float) $hq_row->amount_in; } ?>
             <tr><td class="strong"><?php echo $txt_hq_transfer_in; ?></td><td class="strong"><?php echo number_format($total_hq_transfer_in); ?></td></tr>

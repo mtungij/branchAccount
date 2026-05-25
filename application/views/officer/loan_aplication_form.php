@@ -1,5 +1,12 @@
 <?php
 include_once APPPATH . "views/partials/officerheader.php";
+
+$page_title = isset($loan_page_title) && $loan_page_title !== ''
+    ? $loan_page_title
+    : ($this->lang->line('loan_application_form') ?: 'Loan Application Form');
+$page_subtitle = isset($loan_page_subtitle) && $loan_page_subtitle !== ''
+    ? $loan_page_subtitle
+    : ($this->lang->line('loan_application_form_desc') ?: 'Loan application details.');
 ?>
 
 <!-- ========== MAIN CONTENT BODY ========== -->
@@ -9,10 +16,10 @@ include_once APPPATH . "views/partials/officerheader.php";
         <!-- Page Title / Subheader -->
         <div class="mb-6">
             <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-200">
-               <?php echo $this->lang->line('loan_application_form'); ?>
+               <?php echo $page_title; ?>
             </h2>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            <?php echo $this->lang->line('loan_application_form_desc'); ?>
+            <?php echo $page_subtitle; ?>
             </p>
         </div>
 
@@ -56,10 +63,53 @@ include_once APPPATH . "views/partials/officerheader.php";
                     <?php echo $this->lang->line('loan_application_form'); ?>
                 </h3>
 
+                <?php if (!empty($salary_advance_mode) && !empty($active_loan)): ?>
+                <?php
+                    $active_status_raw = (string)($active_loan->loan_status ?? '');
+                    $active_status_label = $active_status_raw;
+                    $active_day_raw = (string)($active_loan->day ?? '');
+                    $active_day_label = 'Mkopo wa siku';
+                    $active_session_prefix = 'Siku';
+                    if ($active_day_raw === '7') {
+                        $active_day_label = 'Mkopo wa wiki';
+                        $active_session_prefix = 'Wiki';
+                    } elseif ($active_day_raw === '30' || $active_day_raw === '31') {
+                        $active_day_label = 'Mkopo wa mwezi';
+                        $active_session_prefix = 'Mwezi';
+                    } elseif ($active_day_raw === '1') {
+                        $active_day_label = 'Mkopo wa siku';
+                        $active_session_prefix = 'Siku';
+                    }
+                    if ($active_status_raw === 'withdrawal') {
+                        $active_status_label = 'Ndani ya mkataba';
+                    } elseif ($active_status_raw === 'out') {
+                        $active_status_label = 'Nje ya mkataba';
+                    } elseif ($active_status_raw === 'done') {
+                        $active_status_label = 'Waliomaliza';
+                    } elseif ($active_status_raw === 'open') {
+                        $active_status_label = 'Inasubiri';
+                    }
+                ?>
+                <div class="mb-6 rounded-xl border border-cyan-200 bg-cyan-50 p-4 dark:border-cyan-800 dark:bg-cyan-900/20">
+                    <h4 class="font-semibold text-cyan-800 dark:text-cyan-300 mb-3">Mkopo Alionao Sasa</h4>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm text-gray-700 dark:text-gray-200">
+                        <div><span class="font-medium">Kiasi:</span> <?php echo number_format((float)($active_loan->how_loan ?? 0)); ?></div>
+                        <div><span class="font-medium">Session:</span> <?php echo htmlspecialchars($active_session_prefix . '(' . ((string)($active_loan->session ?? '-')) . ')', ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><span class="font-medium">Hali:</span> <?php echo htmlspecialchars($active_status_label, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><span class="font-medium">Mwisho wa Mkopo:</span> <?php echo htmlspecialchars((string)($active_loan->active_loan_end_date ?? '-'), ENT_QUOTES, 'UTF-8'); ?></div>
+                        <div><span class="font-medium">Mteja:</span> <?php echo htmlspecialchars(trim(($customer->f_name ?? '') . ' ' . ($customer->m_name ?? '') . ' ' . ($customer->l_name ?? '')), ENT_QUOTES, 'UTF-8'); ?></div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                <?php 
-$form_action = isset($existing_loan) 
-    ? "oficer/modify_loanapplication/{$customer->customer_id}/{$existing_loan->loan_id}" 
-    : "oficer/create_loanapplication/{$customer->customer_id}";
+$form_action = !empty($salary_advance_mode)
+    ? (isset($existing_loan) && !empty($existing_loan->loan_id)
+        ? "oficer/modify_salary_advance_loanapplication/{$customer->customer_id}/{$existing_loan->loan_id}"
+        : "oficer/create_salary_advance_loanapplication/{$customer->customer_id}")
+    : (isset($existing_loan) 
+        ? "oficer/modify_loanapplication/{$customer->customer_id}/{$existing_loan->loan_id}" 
+        : "oficer/create_loanapplication/{$customer->customer_id}");
 
 echo form_open($form_action, ['novalidate' => true]); 
 ?>
@@ -149,6 +199,18 @@ echo form_open($form_action, ['novalidate' => true]);
                             class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
                         <?= form_error("reason", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
                     </div>
+
+                    <?php if (!empty($salary_advance_mode)): ?>
+                    <!-- Check Number (saved to tbl_customer.member_status) -->
+                    <div class="sm:col-span-4">
+                        <label for="check_number" class="block text-sm font-medium mb-2 dark:text-gray-300">* Check Number:</label>
+                        <input type="text" id="check_number" name="check_number" placeholder="Weka check number"
+                            value="<?= htmlspecialchars((string)($customer->member_status ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+                            autocomplete="off" required
+                            class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                        <?= form_error("check_number", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- Interest Formula -->
                         <div class="sm:col-span-4">

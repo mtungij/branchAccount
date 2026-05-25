@@ -17,6 +17,17 @@ $total_payable = $principal + $total_interest;
 // tarehe ya mwisho (leo + idadi ya vipindi * siku za kila kipindi)
 $start_date = date('Y-m-d');
 $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
+
+// Salary Advance theme
+$is_salary_advance = ($loan_form->loan_type ?? '') === 'salary_advance';
+$sa_header_bg   = $is_salary_advance ? 'bg-purple-700' : 'bg-cyan-600';
+$sa_header_btn  = $is_salary_advance ? 'text-purple-700' : 'text-cyan-700';
+$sa_card_from   = $is_salary_advance ? 'from-purple-50' : 'from-green-50';
+$sa_card_border = $is_salary_advance ? 'border-purple-500 dark:border-purple-400' : 'border-green-500 dark:border-green-400';
+$sa_photo_border = $is_salary_advance ? 'border-purple-400 dark:border-purple-300' : 'border-green-400 dark:border-green-300';
+$sa_name_color  = $is_salary_advance ? 'text-purple-700 dark:text-purple-300' : 'text-green-700 dark:text-green-300';
+$sa_badge_bg    = $is_salary_advance ? 'bg-purple-500 dark:bg-purple-600' : 'bg-green-500 dark:bg-green-600';
+$sa_section_bg  = $is_salary_advance ? 'bg-purple-700' : 'bg-cyan-600';
 ?>
 
 
@@ -34,10 +45,10 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
         </div>
         <?php endif; ?>
 
-       <div class="bg-cyan-600 text-white p-4 rounded-lg shadow flex justify-between items-center">
+       <div class="<?php echo $sa_header_bg; ?> text-white p-4 rounded-lg shadow flex justify-between items-center">
         <h2 class="text-lg font-semibold uppercase tracking-widest"><?php echo $this->lang->line('loan_application_form'); ?></h2>
       <a href="<?= base_url('admin/download_loan_application/' . $loan_form->loan_id); ?>" 
-         class="inline-flex items-center gap-2 px-4 py-2 bg-white text-cyan-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm">
+         class="inline-flex items-center gap-2 px-4 py-2 bg-white <?php echo $sa_header_btn; ?> rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm">
          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
          </svg>
@@ -45,21 +56,34 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
       </a>
     </div>
 
+<?php if ($is_salary_advance): ?>
+<div class="flex items-center gap-4 p-4 bg-purple-50 border border-purple-300 rounded-xl dark:bg-purple-900/20 dark:border-purple-700">
+    <div class="shrink-0 bg-purple-600 text-white rounded-full p-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 8v1m-4.2-4h8.4"/></svg>
+    </div>
+    <div class="flex-1">
+        <h3 class="text-sm font-bold text-purple-800 dark:text-purple-300 uppercase tracking-widest">💼 Mkopo Mdogo</h3>
+        <p class="text-xs text-purple-700 dark:text-purple-400 mt-0.5">Maombi ya Mkopo Mdogo — Kagua taarifa za mteja kabla ya kuidhinisha.</p>
+    </div>
+    <span class="px-3 py-1.5 text-xs font-bold bg-purple-600 text-white rounded-full uppercase tracking-widest shadow">Mkopo Mdogo</span>
+</div>
+<?php endif; ?>
+
 <div class="flex flex-col md:flex-row gap-8 items-stretch">
     <!-- Left: Customer Info -->
     <div class="w-full md:w-3/12">
-        <div class="bg-gradient-to-b from-green-50 to-white dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-2xl p-5 border-t-4 border-green-500 dark:border-green-400 h-full transition-all hover:shadow-xl">
+        <div class="bg-gradient-to-b <?php echo $sa_card_from; ?> to-white dark:from-gray-800 dark:to-gray-900 shadow-lg rounded-2xl p-5 border-t-4 <?php echo $sa_card_border; ?> h-full transition-all hover:shadow-xl">
             <?php foreach ($customer_data as $customer_profiles): ?>
                 <div class="text-center">
                     <?php if (!empty($customer_profiles->passport)): ?>
-                        <img class="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4 border-green-400 dark:border-green-300 shadow-sm"
+                        <img class="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4 <?php echo $sa_photo_border; ?> shadow-sm"
                              src="<?= base_url($customer_profiles->passport) ?>" alt="Customer Passport">
                     <?php else: ?>
-                        <img class="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4 border-green-400 dark:border-green-300 shadow-sm"
+                        <img class="w-32 h-32 mx-auto rounded-full object-cover mb-4 border-4 <?php echo $sa_photo_border; ?> shadow-sm"
                              src="<?= base_url('assets/img/customer21.png') ?>" alt="Default Image">
                     <?php endif; ?>
 
-                    <h1 class="text-2xl font-extrabold text-green-700 dark:text-green-300 uppercase tracking-wide">
+                    <h1 class="text-2xl font-extrabold <?php echo $sa_name_color; ?> uppercase tracking-wide">
                         <?= strtoupper($customer_profiles->f_name) . " " . strtoupper(substr($customer_profiles->m_name, 0, 1)) . " " . strtoupper($customer_profiles->l_name) ?>
                     </h1>
 
@@ -69,13 +93,45 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
                 <ul class="mt-5 text-sm text-gray-700 dark:text-gray-300 divide-y divide-gray-200 dark:divide-gray-700">
                     <li class="py-2 flex justify-between items-center">
                             <span><?php echo $this->lang->line('status'); ?></span>
-                        <span class="bg-green-500 dark:bg-green-600 text-white text-xs px-2.5 py-1 rounded-full shadow-sm">
+                        <span class="<?php echo $sa_badge_bg; ?> text-white text-xs px-2.5 py-1 rounded-full shadow-sm">
                                <?= (count($customer_data) === 1) ? $this->lang->line('new_customer') : $this->lang->line('existing_customer'); ?>
                         </span>
                     </li>
                     <li class="py-2 flex justify-between">
                             <span><?php echo $this->lang->line('member_since'); ?></span>
                         <span class="font-medium text-gray-800 dark:text-gray-200"><?= date('Y-m-d', strtotime($customer_profiles->customer_day)); ?></span>
+                    </li>
+                    <li class="py-2 flex justify-between">
+                        <span><?php echo $this->lang->line('work_status') ?: 'Work Status'; ?></span>
+                        <span class="font-medium text-gray-800 dark:text-gray-200">
+                            <?php
+                                $work_status_label = (string) ($customer_profiles->work_status ?? '-');
+                                if ($work_status_label === 'Mwajiriwa') {
+                                    $work_status_label = 'Mtumishi';
+                                }
+                                echo htmlspecialchars($work_status_label, ENT_QUOTES, 'UTF-8');
+                            ?>
+                        </span>
+                    </li>
+                    <li class="py-2 flex justify-between">
+                        <span>Aina ya Mkopo</span>
+                        <span class="font-medium text-gray-800 dark:text-gray-200">
+                            <?php
+                                $loan_type_label = (string) ($customer_profiles->loan_type ?? ($loan_form->loan_type ?? 'main'));
+                                if ($loan_type_label === 'salary_advance') {
+                                    $loan_type_label = 'Mkopo Mdogo';
+                                } elseif ($loan_type_label === 'main') {
+                                    if (($customer_profiles->work_status ?? '') === 'Mwajiriwa') {
+                                        $loan_type_label = 'Mkopo Mkubwa';
+                                    } elseif (($customer_profiles->work_status ?? '') === 'Mjasiriamali') {
+                                        $loan_type_label = 'Mkopo wa Mjasiriamali';
+                                    } else {
+                                        $loan_type_label = 'Main';
+                                    }
+                                }
+                                echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
+                            ?>
+                        </span>
                     </li>
                 </ul>
 
@@ -225,8 +281,9 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
 			
         </div> -->
      
-		<div class=" bg-white border  p-4 rounded-lg shadow  border-blue-500 dark:bg-gray-800 dark:border-gray-700">
-		<div class="w-full bg-cyan-600 text-white">
+        <?php if (!$is_salary_advance): ?>
+        <div class=" bg-white border  p-4 rounded-lg shadow  border-blue-500 dark:bg-gray-800 dark:border-gray-700">
+		<div class="w-full <?php echo $sa_section_bg; ?> text-white">
         <div class="flex flex-col max-w-screen-xl px-4 mx-auto md:flex-row md:justify-between md:px-6 lg:px-8">
             <div class="p-2 flex flex-row items-center justify-between">
                 <a href="#" class="text-lg font-semibold tracking-widest uppercase rounded-lg focus:outline-none focus:shadow-outline">
@@ -411,11 +468,13 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
 
 
 
-        	<div class="flex flex-col bg-white border shadow-sm rounded-xl pb-1.5 dark:bg-gray-800 dark:border-gray-700">
-		<div class="w-full bg-cyan-600 text-white p-4">
+        <?php endif; ?>
+
+            	<div class="flex flex-col bg-white border shadow-sm rounded-xl pb-1.5 dark:bg-gray-800 dark:border-gray-700">
+		<div class="w-full <?php echo $sa_section_bg; ?> text-white p-4">
         <div class="flex justify-between items-center">
             <h2 class="text-lg font-semibold tracking-widest uppercase">
-    		<?php echo $this->lang->line('loan_history'); ?>
+    		<?php echo $is_salary_advance ? 'Mkopo Mkubwa Unaoendelea' : $this->lang->line('loan_history'); ?>
             </h2>
             <a href="<?= base_url('admin/download_loan_history/' . $loan_form->customer_id); ?>" 
                class="inline-flex items-center gap-2 px-4 py-2 bg-white text-cyan-700 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm">
@@ -440,19 +499,68 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
 
 
                                     <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold">S/No.</th>
+                                        <?php if (!$is_salary_advance): ?>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('loan_product'); ?></th>
+                                        <?php endif; ?>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('principal'); ?></th>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('principal_interest'); ?></th>
+                                        <?php if ($is_salary_advance): ?>
+                                        <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('amount_paid') ?: 'Paid Amount'; ?></th>
+                                        <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('remain_debt') ?: 'Remain Debt'; ?></th>
+                                        <?php endif; ?>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('duration_type'); ?></th>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('disburse_date'); ?></th>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('end_date'); ?></th>
+                                        <?php if (!$is_salary_advance): ?>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('last_payment'); ?></th>
+                                        <?php endif; ?>
+                                        <?php if (!$is_salary_advance): ?>
                                         <th class="py-3 px-6 text-start text-gray-800 dark:text-gray-200 font-bold"><?php echo $this->lang->line('credit_score'); ?></th>
+                                        <?php endif; ?>
         </tr>
     </thead>
    <tbody class="divide-y divide-gray-200">
     <?php $no = 1; ?>
-    <?php if (empty($loan_history)): ?>
+    <?php if ($is_salary_advance): ?>
+        <?php if (empty($active_loans)): ?>
+            <tr>
+                <td colspan="8" class="px-4 py-4 text-center text-gray-500 dark:text-purple-200 italic">
+                    Hakuna mkopo mkubwa unaoendelea kwa sasa.
+                </td>
+            </tr>
+        <?php else: ?>
+            <?php foreach ($active_loans as $active): ?>
+            <tr class="transition bg-purple-50 dark:bg-purple-950/40">
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold"><?php echo $no++; ?>.</td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold">
+                    <?php echo number_format($active->how_loan); ?>
+                </td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold">
+                    <?php echo number_format($active->loan_int ?? 0); ?>
+                </td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold">
+                    <?php echo number_format($active->total_paid_amount ?? 0); ?>
+                </td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold">
+                    <?php echo number_format(max(0, (float)($active->loan_int ?? 0) - (float)($active->total_paid_amount ?? 0))); ?>
+                </td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold">
+                    <?php
+                    if ($active->day == 1) {
+                        echo $this->lang->line('day_option') . " ({$active->session})";
+                    } elseif ($active->day == 7) {
+                        echo $this->lang->line('week_option') . " ({$active->session})";
+                    } elseif (in_array($active->day, [28, 29, 30, 31])) {
+                        echo $this->lang->line('month_option') . " ({$active->session})";
+                    }
+                    ?>
+                </td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold"><?php echo $active->ot_stat_date ?? $active->loan_stat_date ?? '-'; ?></td>
+                <td class="px-4 py-2 text-sm text-gray-900 dark:text-purple-100 font-bold"><?php echo !empty($active->ot_end_date) ? substr($active->ot_end_date, 0, 10) : (!empty($active->loan_end_date) ? substr($active->loan_end_date, 0, 10) : '-'); ?></td>
+            </tr>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    <?php elseif (empty($loan_history)): ?>
         <tr>
             <td colspan="9" class="px-4 py-3 text-center text-gray-500 italic">
                  <?php echo $this->lang->line('no_loan_history'); ?>
@@ -574,7 +682,7 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
         </div>
 
         <div class="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
-		<div class="w-full bg-cyan-600 text-white">
+		<div class="w-full <?php echo $sa_section_bg; ?> text-white">
         <div class="flex flex-col max-w-screen-xl px-4 mx-auto md:flex-row md:justify-between md:px-6 lg:px-8">
             <div class="p-2 flex flex-row items-center justify-between">
                 <a href="#" class="text-lg font-semibold tracking-widest uppercase rounded-lg focus:outline-none focus:shadow-outline">
@@ -722,7 +830,7 @@ $end_date = date('Y-m-d', strtotime("+".($sessions * $day_interval)." days"));
 
                     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                         <div class="flex justify-center gap-x-2">
-                               <button type="submit" class="py-2 px-4 btn-primary-sm bg-cyan-800 border border-cyan-500 hover:bg-cyan-700 text-white"><?php echo $this->lang->line('approve'); ?></button>
+                               <button type="submit" class="py-2 px-4 btn-primary-sm <?php echo $is_salary_advance ? 'bg-purple-800 border border-purple-500 hover:bg-purple-700' : 'bg-cyan-800 border border-cyan-500 hover:bg-cyan-700'; ?> text-white"><?php echo $this->lang->line('approve'); ?></button>
                                <a href="<?php echo base_url("admin/reject_loan/{$loan_form->loan_id}") ?>" class="py-2 px-4 bg-red-600 dark:bg-red-800 rounded border border-red-500 hover:bg-red-700 text-white"><?php echo $this->lang->line('reject'); ?></a>
                         </div>
                     </div>

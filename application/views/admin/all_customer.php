@@ -121,10 +121,17 @@ if (isset($customer) && is_array($customer) && !empty($customer)) {
                   <!-- Status filter -->
                   <select id="filter-status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-cyan-500">
                     <option value=""><?php echo $this->lang->line('all_statuses'); ?></option>
-                    <option value="open"><?php echo $this->lang->line('active'); ?></option>
-                    <option value="close"><?php echo $this->lang->line('done'); ?></option>
+                                        <option value="open">Ndani ya mkataba</option>
+                                        <option value="close">Waliomaliza</option>
                     <option value="pending"><?php echo $this->lang->line('pending'); ?></option>
-                    <option value="out"><?php echo $this->lang->line('default'); ?></option>
+                                        <option value="out">Nje ya mkataba</option>
+                  </select>
+
+                  <!-- Hali ya Ajira filter -->
+                  <select id="filter-work-status" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-cyan-500">
+                    <option value="">Hali ya Ajira (Zote)</option>
+                    <option value="Mjasiriamali">Mjasiriamali</option>
+                    <option value="Mwajiriwa">Mtumishi</option>
                   </select>
 
                   <!-- PDF export -->
@@ -153,8 +160,7 @@ if (isset($customer) && is_array($customer) && !empty($customer)) {
 							<th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('customer_name'); ?></th>
                <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('branch_name'); ?></th>
                <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('phone_number'); ?></th>
-					 <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('status'); ?></th>
-                     <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500">Date Registered</th>
+					 <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('status'); ?></th>                     <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500">Hali ya Ajira</th>                     <th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500">Date Registered</th>
 							<th scope="col" class="border-b border-cyan-200 px-4 py-3 dark:border-cyan-500"><?php echo $this->lang->line('action'); ?></th> 
                         </tr>
                     </thead>
@@ -165,10 +171,13 @@ if (isset($customer) && is_array($customer) && !empty($customer)) {
                 <?php
                     $registered_raw = !empty($customers->customer_day) ? $customers->customer_day : (!empty($customers->reg_date) ? $customers->reg_date : '');
                     $registered_date = !empty($registered_raw) ? date('Y-m-d', strtotime($registered_raw)) : '-';
+                    $raw_ws = trim((string)($customers->work_status ?? ''));
+                    $display_ws = $raw_ws === 'Mwajiriwa' ? 'Mtumishi' : ($raw_ws !== '' ? $raw_ws : '-');
                 ?>
         <tr class="border-b dark:border-gray-700"
             data-branch="<?php echo htmlspecialchars($customers->blanch_name, ENT_QUOTES, 'UTF-8'); ?>"
-            data-status="<?php echo htmlspecialchars($customers->customer_status, ENT_QUOTES, 'UTF-8'); ?>">
+            data-status="<?php echo htmlspecialchars($customers->customer_status, ENT_QUOTES, 'UTF-8'); ?>"
+            data-work-status="<?php echo htmlspecialchars($raw_ws, ENT_QUOTES, 'UTF-8'); ?>">
             <th scope="row" class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white"><?= $no++ ?></th>
             <td class="uppercase px-4 py-3 dark:text-white">
             <?php echo htmlspecialchars($customers->f_name, ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($customers->m_name, ENT_QUOTES, 'UTF-8'); ?> <?php echo htmlspecialchars($customers->l_name, ENT_QUOTES, 'UTF-8'); ?>
@@ -178,18 +187,19 @@ if (isset($customer) && is_array($customer) && !empty($customer)) {
             <td class="px-4 py-3 dark:text-white">
                   <?php if ($customers->customer_status == 'open') {
         ?>
-                <a href="#" class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-500/20 dark:text-emerald-100 dark:ring-emerald-400/40"><?php echo $this->lang->line('active'); ?></a>
+                <a href="#" class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200/80 dark:bg-emerald-500/20 dark:text-emerald-100 dark:ring-emerald-400/40">Active</a>
        <?php }elseif ($customers->customer_status == 'close') {
         ?>
-                <a href="#" class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 ring-1 ring-sky-200/80 dark:bg-sky-500/20 dark:text-sky-100 dark:ring-sky-400/40"><?php echo $this->lang->line('done'); ?></a>
+                <a href="#" class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-semibold text-sky-800 ring-1 ring-sky-200/80 dark:bg-sky-500/20 dark:text-sky-100 dark:ring-sky-400/40">Waliomaliza</a>
         <?php }elseif($customers->customer_status == 'pending'){
          ?>
                  <a href="#" class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 ring-1 ring-amber-200/80 dark:bg-amber-500/20 dark:text-amber-100 dark:ring-amber-400/40"><?php echo $this->lang->line('pending'); ?></a>
          <?php }elseif ($customers->customer_status == 'out') {
           ?>
-                    <a href="#" class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-500/20 dark:text-rose-100 dark:ring-rose-400/40"><?php echo $this->lang->line('default'); ?></a>
+                    <a href="#" class="inline-flex items-center rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-500/20 dark:text-rose-100 dark:ring-rose-400/40">Nje ya mkataba</a>
           <?php } ?>
             </td>
+                        <td class="px-4 py-3 dark:text-white"><?php echo htmlspecialchars($display_ws, ENT_QUOTES, 'UTF-8'); ?></td>
                         <td class="px-4 py-3 dark:text-white"><?php echo htmlspecialchars($registered_date, ENT_QUOTES, 'UTF-8'); ?></td>
 
            <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
@@ -370,26 +380,32 @@ $('#empl').html('<option value="">Select Employee</option>');
 
   <script>
   (function () {
-    var branchSel = document.getElementById('filter-branch');
-    var statusSel = document.getElementById('filter-status');
-    var pdfBtn    = document.getElementById('pdf-export-btn');
-    var baseUrl   = '<?php echo base_url('admin/export_all_customer_pdf'); ?>';
+    var branchSel     = document.getElementById('filter-branch');
+    var statusSel     = document.getElementById('filter-status');
+    var workStatusSel = document.getElementById('filter-work-status');
+    var pdfBtn        = document.getElementById('pdf-export-btn');
+    var baseUrl       = '<?php echo base_url('admin/export_all_customer_pdf'); ?>';
 
     function buildPdfUrl() {
       var params = [];
       if (branchSel.value) params.push('blanch_name=' + encodeURIComponent(branchSel.value));
       if (statusSel.value) params.push('status='      + encodeURIComponent(statusSel.value));
+            if (workStatusSel.value) params.push('work_status=' + encodeURIComponent(workStatusSel.value));
       pdfBtn.href = baseUrl + (params.length ? '?' + params.join('&') : '');
     }
 
     function applyFilters() {
-      var branch = branchSel.value.toLowerCase();
-      var status = statusSel.value.toLowerCase();
-      var rows   = document.querySelectorAll('#shareholder_table tbody tr');
+      var branch     = branchSel.value.toLowerCase();
+      var status     = statusSel.value.toLowerCase();
+      var workStatus = workStatusSel.value.trim();
+      var rows       = document.querySelectorAll('#shareholder_table tbody tr');
       rows.forEach(function (row) {
         var rowBranch = (row.getAttribute('data-branch') || '').toLowerCase();
         var rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
-        var show = (!branch || rowBranch === branch) && (!status || rowStatus === status);
+        var rowWS     = (row.getAttribute('data-work-status') || '').trim();
+        var show = (!branch || rowBranch === branch)
+                && (!status || rowStatus === status)
+                && (!workStatus || rowWS === workStatus);
         row.style.display = show ? '' : 'none';
       });
       buildPdfUrl();
@@ -397,6 +413,7 @@ $('#empl').html('<option value="">Select Employee</option>');
 
     branchSel.addEventListener('change', applyFilters);
     statusSel.addEventListener('change', applyFilters);
+    workStatusSel.addEventListener('change', applyFilters);
   })();
   </script>
 

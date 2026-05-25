@@ -47,14 +47,15 @@ include_once APPPATH . "views/partials/officerheader.php";
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('sno') ?? 'S/No.'; ?></th>
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('customer_name') ?? 'Customer Name'; ?></th>
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('phone_number') ?? 'Phone Number'; ?></th>
-            <th class="py-3 px-6 text-start"><?php echo $this->lang->line('branch_sw') ?? 'Branch'; ?></th>
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('loan_amount_applied') ?? 'Loan Amount Applied'; ?></th>
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('duration_type') ?? 'Duration Type'; ?></th>
+            <th class="py-3 px-6 text-start"><?php echo $this->lang->line('work_status') ?? 'Work Status'; ?></th>
+
             <th class="py-3 px-6 text-start"><?php echo $this->lang->line('loan_type') ?? 'Loan Type'; ?></th>
             <th class="py-3 px-6 text-end"><?php echo $this->lang->line('loan_status') ?? 'Loan Status'; ?></th>
             <th class="py-3 px-6 text-end"><?php echo $this->lang->line('loan_application_date') ?? 'Loan Application Date'; ?></th>
             <th class="py-3 px-6 text-center"><?php echo $this->lang->line('verification_status') ?? 'Verification'; ?></th>
-            <th class="py-3 px-6 text-end"><?php echo $this->lang->line('action') ?? 'Action'; ?></th>
+
         </tr>
     </thead>
 
@@ -82,9 +83,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 <?php echo htmlspecialchars($loan_pendings->phone_no, ENT_QUOTES, 'UTF-8'); ?>
             </td>
 
-            <td class="px-6 py-4 text-sm">
-                <?php echo htmlspecialchars($loan_pendings->blanch_name, ENT_QUOTES, 'UTF-8'); ?>
-            </td>
+        
 
             <td class="px-6 py-4 text-sm">
                 <?php echo number_format((float)$loan_pendings->how_loan, 0, '.', ','); ?>
@@ -106,8 +105,32 @@ include_once APPPATH . "views/partials/officerheader.php";
                 ?>
             </td>
 
+        
+
             <td class="px-6 py-4 text-sm">
-                <?php echo htmlspecialchars($loan_pendings->loan_name, ENT_QUOTES, 'UTF-8'); ?>
+                <?php
+                    $ws = $loan_pendings->work_status ?? '-';
+                    if ($ws === 'Mwajiriwa') $ws = 'Mtumishi';
+                    echo htmlspecialchars($ws, ENT_QUOTES, 'UTF-8');
+                ?>
+            </td>
+
+            <td class="px-6 py-4 text-sm">
+                <?php
+                    $loan_type_label = (string)($loan_pendings->loan_type ?? 'main');
+                    if ($loan_type_label === 'salary_advance') {
+                        $loan_type_label = 'mkopo mdogo';
+                    } elseif ($loan_type_label === 'main') {
+                        if (($loan_pendings->work_status ?? '') === 'Mwajiriwa') {
+                            $loan_type_label = 'Mkopo Mkubwa';
+                        } elseif (($loan_pendings->work_status ?? '') === 'Mjasiriamali') {
+                            $loan_type_label = 'Mkopo wa Mjasiriamali';
+                        } else {
+                            $loan_type_label = 'Main';
+                        }
+                    }
+                    echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
+                ?>
             </td>
 
             <td class="px-6 py-4 text-sm">
@@ -164,7 +187,7 @@ include_once APPPATH . "views/partials/officerheader.php";
                 </div>
             </td>
             <?php else: ?>
-            <td class="px-6 py-4 text-end text-sm text-gray-400 dark:text-gray-500">—</td>
+
             <?php endif; ?>
 
         </tr>
@@ -173,11 +196,11 @@ include_once APPPATH . "views/partials/officerheader.php";
 
         <!-- TOTAL ROW -->
         <tr class="bg-gray-100 font-semibold dark:bg-gray-700 dark:text-gray-200">
-            <td colspan="4" class="px-6 py-4 text-end"><?php echo ($this->lang->line('total') ?? 'TOTAL') . ':'; ?></td>
+            <td colspan="3" class="px-6 py-4 text-end"><?php echo ($this->lang->line('total') ?? 'TOTAL') . ':'; ?></td>
             <td class="px-6 py-4">
                 <?php echo number_format($total_loan, 0, '.', ','); ?>
             </td>
-            <td colspan="6"></td>
+            <td colspan="5"></td>
         </tr>
 
     <?php endif; ?>
