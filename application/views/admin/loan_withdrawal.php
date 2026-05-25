@@ -67,6 +67,9 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
                         <tr>
                             <th scope="col" class="px-4 py-3 dark:text-white">S/No</th>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('customer_name'); ?></th>
+                          <?php if ($today_withdrawal_mode): ?>
+                          <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('work_status') ?: 'Work Status'; ?></th>
+                          <?php endif; ?>
                             <?php if (!$today_withdrawal_mode): ?>
                             <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('phone_number'); ?></th>
                             <?php endif; ?>
@@ -116,6 +119,17 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
             <td class="uppercase px-4 py-3 dark:text-white">
                 <?= $loan_aproveds->f_name; ?> <?= substr($loan_aproveds->m_name, 0,1); ?> <?= $loan_aproveds->l_name; ?>
             </td>
+            <?php if ($today_withdrawal_mode): ?>
+            <td class="px-4 py-3 dark:text-white">
+              <?php
+              $withdraw_work_status = trim((string) ($loan_aproveds->work_status ?? ''));
+              if ($withdraw_work_status === 'Mwajiriwa') {
+                $withdraw_work_status = 'Mtumishi';
+              }
+              echo $withdraw_work_status !== '' ? htmlspecialchars($withdraw_work_status, ENT_QUOTES, 'UTF-8') : '-';
+              ?>
+            </td>
+            <?php endif; ?>
             <?php if (!$today_withdrawal_mode): ?>
             <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->phone_no; ?></td>
             <?php endif; ?>
@@ -221,7 +235,7 @@ $today_withdrawal_mode = ($filter_action === 'admin/today_withdrawal_loans');
     <!-- Totals Row -->
     <?php if ($today_withdrawal_mode): ?>
     <tr class="bg-gray-100 dark:bg-gray-700 font-bold text-sm border-t-2 border-gray-400 dark:border-gray-500">
-      <td colspan="3" class="px-4 py-3 dark:text-white text-right font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-200">
+      <td colspan="4" class="px-4 py-3 dark:text-white text-right font-extrabold uppercase tracking-wide text-gray-700 dark:text-gray-200">
         <?php echo $this->lang->line('total'); ?>
       </td>
       <td class="px-4 py-3 text-green-700 dark:text-green-300 font-extrabold"><?= number_format($total_loan_aprove); ?></td>
