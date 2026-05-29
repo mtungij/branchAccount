@@ -23,28 +23,46 @@ $html_lang = ($ui_lang === 'swahili') ? 'sw' : 'en';
 
 <script>
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('Service Worker Registered'))
-        .catch(err => console.log('SW Error: ', err));
+    navigator.serviceWorker.register('/sw.js?v=4', { updateViaCache: 'none' })
+      .then(function(reg) {
+        console.log('Service Worker Registered');
+        return reg.update();
+      })
+      .catch(function(err) {
+        console.log('SW Error: ', err);
+      });
 }
 
-// Optional: Listen for beforeinstallprompt to trigger install manually
 let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
+window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
-    // Example: show a button to install
-    // document.getElementById('install-btn').style.display = 'block';
+    var btn = document.getElementById('install-btn');
+    if (btn) {
+      btn.style.display = 'block';
+    }
 });
 
 function promptInstall() {
     if (deferredPrompt) {
         deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(choice => {
+        deferredPrompt.userChoice.then(function() {
             deferredPrompt = null;
+            var btn = document.getElementById('install-btn');
+            if (btn) {
+              btn.style.display = 'none';
+            }
         });
     }
 }
+
+window.addEventListener('appinstalled', function() {
+  deferredPrompt = null;
+  var btn = document.getElementById('install-btn');
+  if (btn) {
+    btn.style.display = 'none';
+  }
+});
 </script>
 
 
@@ -181,6 +199,9 @@ input[type="checkbox"]:not(:checked)::after {
 </head>
 
 <body class="bg-gray-50 dark:bg-gray-900 font-poppins notranslate" translate="no">
+<button id="install-btn" onclick="promptInstall()" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999; padding:10px 20px; background:#0d6efd; color:#fff; border:none; border-radius:5px;">
+  Install App
+</button>
 <script src="https://cdn.jsdelivr.net/npm/preline/dist/preline.js"></script>
   
   <?php include_once APPPATH . 'views/partials/navbar.php'; ?>

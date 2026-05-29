@@ -10083,17 +10083,7 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 	foreach ($opening_rows as $row) {
 		$trans_id = (string) $row->trans_id;
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $row->trans_id,
-				'account_name' => $row->account_name,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'penalty_added_to_cash' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 		$account_map[$trans_id]->opening_balance = (float) $row->opening_balance;
 	}
@@ -10105,17 +10095,7 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 			continue;
 		}
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $row->trans_id,
-				'account_name' => $row->account_name,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'penalty_added_to_cash' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 		if ((float) $account_map[$trans_id]->opening_balance <= 0) {
 			$account_map[$trans_id]->opening_balance = (float) $row->opening_balance;
@@ -10125,17 +10105,7 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 	foreach ($received_rows as $row) {
 		$trans_id = (string) $row->trans_id;
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $row->trans_id,
-				'account_name' => 'Account ' . $row->trans_id,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'penalty_added_to_cash' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 
 		$loan_payment_received = (float) $row->loan_payment_received;
@@ -10156,17 +10126,7 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 	foreach ($withdraw_rows as $row) {
 		$trans_id = (string) $row->trans_id;
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $row->trans_id,
-				'account_name' => 'Account ' . $row->trans_id,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'penalty_added_to_cash' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 		$account_map[$trans_id]->today_loan_withdraw = (float) $row->total_withdraw;
 	}
@@ -10174,33 +10134,14 @@ public function get_daily_account_payment_summary_blanch($blanch_id, $date = nul
 	foreach ($closing_rows as $row) {
 		$trans_id = (string) $row->trans_id;
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $row->trans_id,
-				'account_name' => $row->account_name,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'penalty_added_to_cash' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 		$account_map[$trans_id]->closing_balance = (float) $row->closing_balance;
 	}
 
 	foreach ($payment_split as $trans_id => $split) {
 		if (!isset($account_map[$trans_id])) {
-			$account_map[$trans_id] = (object) array(
-				'trans_id' => $trans_id,
-				'account_name' => 'Account ' . $trans_id,
-				'opening_balance' => 0.0,
-				'today_received' => 0.0,
-				'today_loan_withdraw' => 0.0,
-				'actual_payments' => 0.0,
-				'advance_payments' => 0.0,
-				'closing_balance' => 0.0,
-			);
+			continue;
 		}
 		$account_map[$trans_id]->actual_payments = (float) $split['actual'];
 		$account_map[$trans_id]->advance_payments = (float) $split['advance'];
