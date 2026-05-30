@@ -11385,7 +11385,7 @@ public function get_remain_amount($loan_id) {
      }
 
 		public function get_customer_loan_options_for_deposit($customer_id){
-			$data = $this->db->query("SELECT l.loan_id, l.loan_type, l.loan_status, l.loan_int, l.restration, l.loan_code, l.day, l.session, l.loan_day, ot.loan_stat_date, ot.loan_end_date, lc.loan_name, COALESCE((SELECT SUM(d.depost) FROM tbl_depost d WHERE d.loan_id = l.loan_id), 0) AS total_Deposit FROM tbl_loans l LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id LEFT JOIN tbl_loan_category lc ON lc.category_id = l.category_id WHERE l.customer_id = '$customer_id' AND l.loan_status IN ('withdrawal', 'out', 'disbarsed') ORDER BY CASE WHEN l.loan_status = 'withdrawal' THEN 1 WHEN l.loan_status = 'out' THEN 2 WHEN l.loan_status = 'disbarsed' THEN 3 ELSE 9 END, l.loan_id DESC");
+			$data = $this->db->query("SELECT l.loan_id, l.loan_type, l.loan_status, l.loan_int, l.restration, l.loan_code, l.day, l.session, l.loan_day, ot.loan_stat_date, ot.loan_end_date, lc.loan_name, COALESCE((SELECT SUM(d.depost) FROM tbl_depost d WHERE d.loan_id = l.loan_id), 0) AS total_Deposit FROM tbl_loans l LEFT JOIN tbl_outstand ot ON ot.loan_id = l.loan_id LEFT JOIN tbl_loan_category lc ON lc.category_id = l.category_id WHERE l.customer_id = '$customer_id' AND l.loan_status IN ('withdrawal', 'out', 'disbarsed', 'disbursed') ORDER BY CASE WHEN l.loan_status = 'withdrawal' THEN 1 WHEN l.loan_status = 'out' THEN 2 WHEN l.loan_status = 'disbarsed' THEN 3 WHEN l.loan_status = 'disbursed' THEN 4 ELSE 9 END, l.loan_id DESC");
 			return $data->result();
 		}
 

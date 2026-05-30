@@ -86,6 +86,15 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
           $selected_loan = $selected_loan ?? null;
           $selected_loan_id = (int) ($selected_loan_id ?? 0);
 
+          if (empty($selected_loan) && $selected_loan_id > 0 && !empty($loan_options)) {
+            foreach ($loan_options as $loan_option) {
+              if ((int) $loan_option->loan_id === $selected_loan_id) {
+                $selected_loan = $loan_option;
+                break;
+              }
+            }
+          }
+
           if (empty($selected_loan) && count($loan_options) === 1) {
             $selected_loan = $loan_options[0];
             $selected_loan_id = (int) ($selected_loan->loan_id ?? 0);
@@ -103,6 +112,10 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
             if (empty($default_display_loan)) {
               $default_display_loan = $loan_options[0];
             }
+          }
+
+          if (empty($selected_loan) && empty($default_display_loan) && !empty($customer->customer_id)) {
+            $default_display_loan = $this->queries->get_loan_active_customer($customer->customer_id);
           }
 
           $needs_loan_selection = count($loan_options) > 1 && empty($selected_loan_id);

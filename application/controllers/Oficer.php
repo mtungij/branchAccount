@@ -6461,12 +6461,29 @@ public function disburse($loan_id){
     $empl_data = $this->queries->get_employee_data($empl_id);
 
     
-    $customer_id = $this->input->post('customer_id');
-    $comp_id = $this->input->post('comp_id');
+    $customer_id = (int) ($this->input->get('customer_id', true) ?: $this->input->post('customer_id', true) ?: 0);
+    $comp_id = $this->input->get('comp_id', true) ?: $this->input->post('comp_id', true);
     $customer = $this->queries->search_CustomerLoan($customer_id);
     @$customer_id = $customer->customer_id;
     @$blanch_id = $customer->blanch_id;
     $acount = $this->queries->get_customer_account_verfied($blanch_id);
+    $loan_options = $this->queries->get_customer_loan_options_for_deposit($customer_id);
+    $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
+    $selected_loan = null;
+
+    if (!empty($loan_options)) {
+      foreach ($loan_options as $loan_option) {
+        if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
+          $selected_loan = $loan_option;
+          break;
+        }
+      }
+
+      if (empty($selected_loan) && count($loan_options) === 1) {
+        $selected_loan = $loan_options[0];
+        $selected_loan_id = (int) $selected_loan->loan_id;
+      }
+    }
     
     $deposts = $this->queries->get_sumTodayDepostBlanch($blanch_id);
     $withdraw = $this->queries->get_sumTodayWithdrawalBlanch($blanch_id);
@@ -6488,7 +6505,7 @@ public function disburse($loan_id){
 
 
    
-   $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage]);
+  $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
 }
 
 
