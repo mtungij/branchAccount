@@ -4677,18 +4677,22 @@ $admins_numbers = $this->queries->get_admin_numbers();
     $received_by_empl_id = (int) $this->input->post('received_by_empl_id');
     $received_by = '';
 
-    $loan_attach = $this->queries->get_loanAttach($loan_id);
-    $target_blanch_id = !empty($loan_attach->blanch_id)
-      ? (int) $loan_attach->blanch_id
-      : (int) $this->session->userdata('blanch_id');
-    $branch_employees = $this->queries->get_employee_blanch($target_blanch_id);
+    if ($submitted_at_office === 'No') {
+      $received_by = 'Collateral not exist in office';
+    } else {
+      $loan_attach_tmp = $this->queries->get_loanAttach($loan_id);
+      $target_blanch_id = !empty($loan_attach_tmp->blanch_id)
+        ? (int) $loan_attach_tmp->blanch_id
+        : (int) $this->session->userdata('blanch_id');
+      $branch_employees = $this->queries->get_employee_blanch($target_blanch_id);
 
-    foreach ((array) $branch_employees as $employee) {
-      if ((int) $employee->empl_id === $received_by_empl_id) {
-        $received_by = !empty($employee->empl_name)
-          ? trim((string) $employee->empl_name)
-          : trim((string) $employee->username);
-        break;
+      foreach ((array) $branch_employees as $employee) {
+        if ((int) $employee->empl_id === $received_by_empl_id) {
+          $received_by = !empty($employee->empl_name)
+            ? trim((string) $employee->empl_name)
+            : trim((string) $employee->username);
+          break;
+        }
       }
     }
 

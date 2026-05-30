@@ -133,10 +133,10 @@ include_once APPPATH . "views/partials/officerheader.php";
         <?php echo form_error("submitted_at_office", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
     </div>
 
-    <!-- Received By -->
-    <div class="sm:col-span-3">
+    <!-- Received By (shown only when Submitted at Office = Yes) -->
+    <div class="sm:col-span-3" id="received-by-field" style="display:none;">
         <label for="received_by" class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('received_by'); ?>:</label>
-        <select id="received_by" name="received_by_empl_id" required
+        <select id="received_by" name="received_by_empl_id"
             class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
             <option value=""><?php echo $this->lang->line('select_employee'); ?></option>
             <?php if (!empty($branch_employees) && is_array($branch_employees)): ?>
@@ -149,6 +149,9 @@ include_once APPPATH . "views/partials/officerheader.php";
         </select>
         <?php echo form_error("received_by_empl_id", '<p class="text-xs text-red-600 mt-2">', '</p>'); ?>
     </div>
+
+    <!-- Hidden value submitted when Submitted at Office = No -->
+    <input type="hidden" id="received-by-not-in-office" name="received_by_not_in_office" value="" disabled>
 
     <!-- Thamani ya Dhamana -->
     <div class="sm:col-span-4">
@@ -196,6 +199,44 @@ include_once APPPATH . "views/partials/officerheader.php";
 
 
 <?php echo form_close(); ?>
+
+<script>
+(function () {
+  var radios = document.querySelectorAll('input[name="submitted_at_office"]');
+  var receivedByField = document.getElementById('received-by-field');
+  var receivedBySelect = document.getElementById('received_by');
+
+  var notInOfficeHidden = document.getElementById('received-by-not-in-office');
+
+  function toggleReceivedBy() {
+    var checked = document.querySelector('input[name="submitted_at_office"]:checked');
+    if (checked && checked.value === 'Yes') {
+      receivedByField.style.display = '';
+      receivedBySelect.setAttribute('required', 'required');
+      notInOfficeHidden.disabled = true;
+      notInOfficeHidden.value = '';
+    } else if (checked && checked.value === 'No') {
+      receivedByField.style.display = 'none';
+      receivedBySelect.removeAttribute('required');
+      receivedBySelect.value = '';
+      notInOfficeHidden.disabled = false;
+      notInOfficeHidden.value = 'Collateral not exist in office';
+    } else {
+      receivedByField.style.display = 'none';
+      receivedBySelect.removeAttribute('required');
+      notInOfficeHidden.disabled = true;
+      notInOfficeHidden.value = '';
+    }
+  }
+
+  radios.forEach(function (radio) {
+    radio.addEventListener('change', toggleReceivedBy);
+  });
+
+  // Run on page load to restore state after validation error redirect
+  toggleReceivedBy();
+})();
+</script>
 
             </div>
         </div>

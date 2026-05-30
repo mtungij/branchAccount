@@ -5517,13 +5517,27 @@ public function today_transactions(){
     }
 
     $default_date = date('Y-m-d');
+    $from_date = trim((string) $this->input->get('from_date', true));
+    $to_date = trim((string) $this->input->get('to_date', true));
     $report_date = trim((string) $this->input->get('report_date', true));
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
-        $report_date = trim((string) $this->input->get('from', true));
+
+    if ($from_date === '' && $to_date === '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
+        $from_date = $report_date;
+        $to_date = $report_date;
     }
-    $report_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date) ? $report_date : $default_date;
-    $from_date = $report_date;
-    $to_date = $report_date;
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from_date)) {
+        $from_date = $default_date;
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to_date)) {
+        $to_date = $from_date;
+    }
+    if ($from_date > $to_date) {
+        $tmp = $from_date;
+        $from_date = $to_date;
+        $to_date = $tmp;
+    }
+    $report_date = $from_date;
 
     $cash = $this->queries->get_today_received_loan(
         $comp_id,
@@ -5590,13 +5604,26 @@ public function download_today_transactions_pdf(){
     }
 
     $default_date = date('Y-m-d');
+    $from_date = trim((string) $this->input->get('from_date', true));
+    $to_date = trim((string) $this->input->get('to_date', true));
     $report_date = trim((string) $this->input->get('report_date', true));
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
-        $report_date = trim((string) $this->input->get('from', true));
+
+    if ($from_date === '' && $to_date === '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date)) {
+        $from_date = $report_date;
+        $to_date = $report_date;
     }
-    $report_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $report_date) ? $report_date : $default_date;
-    $from_date = $report_date;
-    $to_date = $report_date;
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from_date)) {
+        $from_date = $default_date;
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $to_date)) {
+        $to_date = $from_date;
+    }
+    if ($from_date > $to_date) {
+        $tmp = $from_date;
+        $from_date = $to_date;
+        $to_date = $tmp;
+    }
 
     $cash = $this->queries->get_today_received_loan(
         $comp_id,
@@ -13940,8 +13967,12 @@ public function update_customer_details($customer_id){
 	   
 			// print_r($remain_depost);
 			//      exit();
-			$this->session->set_flashdata("massage","Adjust successfully");
-			return redirect("admin/cash_transaction");
+			$this->session->set_flashdata("massage","Delete has been done successfully");
+            $return_url = trim((string) $this->input->get('return_url', true));
+            if (!empty($return_url) && strpos($return_url, base_url()) === 0) {
+                return redirect($return_url);
+            }
+            return redirect("admin/today_transactions");
 		}
 
 

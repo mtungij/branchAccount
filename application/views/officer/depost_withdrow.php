@@ -648,7 +648,7 @@ include_once APPPATH . "views/partials/officerheader.php";
       <?php
         $out_stand_modal = $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0);
       ?>
-      <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}"); ?>
+      <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}", ['id' => 'depositLoanFormDataWithDepost']); ?>
 <!-- Modal Body -->
 <div class="p-4 sm:p-6">
   <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
@@ -762,10 +762,10 @@ include_once APPPATH . "views/partials/officerheader.php";
     <button type="button" class="py-2 px-3 btn-secondary-sm"
       data-hs-overlay="#hs-edit-deposit-modal">Funga</button>
 
-      <button id="submit-btn" type="submit"
+        <button id="depositSubmitBtnDataWithDepost" type="submit"
   class="py-2 px-4 btn-primary-sm bg-cyan-600 hover:bg-cyan-700 text-white flex items-center gap-2">
-  <span>Weka</span>
-  <svg id="spinner" class="hidden w-5 h-5 animate-spin text-cyan-200 dark:text-cyan-400"
+      <span id="depositSubmitTextDataWithDepost">Weka</span>
+      <svg id="depositSubmitSpinnerDataWithDepost" class="hidden w-5 h-5 animate-spin text-cyan-200 dark:text-cyan-400"
     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
     <circle class="opacity-25" cx="12" cy="12" r="10"
       stroke="currentColor" stroke-width="4"></circle>
@@ -884,18 +884,52 @@ include_once APPPATH . "views/partials/footer.php";
 .custom-select2-container { margin: 0; }
 </style> 
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const form = document.querySelector("form");
-    const spinner = document.getElementById("spinner");
-    const button = document.getElementById("submit-btn");
-    const text = document.getElementById("submit-text");
+function initDataWithDepostSubmitLoader() {
+  const form = document.getElementById('depositLoanFormDataWithDepost');
+  const button = document.getElementById('depositSubmitBtnDataWithDepost');
+  const text = document.getElementById('depositSubmitTextDataWithDepost');
+  const spinner = document.getElementById('depositSubmitSpinnerDataWithDepost');
 
-    form.addEventListener("submit", function () {
-      button.disabled = true;
-      text.textContent = "Tafadhali subiri...";
-      spinner.classList.remove("hidden");
+  if (!form || !button) {
+    return;
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    if (button.dataset.submitting === '1') {
+      return;
+    }
+
+    button.dataset.submitting = '1';
+    button.disabled = true;
+    button.classList.add('opacity-70', 'pointer-events-none');
+
+    if (text) {
+      text.textContent = 'Tafadhali subiri...';
+    }
+    if (spinner) {
+      spinner.classList.remove('hidden');
+    }
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        form.submit();
+      });
     });
   });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDataWithDepostSubmitLoader);
+} else {
+  initDataWithDepostSubmitLoader();
+}
 </script>
 
 <script>

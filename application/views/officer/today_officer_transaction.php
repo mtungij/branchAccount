@@ -78,8 +78,7 @@ if (function_exists('has_permission')) {
             <th class="px-4 py-3"><?php echo $this->lang->line('customer_name'); ?></th>
           <th class="px-4 py-3"><?php echo $this->lang->line('work_status') ?: 'Work Status'; ?></th>
           <th class="px-4 py-3"><?php echo $this->lang->line('loan_type') ?: 'Loan Type'; ?></th>
-            <th class="px-4 py-3"><?php echo ($this->lang->line('paid') ?: 'Paid') . ' (' . ($this->lang->line('rejesho') ?: 'Collection') . ')'; ?></th>
-            <th class="px-4 py-3"><?php echo $this->lang->line('loan_return_amount') ?: 'Loan Return Amount'; ?></th>
+            <th class="px-4 py-3"><?php echo $this->lang->line('paid') ?: 'Lipwa'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('payment_account_label') ?: 'Payment Account'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('mkopo') ?: 'Mkopo'; ?></th>
             <th class="px-4 py-3"><?php echo $this->lang->line('withdrawal_account_label') ?: 'Withdrawal Account'; ?></th>
@@ -147,16 +146,6 @@ if (function_exists('has_permission')) {
                                      <?php } ?>
                     </td>
                     <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
-                      <?php
-                      $loan_return_amount = ((float)($cashs->principal_return ?? 0) + (float)($cashs->interest_return ?? 0));
-                      if ($loan_return_amount > 0) {
-                        echo number_format($loan_return_amount);
-                      } else {
-                        echo '-';
-                      }
-                      ?>
-                    </td>
-                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-white">
                        <?php if ($cashs->deposit_account == TRUE) {
                                          ?>
                                         <?php echo $cashs->deposit_account; ?>
@@ -207,7 +196,6 @@ if (function_exists('has_permission')) {
                                        <td></td>
                                        <td><b>JUMLA</b></td>
                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format($sum_cashTransaction->total_deposit); ?></b></td>
-                                       <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><b><?php echo number_format(($sum_cashTransaction->total_principal_return ?? 0) + ($sum_cashTransaction->total_interest_return ?? 0)); ?></b></td>
                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"></td>
                                        <td class="px-4 py-2 font-medium text-gray-900 dark:text-white"><?php echo number_format($sum_cashTransaction->total_aprove); ?></td>
                                         <td></td>

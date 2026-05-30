@@ -10,11 +10,19 @@
 <?php
 include_once APPPATH . "views/partials/header.php";
 
+$success_alert_message = $this->session->flashdata('massage');
+
 $selected_blanch_id = isset($selected_blanch_id) ? (string) $selected_blanch_id : '';
 $selected_loan_type = isset($selected_loan_type) ? (string) $selected_loan_type : '';
 $selected_loan_status = isset($selected_loan_status) ? (string) $selected_loan_status : '';
 $show_action_column = !in_array($selected_loan_status, ['done', 'out'], true);
-$report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
+$from_date = isset($from_date) ? (string) $from_date : date('Y-m-d');
+$to_date = isset($to_date) ? (string) $to_date : $from_date;
+$report_date = isset($report_date) ? (string) $report_date : $from_date;
+$current_page_url = current_url();
+if (!empty($_SERVER['QUERY_STRING'])) {
+  $current_page_url .= '?' . $_SERVER['QUERY_STRING'];
+}
 
 // --- DUMMY DATA - REMOVE AND LOAD FROM YOUR CONTROLLER ---
 // Controller should pass $share, an array of shareholder objects.
@@ -51,19 +59,18 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
               </form>
             </div>
             <div class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
-              <?php if ($selected_loan_status !== 'done'): ?>
               <button type="button" class="flex items-center justify-center text-white bg-gray-700 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-basic-modal" data-hs-overlay="#hs-basic-modal">
                 <svg class="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                   <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V4z" clip-rule="evenodd" />
                 </svg>
                 Filter Data
               </button>
-              <?php endif; ?>
               <a href="<?php echo base_url('admin/download_today_transactions_pdf') . '?' . http_build_query([
                 'blanch_id' => $selected_blanch_id === '' ? 'all' : $selected_blanch_id,
                 'loan_type' => $selected_loan_type,
                 'loan_status' => $selected_loan_status,
-                'report_date' => $report_date
+                'from_date' => $from_date,
+                'to_date' => $to_date
               ]); ?>" class="flex items-center justify-center text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-4 py-2 focus:outline-none">
                 PDF Download
               </a>
@@ -84,7 +91,6 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('working_status'); ?></th>
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('loan_type'); ?></th>
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('branch_name'); ?></th>
-                          <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('loan_amount'); ?></th>
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('received_amount'); ?></th>
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('pay_method'); ?></th>
                           <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('employee'); ?></th>
@@ -99,7 +105,6 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
 
                        <?php 
         $no = 1;
-        $total_loan = 0;
         $total_received = 0;
 
         foreach ($cash as $cashs): 
@@ -129,7 +134,6 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
             $display_date = $cashs->depost_day ?? '';
             $delete_record_id = $cashs->pay_id ?? ($cashs->dep_id ?? 0);
 
-            $total_loan += $loan_amount;
             $total_received += $received_amount;
         ?>
 
@@ -139,7 +143,6 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
                           <td class="px-4 py-3 dark:text-white"><?php echo $work_status; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $loan_type_label; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $branch_name; ?></td>
-                          <td class="px-4 py-3 dark:text-white"><?php echo number_format($loan_amount); ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo number_format($received_amount); ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $pay_method; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $employee_name; ?></td>
@@ -148,11 +151,27 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
                           <td class="px-4 py-3 dark:text-white">
 
 <?php if (!empty($delete_record_id)) { ?>
-<a href="<?php echo base_url("admin/delete_depost_data/{$delete_record_id}") ?>" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-hidden focus:bg-red-700 disabled:opacity-50 disabled:pointer-events-none">
+<a href="<?php echo base_url("admin/delete_depost_data/{$delete_record_id}") . '?return_url=' . rawurlencode($current_page_url); ?>" onclick="showDeleteLoaderAndRedirect(event, this)" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700 focus:outline-hidden focus:bg-red-700 disabled:opacity-50 disabled:pointer-events-none">
   <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0h8m-8 0a1 1 0 01-1-1V5a1 1 0 011-1h6a1 1 0 011 1v1"/>
   </svg>
-  <?php echo $this->lang->line('delete'); ?>
+  <span class="delete-btn-label"><?php echo $this->lang->line('delete'); ?></span>
+  <span class="delete-btn-loader hidden w-5 h-5" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" width="20" height="20" style="display:block;background:transparent;shape-rendering:auto;">
+      <g>
+        <circle r="20" fill="#e90c59" cy="50" cx="30">
+          <animate begin="-0.5s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx"/>
+        </circle>
+        <circle r="20" fill="#46dff0" cy="50" cx="70">
+          <animate begin="0s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx"/>
+        </circle>
+        <circle r="20" fill="#e90c59" cy="50" cx="30">
+          <animate begin="-0.5s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx"/>
+          <animate repeatCount="indefinite" dur="1s" keyTimes="0;0.499;0.5;1" calcMode="discrete" values="0;0;1;1" attributeName="fill-opacity"/>
+        </circle>
+      </g>
+    </svg>
+  </span>
 </a>
 <?php } ?>
 
@@ -167,7 +186,6 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
                   <tfoot>
                     <tr class="bg-gray-100 dark:bg-gray-700 font-bold">
                         <td colspan="5" class="px-4 py-3 dark:text-white text-right"><?php echo $this->lang->line('total'); ?></td>
-                        <td class="px-4 py-3 dark:text-white"><?php echo number_format($total_loan); ?></td>
                         <td class="px-4 py-3 dark:text-white"><?php echo number_format($total_received); ?></td>
                         <td colspan="<?php echo $show_action_column ? '4' : '3'; ?>"></td>
                     </tr>
@@ -226,9 +244,15 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
           </div>
         </div>
 
-        <div>
-          <label for="report_date" class="block text-sm font-medium text-gray-700 dark:text-white">Tarehe</label>
-          <input type="date" id="report_date" name="report_date" value="<?php echo htmlspecialchars($report_date, ENT_QUOTES, 'UTF-8'); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label for="from_date" class="block text-sm font-medium text-gray-700 dark:text-white">From Date</label>
+            <input type="date" id="from_date" name="from_date" value="<?php echo htmlspecialchars($from_date, ENT_QUOTES, 'UTF-8'); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+          </div>
+          <div>
+            <label for="to_date" class="block text-sm font-medium text-gray-700 dark:text-white">To Date</label>
+            <input type="date" id="to_date" name="to_date" value="<?php echo htmlspecialchars($to_date, ENT_QUOTES, 'UTF-8'); ?>" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+          </div>
         </div>
       </div>
 
@@ -255,11 +279,39 @@ $report_date = isset($report_date) ? (string) $report_date : date('Y-m-d');
 include_once APPPATH . "views/partials/footer.php";
 ?>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 
 
 <script>
+function showDeleteLoaderAndRedirect(event, el) {
+  event.preventDefault();
+
+  var label = el.querySelector('.delete-btn-label');
+  var loader = el.querySelector('.delete-btn-loader');
+  if (label) {
+    label.textContent = 'Deleting...';
+  }
+  if (loader) {
+    loader.classList.remove('hidden');
+  }
+
+  el.classList.add('pointer-events-none', 'opacity-70');
+  window.location.href = el.href;
+}
+
 document.addEventListener('DOMContentLoaded', function () {
+  <?php if (!empty($success_alert_message)): ?>
+  Swal.fire({
+    icon: 'success',
+    title: 'Success',
+    text: <?php echo json_encode((string) $success_alert_message); ?>,
+    timer: 2500,
+    showConfirmButton: false
+  });
+  <?php endif; ?>
+
   const filterForm = document.getElementById('today-transactions-filter-form');
   const applyBtn = document.getElementById('apply-filter-btn');
 

@@ -660,7 +660,7 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
       <?php
         $out_stand_modal = !empty($customer_loan->loan_id) ? $this->queries->get_outstand_loan_customer($customer_loan->loan_id ?? 0) : null;
       ?>
-      <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}"); ?>
+      <?php echo form_open("oficer/deposit_loan/{$customer->customer_id}", ['id' => 'depositLoanForm']); ?>
 <!-- Modal Body -->
 <div class="p-4 sm:p-6">
   <div class="grid sm:grid-cols-12 gap-4 sm:gap-6">
@@ -776,7 +776,25 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
     <button type="button" class="py-2 px-3 btn-secondary-sm"
       data-hs-overlay="#hs-edit-deposit-modal">Funga</button>
 
-    <button type="submit" class="py-2 px-3 btn-primary-sm bg-cyan-600 hover:bg-cyan-700 text-white">Weka</button>
+    <button type="submit" id="depositSubmitBtn" class="py-2 px-3 btn-primary-sm bg-cyan-600 hover:bg-cyan-700 text-white inline-flex items-center gap-2">
+      <span id="depositSubmitLabel">Weka</span>
+      <span id="depositSubmitLoader" class="hidden w-5 h-5" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid" width="20" height="20" style="shape-rendering:auto; display:block; background:transparent;">
+          <g>
+            <circle r="20" fill="#e90c59" cy="50" cx="30">
+              <animate begin="-0.5s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx" />
+            </circle>
+            <circle r="20" fill="#46dff0" cy="50" cx="70">
+              <animate begin="0s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx" />
+            </circle>
+            <circle r="20" fill="#e90c59" cy="50" cx="30">
+              <animate begin="-0.5s" values="30;70;30" keyTimes="0;0.5;1" dur="1s" repeatCount="indefinite" attributeName="cx" />
+              <animate repeatCount="indefinite" dur="1s" keyTimes="0;0.499;0.5;1" calcMode="discrete" values="0;0;1;1" attributeName="fill-opacity" />
+            </circle>
+          </g>
+        </svg>
+      </span>
+    </button>
   </div>
 </div>
 
@@ -835,11 +853,68 @@ include_once APPPATH . "views/partials/footer.php";
 <script>
   
   // Disable submit button on submit
-  document.querySelector('form').addEventListener('submit', function () {
-    const btn = this.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerText = 'Processing...';
+  const customerSearchForm = document.getElementById('customerSearchForm');
+  if (customerSearchForm) {
+    customerSearchForm.addEventListener('submit', function () {
+      const btn = this.querySelector('button[type="submit"]');
+      if (!btn) {
+        return;
+      }
+      btn.disabled = true;
+      btn.innerText = 'Processing...';
+    });
+  }
+</script>
+
+<script>
+function initDepositSubmitLoader() {
+  const depositForm = document.getElementById('depositLoanForm');
+  const depositBtn = document.getElementById('depositSubmitBtn');
+  const depositLabel = document.getElementById('depositSubmitLabel');
+  const depositLoader = document.getElementById('depositSubmitLoader');
+
+  if (!depositForm || !depositBtn) {
+    return;
+  }
+
+  depositForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    if (!depositForm.checkValidity()) {
+      depositForm.reportValidity();
+      return;
+    }
+
+    if (depositBtn.dataset.submitting === '1') {
+      return;
+    }
+
+    depositBtn.dataset.submitting = '1';
+    depositBtn.disabled = true;
+    depositBtn.classList.add('opacity-70', 'pointer-events-none');
+
+    if (depositLabel) {
+      depositLabel.textContent = 'Inatuma...';
+    }
+    if (depositLoader) {
+      depositLoader.classList.remove('hidden');
+    }
+
+    // Let the browser paint loader state before navigation.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        depositForm.submit();
+      });
+    });
+
   });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDepositSubmitLoader);
+} else {
+  initDepositSubmitLoader();
+}
 </script>
 
 <script>
