@@ -3425,6 +3425,13 @@ $this->load->model('queries');
       return redirect('oficer/loan_application');
     }
 
+    if ($this->queries->has_pending_loans($customer_id)) {
+      return $this->load->view('officer/toast_message_view', [
+        'message' => "Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> bado hajamaliza mkopo wake. Tafadhali maliza mkopo kabla ya kuomba tena.",
+        'type'    => 'loan'
+      ]);
+    }
+
     $this->session->set_userdata('customer_id', $customer_id);
 
     return $this->load->view('officer/loan_guarantee_option', [
@@ -3463,6 +3470,13 @@ $this->load->model('queries');
     if (!$customer) {
       $this->session->set_flashdata('error', 'Mteja hakupatikana au hajaruhusiwa chini ya kampuni hii.');
       return redirect('oficer/loan_application');
+    }
+
+    if ($this->queries->has_pending_loans($customer_id)) {
+      return $this->load->view('officer/toast_message_view', [
+        'message' => "Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> bado hajamaliza mkopo wake. Tafadhali maliza mkopo kabla ya kuomba tena.",
+        'type'    => 'loan'
+      ]);
     }
 
     $this->session->set_userdata('customer_id', $customer_id);
