@@ -5683,8 +5683,22 @@ public function get_total_recevableBlanch_by_officer($blanch_id, $empl_id){
 		}
 
 		if (!empty($loan_type)) {
-			if (in_array($loan_type, ['main', 'salary_advance'], true)) {
+			if ($loan_type === 'main') {
+				$this->db->group_start()
+					->where('l.loan_type', 'main')
+					->or_where('l.loan_type', '')
+					->or_where('l.loan_type IS NULL', null, false)
+					->group_end();
+				$this->db->group_start()
+					->where('sc.work_status !=', 'Mjasiriamali')
+					->or_where('sc.work_status IS NULL', null, false)
+					->group_end();
+			} elseif ($loan_type === 'salary_advance') {
 				$this->db->where('l.loan_type', $loan_type);
+				$this->db->group_start()
+					->where('sc.work_status !=', 'Mjasiriamali')
+					->or_where('sc.work_status IS NULL', null, false)
+					->group_end();
 			} elseif ($loan_type === 'mjasiriamali') {
 				$this->db->where('sc.work_status', 'Mjasiriamali');
 			}

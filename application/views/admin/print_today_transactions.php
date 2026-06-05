@@ -86,12 +86,12 @@ $total_received = 0;
                 $work_status = 'Mtumishi';
             }
 
-            $loan_type_label = (string) ($row->loan_type ?? 'main');
+            $loan_type_label = trim((string) ($row->loan_type ?? ''));
             if (trim((string) ($row->work_status ?? '')) === 'Mjasiriamali') {
                 $loan_type_label = 'Mkopo wa Mjasiriamali';
             } elseif ($loan_type_label === 'salary_advance') {
                 $loan_type_label = 'Mkopo Mdogo';
-            } elseif ($loan_type_label === 'main') {
+            } elseif ($loan_type_label === 'main' || $loan_type_label === '') {
                 $loan_type_label = 'Mkopo Mkubwa';
             }
             ?>

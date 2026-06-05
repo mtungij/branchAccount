@@ -119,12 +119,12 @@ if (!empty($_SERVER['QUERY_STRING'])) {
               $work_status = 'Mtumishi';
             }
 
-            $loan_type_label = (string) ($cashs->loan_type ?? 'main');
+            $loan_type_label = trim((string) ($cashs->loan_type ?? ''));
             if ($work_status === 'Mjasiriamali') {
               $loan_type_label = 'Mkopo wa Mjasiriamali';
             } elseif ($loan_type_label === 'salary_advance') {
               $loan_type_label = 'Mkopo Mdogo';
-            } elseif ($loan_type_label === 'main') {
+            } elseif ($loan_type_label === 'main' || $loan_type_label === '') {
               $loan_type_label = 'Mkopo Mkubwa';
             }
 
@@ -375,7 +375,6 @@ $('#empl').html('<option value=""><?php echo $this->lang->line('select_employee'
 
 });
 </script>
-
 
 
 
