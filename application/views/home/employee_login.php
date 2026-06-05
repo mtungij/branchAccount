@@ -173,6 +173,7 @@ include_once APPPATH . "views/partials/guest_header.php";
 
           <?php echo form_close(); ?>
 
+          <?php if (getenv('SYNC_REMOTE_URL') || getenv('SYNC_COMP_ID')): ?>
           <div class="mt-4">
             <button
               type="button"
@@ -183,6 +184,7 @@ include_once APPPATH . "views/partials/guest_header.php";
             </button>
             <p id="loginMasterSyncStatus" class="mt-2 min-h-[18px] text-center text-xs text-gray-600 dark:text-gray-300"></p>
           </div>
+          <?php endif; ?>
    
     <!-- Divider -->
     <div class="flex items-center my-6">
