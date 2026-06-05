@@ -185,7 +185,9 @@ $branch_only_query = http_build_query([
             <td class="px-4 py-3 dark:text-white">
                 <?php
                     $loan_type_label = trim((string) ($outstands->loan_type ?? ''));
-                    if ($work_status === 'Mjasiriamali') {
+                    if ($work_status === '') {
+                        $loan_type_label = 'Haijulikani';
+                    } elseif ($work_status === 'Mjasiriamali') {
                         $loan_type_label = 'Mkopo wa Mjasiriamali';
                     } elseif ($loan_type_label === 'salary_advance') {
                         $loan_type_label = 'Mkopo Mdogo';
@@ -660,6 +662,5 @@ function downloadDefaultersPDF() {
 </div>
 
 </div> -->
-
 
 
