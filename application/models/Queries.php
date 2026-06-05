@@ -7181,9 +7181,10 @@ return $data->row();
 public function outstand_loan($comp_id, $blanch_id = null, $empl_id = null, $from = null, $to = null, $overdue_days = null, $overdue_days_max = null, $exact_end_date = null) {
     $this->db->select('
         ot.*, 
-        l.loan_int, l.restration, l.day, l.session, l.empl_id, l.blanch_id,
+        l.loan_int, l.restration, l.day, l.session, l.empl_id, l.blanch_id, l.loan_type,
         c.f_name, c.m_name, c.l_name, c.phone_no,
         b.blanch_name,
+        sc.work_status,
         SUM(COALESCE(d.depost,0)) AS total_deposit,
         GREATEST(DATEDIFF(CURDATE(), o.loan_end_date), 0) AS overdue_days,
         o.loan_stat_date, o.loan_end_date
@@ -7194,6 +7195,11 @@ public function outstand_loan($comp_id, $blanch_id = null, $empl_id = null, $fro
     $this->db->join('tbl_blanch b','b.blanch_id = l.blanch_id','left');
     $this->db->join('tbl_depost d','d.loan_id = ot.loan_id','left');
     $this->db->join('tbl_outstand o','o.loan_id = ot.loan_id','left');
+    $this->db->join(
+        '(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) latest_sc ON latest_sc.latest_id = sc1.id) sc',
+        'sc.customer_id = c.customer_id',
+        'left'
+    );
 
     $this->db->where('ot.comp_id', $comp_id);
     $this->db->where('ot.out_status', 'open');

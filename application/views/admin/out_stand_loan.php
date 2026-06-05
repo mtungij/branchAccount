@@ -146,9 +146,11 @@ $branch_only_query = http_build_query([
                            
                          
                                <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('s_no', 'S/No'); ?></th>
-                  						    <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('branch_name', 'Branch Name'); ?></th>
+                                            <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('branch_name', 'Branch Name'); ?></th>
                                             <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('customer_name', 'Customer Name'); ?></th>
                                             <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('phone_number', 'Phone Number'); ?></th>
+                                            <th scope="col" class="px-4 py-3 dark:text-white">Work Status</th>
+                                            <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('loan_type', 'Loan Type'); ?></th>
                                             <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('loan_amount', 'Loan Amount'); ?></th>
                                             <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('outstand_restoration', 'Restoration'); ?></th>
                                             <th scope="col" class="px-4 py-3 dark:text-white"><?= $lang_line('duration_type', 'Duration Type'); ?></th>
@@ -174,6 +176,25 @@ $branch_only_query = http_build_query([
             <td class="px-4 py-3 dark:text-white"><?= $outstands->f_name . ' ' . $outstands->m_name . ' ' . $outstands->l_name; ?></td>
        
             <td class="px-4 py-3 dark:text-white"><?= $outstands->phone_no; ?></td>
+            <td class="px-4 py-3 dark:text-white">
+                <?php
+                    $work_status = trim((string) ($outstands->work_status ?? ''));
+                    echo htmlspecialchars($work_status === 'Mwajiriwa' ? 'Mtumishi' : ($work_status ?: '-'), ENT_QUOTES, 'UTF-8');
+                ?>
+            </td>
+            <td class="px-4 py-3 dark:text-white">
+                <?php
+                    $loan_type_label = trim((string) ($outstands->loan_type ?? ''));
+                    if ($work_status === 'Mjasiriamali') {
+                        $loan_type_label = 'Mkopo wa Mjasiriamali';
+                    } elseif ($loan_type_label === 'salary_advance') {
+                        $loan_type_label = 'Mkopo Mdogo';
+                    } elseif ($loan_type_label === 'main' || $loan_type_label === '') {
+                        $loan_type_label = 'Mkopo Mkubwa';
+                    }
+                    echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
+                ?>
+            </td>
 			            <td class="px-4 py-3 dark:text-white"><?= number_format($outstands->loan_int); ?></td>
 						  <td class="px-4 py-3 dark:text-white"><?= number_format($outstands->restration); ?></td>
          <td class="px-4 py-3 dark:text-white">
@@ -639,7 +660,6 @@ function downloadDefaultersPDF() {
 </div>
 
 </div> -->
-
 
 
 
