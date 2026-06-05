@@ -4369,9 +4369,13 @@ $loan_aproveds = number_format($loan_aproved);
         $selected_blanch_id = (int) $this->input->get('blanch_id', true);
         $from_date = $this->input->get('from_date', true);
         $to_date = $this->input->get('to_date', true);
+        $selected_work_status = trim((string) $this->input->get('work_status', true));
+        if (!in_array($selected_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+            $selected_work_status = '';
+        }
         $branch_filter = $selected_blanch_id > 0 ? $selected_blanch_id : null;
 
-        $disburse = $this->queries->get_today_disbursed_loans($comp_id, $branch_filter, $from_date, $to_date);
+        $disburse = $this->queries->get_today_disbursed_loans($comp_id, $branch_filter, $from_date, $to_date, $selected_work_status);
         $total_loanDis = (object) [
             'total_loan' => array_sum(array_map(function ($loan) {
                 return (float) ($loan->loan_aprove ?? 0);
@@ -4395,7 +4399,8 @@ $loan_aproveds = number_format($loan_aproved);
             'selected_blanch_id'=>$selected_blanch_id,
             'branches'=>$branches,
             'from_date'=>$from_date,
-            'to_date'=>$to_date
+            'to_date'=>$to_date,
+            'selected_work_status'=>$selected_work_status
         ]);
 	}
 

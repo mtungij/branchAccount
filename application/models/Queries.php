@@ -3048,13 +3048,14 @@ public function get_totalLoanout($customer_id){
 }
 
 
-public function get_today_disbursed_loans($comp_id, $blanch_id = null, $from_date = null, $to_date = null)
+public function get_today_disbursed_loans($comp_id, $blanch_id = null, $from_date = null, $to_date = null, $work_status = '')
 {
     $this->db->select('
         l.*, 
         b.blanch_name, 
         c.f_name, c.m_name, c.l_name, c.phone_no, 
         e.empl_name,
+        sc.work_status,
         (
             SELECT COUNT(l2.loan_id) 
             FROM tbl_loans l2 
@@ -3065,6 +3066,11 @@ public function get_today_disbursed_loans($comp_id, $blanch_id = null, $from_dat
     $this->db->join('tbl_blanch b', 'b.blanch_id = l.blanch_id', 'left');
     $this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
     $this->db->join('tbl_employee e', 'e.empl_id = l.empl_id', 'left');
+    $this->db->join(
+        '(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) latest_sc ON latest_sc.latest_id = sc1.id) sc',
+        'sc.customer_id = c.customer_id',
+        'left'
+    );
 
     $this->db->where('l.loan_status', 'disbarsed');
     $this->db->where('l.comp_id', (int) $comp_id);
@@ -3076,6 +3082,9 @@ public function get_today_disbursed_loans($comp_id, $blanch_id = null, $from_dat
     }
     if (!empty($to_date)) {
         $this->db->where('DATE(l.disburse_day) <=', $to_date);
+    }
+    if (!empty($work_status) && in_array($work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+        $this->db->where('sc.work_status', $work_status);
     }
 
     $this->db->order_by('l.disburse_day', 'DESC');

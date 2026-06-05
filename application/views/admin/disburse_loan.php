@@ -3,6 +3,7 @@ include_once APPPATH . "views/partials/header.php";
 
 $is_super_admin = ($this->session->userdata('role') === 'admin');
 $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || has_permission('Mikopo', 'can_delete');
+$selected_work_status = isset($selected_work_status) ? (string) $selected_work_status : '';
 
 // --- DUMMY DATA - REMOVE AND LOAD FROM YOUR CONTROLLER ---
 // Controller should pass $share, an array of shareholder objects.
@@ -112,6 +113,17 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
     </select>
   </div>
 
+  <!-- Work Status Dropdown -->
+  <div>
+    <label for="work_status" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Work Status</label>
+    <select name="work_status" id="work_status"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-500 focus:ring-cyan-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+      <option value="" <?php echo ($selected_work_status === '') ? 'selected' : ''; ?>>All Status</option>
+      <option value="Mwajiriwa" <?php echo ($selected_work_status === 'Mwajiriwa') ? 'selected' : ''; ?>>Mtumishi</option>
+      <option value="Mjasiriamali" <?php echo ($selected_work_status === 'Mjasiriamali') ? 'selected' : ''; ?>>Mjasiriamali</option>
+    </select>
+  </div>
+
   <!-- Submit Button -->
   <div class="flex items-end">
     <button type="submit"
@@ -134,6 +146,7 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('customer_name'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('phone_number'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo rtrim($this->lang->line('branch'), ':'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
+                                        <th scope="col" class="py-3 px-6 text-start"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_type'); ?></span><svg class="size-3.5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="hs-datatable-ordering-desc:text-cyan-600 dark:hs-datatable-ordering-desc:text-cyan-500" d="m7 15 5 5 5-5"></path><path class="hs-datatable-ordering-asc:text-cyan-600 dark:hs-datatable-ordering-asc:text-cyan-500" d="m7 9 5-5 5 5"></path></svg></div></th>
                                         <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_approved'); ?></span></div></th>
 										<th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_plus_interest'); ?></span></div></th>
                                         <th scope="col" class="py-3 px-6 text-start --exclude-from-ordering"><div class="inline-flex items-center gap-x-2"><span class="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400"><?php echo $this->lang->line('loan_duration'); ?></span></div></th>
@@ -162,6 +175,20 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                                             ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_aproveds->phone_no, ENT_QUOTES, 'UTF-8'); ?></td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo htmlspecialchars($loan_aproveds->blanch_name, ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                                <?php
+                                                    $work_status = trim((string) ($loan_aproveds->work_status ?? ''));
+                                                    $loan_type_label = trim((string) ($loan_aproveds->loan_type ?? ''));
+                                                    if ($work_status === 'Mjasiriamali') {
+                                                        $loan_type_label = 'Mkopo wa Mjasiriamali';
+                                                    } elseif ($loan_type_label === 'salary_advance') {
+                                                        $loan_type_label = 'Mkopo Mdogo';
+                                                    } elseif ($loan_type_label === 'main' || $loan_type_label === '') {
+                                                        $loan_type_label = 'Mkopo Mkubwa';
+                                                    }
+                                                    echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
+                                                ?>
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?php echo htmlspecialchars(number_format($loan_aproveds->how_loan, 0), ENT_QUOTES, 'UTF-8'); ?>
 </td>
