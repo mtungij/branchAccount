@@ -87,7 +87,9 @@ $total_received = 0;
             }
 
             $loan_type_label = trim((string) ($row->loan_type ?? ''));
-            if (trim((string) ($row->work_status ?? '')) === 'Mjasiriamali') {
+            if (trim((string) ($row->work_status ?? '')) === '') {
+                $loan_type_label = 'Haijulikani';
+            } elseif (trim((string) ($row->work_status ?? '')) === 'Mjasiriamali') {
                 $loan_type_label = 'Mkopo wa Mjasiriamali';
             } elseif ($loan_type_label === 'salary_advance') {
                 $loan_type_label = 'Mkopo Mdogo';
@@ -98,7 +100,7 @@ $total_received = 0;
             <tr>
                 <td><?php echo $no++; ?></td>
                 <td><?php echo htmlspecialchars(trim(($row->f_name ?? '') . ' ' . ($row->m_name ?? '') . ' ' . ($row->l_name ?? '')), ENT_QUOTES, 'UTF-8'); ?></td>
-                <td><?php echo htmlspecialchars($work_status, ENT_QUOTES, 'UTF-8'); ?></td>
+                <td><?php echo htmlspecialchars($work_status !== '' ? $work_status : '-', ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?php echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?php echo htmlspecialchars((string) ($row->blanch_name ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
                 <td><?php echo number_format($loan_amount); ?></td>

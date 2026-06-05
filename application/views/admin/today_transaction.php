@@ -120,7 +120,9 @@ if (!empty($_SERVER['QUERY_STRING'])) {
             }
 
             $loan_type_label = trim((string) ($cashs->loan_type ?? ''));
-            if ($work_status === 'Mjasiriamali') {
+            if ($work_status === '') {
+              $loan_type_label = 'Haijulikani';
+            } elseif ($work_status === 'Mjasiriamali') {
               $loan_type_label = 'Mkopo wa Mjasiriamali';
             } elseif ($loan_type_label === 'salary_advance') {
               $loan_type_label = 'Mkopo Mdogo';
@@ -140,7 +142,7 @@ if (!empty($_SERVER['QUERY_STRING'])) {
                       <tr class="border-b dark:border-gray-700">
                           <th scope="row" class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white"><?php echo $no++; ?></th>
                           <td class="px-4 py-3 dark:text-white"><?php echo $cashs->f_name . ' ' . $cashs->m_name . ' ' . $cashs->l_name; ?></td>
-                          <td class="px-4 py-3 dark:text-white"><?php echo $work_status; ?></td>
+                          <td class="px-4 py-3 dark:text-white"><?php echo $work_status !== '' ? $work_status : '-'; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $loan_type_label; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo $branch_name; ?></td>
                           <td class="px-4 py-3 dark:text-white"><?php echo number_format($received_amount); ?></td>
@@ -375,7 +377,6 @@ $('#empl').html('<option value=""><?php echo $this->lang->line('select_employee'
 
 });
 </script>
-
 
 
 
