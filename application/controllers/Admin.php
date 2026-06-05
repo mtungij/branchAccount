@@ -18,8 +18,22 @@ class Admin extends CI_Controller {
         $this->session->set_userdata('blanch_id', $selected_blanch_id);
     } else {
         $selected_blanch_id = $session_blanch_id > 0 ? $session_blanch_id : 0;
-    }
+	}
 	$branch_filter_id = $selected_blanch_id > 0 ? $selected_blanch_id : null;
+    $selected_work_status = trim((string) $this->input->get('work_status', true));
+    if ($selected_work_status === 'Mtumishi') {
+        $selected_work_status = 'Mwajiriwa';
+    }
+    if (!in_array($selected_work_status, array('Mwajiriwa', 'Mjasiriamali'), true)) {
+        $selected_work_status = '';
+    }
+
+    $selected_loan_type = trim((string) $this->input->get('loan_type', true));
+    if (!in_array($selected_loan_type, array('main', 'salary_advance', 'mjasiriamali'), true)) {
+        $selected_loan_type = '';
+    }
+
+    $has_dashboard_loan_filters = ($selected_work_status !== '' || $selected_loan_type !== '');
    $compdata = $this->queries->get_companyData($comp_id);
 
  
@@ -81,6 +95,9 @@ class Admin extends CI_Controller {
      $all_customer_count = $this->queries->count_by_company($comp_id, $branch_filter_id);
      $done_customer_count = $this->queries->count_completed_today($comp_id, $branch_filter_id);
      $default_customer_count = $this->queries->count_default_loans_today($comp_id, $branch_filter_id);
+     $customer_status_counts = null;
+     $loan_request_count = null;
+     $today_pending_count = null;
      $deposit_daily = $this->queries->fetch_today_deposit_daily_comp($comp_id, $branch_filter_id);
      $total_deposit_daily = $this->queries->get_today_received_loan_total($comp_id, $branch_filter_id);
      $total_deposit_weekly = $this->queries->get_weekly_received_loan_total($comp_id, $branch_filter_id);
@@ -110,6 +127,31 @@ class Admin extends CI_Controller {
      $total_active_paid= $this->queries->get_today_received_from_receivale	($comp_id, $branch_filter_id);
  $total_default_paid=$this->queries->get_depositing_out_total_comp($comp_id, $branch_filter_id);
  $today_endactive_paid=$this->queries->get_depositing_out_todayend_comp($comp_id, $branch_filter_id);
+
+     if ($has_dashboard_loan_filters) {
+        $filtered_dashboard = $this->queries->get_admin_dashboard_filtered_metrics($comp_id, $branch_filter_id, $selected_work_status, $selected_loan_type);
+        $receivable_total = $filtered_dashboard['receivable_total'];
+        $total_received = $filtered_dashboard['total_received'];
+        $total_receved = $filtered_dashboard['total_receved'];
+        $total_loanWithdrawal = $filtered_dashboard['total_loanWithdrawal'];
+        $total_withdrawal_daily = $filtered_dashboard['total_withdrawal_daily'];
+        $total_withdrawal_weekly = $filtered_dashboard['total_withdrawal_weekly'];
+        $total_withdrawal_monthly = $filtered_dashboard['total_withdrawal_monthly'];
+        $total_deposit_daily = $filtered_dashboard['total_deposit_daily'];
+        $total_deposit_weekly = $filtered_dashboard['total_deposit_weekly'];
+        $total_deposit_monthly = $filtered_dashboard['total_deposit_monthly'];
+        $total_overdue = $filtered_dashboard['total_overdue'];
+        $total_deni = $filtered_dashboard['total_deni'];
+        $total_remain = $filtered_dashboard['total_remain'];
+        $today_enddate_collection = $filtered_dashboard['today_enddate_collection'];
+
+        $filtered_quick_counts = $this->queries->get_admin_dashboard_filtered_quick_counts($comp_id, $branch_filter_id, $selected_work_status, $selected_loan_type);
+        $customer_status_counts = $filtered_quick_counts['customer_counts'];
+        $all_customer_count = $customer_status_counts['total'];
+        $new_customer = $customer_status_counts['new_today'];
+        $loan_request_count = $filtered_quick_counts['loan_requests'];
+        $today_pending_count = $filtered_quick_counts['today_pending'];
+     }
 
      $monthly_loan_chart = [];
      $withdrawal_index = [];
@@ -177,8 +219,13 @@ class Admin extends CI_Controller {
 	'total_deni'=> $total_deni,
 	'today_enddate_collection' => $today_enddate_collection,
 	'total_loanWithdrawal'=>$total_loanWithdrawal,
+    'customer_status_counts' => $customer_status_counts,
+    'loan_request_count' => $loan_request_count,
+    'today_pending_count' => $today_pending_count,
     'selected_blanch_id' => $selected_blanch_id,
     'selected_blanch_name' => $selected_blanch_name,
+    'selected_work_status' => $selected_work_status,
+    'selected_loan_type' => $selected_loan_type,
     'monthly_loan_chart' => $monthly_loan_chart,
 	' compdata'=> $compdata,
 	'total_loanDis'=>$total_loanDis,

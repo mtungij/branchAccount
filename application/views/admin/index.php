@@ -48,10 +48,33 @@ $txt_switch_branch = $lang_line('switch_branch', 'Badili Tawi');
 
 $selected_blanch_id = isset($selected_blanch_id) ? (int) $selected_blanch_id : 0;
 $selected_blanch_name = !empty($selected_blanch_name) ? $selected_blanch_name : $txt_all_branches;
-$admin_link = function ($path) use ($selected_blanch_id) {
+$selected_work_status = isset($selected_work_status) ? (string) $selected_work_status : '';
+$selected_loan_type = isset($selected_loan_type) ? (string) $selected_loan_type : '';
+$dashboard_filter_params = array();
+if ($selected_blanch_id > 0) {
+  $dashboard_filter_params['blanch_id'] = $selected_blanch_id;
+}
+if ($selected_work_status !== '') {
+  $dashboard_filter_params['work_status'] = $selected_work_status;
+}
+if ($selected_loan_type !== '') {
+  $dashboard_filter_params['loan_type'] = $selected_loan_type;
+}
+$dashboard_filter_url = function ($branch_id = null) use ($selected_work_status, $selected_loan_type) {
+  $params = array();
+  $params['blanch_id'] = $branch_id === null ? 'all' : (int) $branch_id;
+  if ($selected_work_status !== '') {
+    $params['work_status'] = $selected_work_status;
+  }
+  if ($selected_loan_type !== '') {
+    $params['loan_type'] = $selected_loan_type;
+  }
+  return base_url('admin/index?' . http_build_query($params));
+};
+$admin_link = function ($path) use ($dashboard_filter_params) {
   $url = base_url($path);
-  if ($selected_blanch_id > 0) {
-    $url .= (strpos($url, '?') === false ? '?' : '&') . 'blanch_id=' . (int) $selected_blanch_id;
+  if (!empty($dashboard_filter_params)) {
+    $url .= (strpos($url, '?') === false ? '?' : '&') . http_build_query($dashboard_filter_params);
   }
   return $url;
 };
@@ -118,9 +141,10 @@ $admin_link = function ($path) use ($selected_blanch_id) {
 
                 </p>
             </div>
-            <div>
-              <form action="<?php echo base_url('admin/index'); ?>" method="get" class="flex items-center gap-2">
-                <label for="dashboard-branch-switch" class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            <div class="w-full sm:w-auto">
+              <form action="<?php echo base_url('admin/index'); ?>" method="get" class="flex flex-wrap items-end gap-2">
+                <div class="min-w-48 flex-1 sm:flex-none">
+                <label for="dashboard-branch-switch" class="block mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   <?php echo $txt_switch_branch; ?>
                 </label>
                 <select id="dashboard-branch-switch" name="blanch_id" onchange="this.form.submit()"
@@ -134,6 +158,30 @@ $admin_link = function ($path) use ($selected_blanch_id) {
                     <?php endforeach; ?>
                   <?php endif; ?>
                 </select>
+                </div>
+                <div class="min-w-40 flex-1 sm:flex-none">
+                  <label for="dashboard-work-status" class="block mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Work Status
+                  </label>
+                  <select id="dashboard-work-status" name="work_status" onchange="this.form.submit()"
+                      class="py-2 px-3 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                    <option value="" <?php echo $selected_work_status === '' ? 'selected' : ''; ?>>All</option>
+                    <option value="Mwajiriwa" <?php echo $selected_work_status === 'Mwajiriwa' ? 'selected' : ''; ?>>Mtumishi</option>
+                    <option value="Mjasiriamali" <?php echo $selected_work_status === 'Mjasiriamali' ? 'selected' : ''; ?>>Mjasiriamali</option>
+                  </select>
+                </div>
+                <div class="min-w-44 flex-1 sm:flex-none">
+                  <label for="dashboard-loan-type" class="block mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Loan Type
+                  </label>
+                  <select id="dashboard-loan-type" name="loan_type" onchange="this.form.submit()"
+                      class="py-2 px-3 pe-9 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                    <option value="" <?php echo $selected_loan_type === '' ? 'selected' : ''; ?>>All</option>
+                    <option value="main" <?php echo $selected_loan_type === 'main' ? 'selected' : ''; ?>>Mkopo Mkubwa</option>
+                    <option value="salary_advance" <?php echo $selected_loan_type === 'salary_advance' ? 'selected' : ''; ?>>Mkopo Mdogo</option>
+                    <option value="mjasiriamali" <?php echo $selected_loan_type === 'mjasiriamali' ? 'selected' : ''; ?>>Mkopo wa Mjasiriamali</option>
+                  </select>
+                </div>
               </form>
             </div>
         </div>
@@ -1012,13 +1060,13 @@ $admin_link = function ($path) use ($selected_blanch_id) {
                     <div class="hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden min-w-40 z-20 bg-white shadow-md rounded-lg p-2 mt-2 dark:bg-gray-800 dark:border dark:border-gray-700" aria-labelledby="branches-dropdown-btn">
                         <div class="py-2 first:pt-0 last:pb-0">
                             <span class="block py-2 px-3 text-xs font-medium uppercase text-gray-400 dark:text-gray-500"><?php echo $txt_branches_list; ?></span>
-                          <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300" href="<?php echo base_url('admin/index?blanch_id=all'); ?>">
+                          <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300" href="<?php echo $dashboard_filter_url(null); ?>">
                             <?php echo htmlspecialchars($txt_all_branches, ENT_QUOTES, 'UTF-8'); ?>
                           </a>
                             <?php if (isset($blanch) && is_array($blanch)): ?>
                                 <?php foreach ($blanch as $blanchs): ?>
                                 <a class="flex items-center gap-x-3.5 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                               href="<?php echo base_url('admin/index?blanch_id=' . (int) ($blanchs->blanch_id ?? 0)); ?>">
+                               href="<?php echo $dashboard_filter_url((int) ($blanchs->blanch_id ?? 0)); ?>">
 
                                     <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3.5 2A1.5 1.5 0 0 0 2 3.5v13A1.5 1.5 0 0 0 3.5 18h13a1.5 1.5 0 0 0 1.5-1.5v-13A1.5 1.5 0 0 0 16.5 2h-13ZM12.25 8.25a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5h-1.5ZM12.25 12a.75.75 0 0 0 0 1.5h1.5a.75.75 0 0 0 0-1.5h-1.5ZM6.25 6.75a.75.75 0 0 0-.75.75v5.5a.75.75 0 0 0 1.5 0v-5.5a.75.75 0 0 0-.75-.75ZM8.25 5a.75.75 0 0 0-.75.75v8.5a.75.75 0 0 0 1.5 0v-8.5A.75.75 0 0 0 8.25 5Z" /></svg>
                                     <?php
@@ -1079,21 +1127,28 @@ echo htmlspecialchars($blanchs->blanch_name ?? '', ENT_QUOTES, 'UTF-8');
                     <!-- Stat Card: Customers -->
                     <a href="<?php echo $admin_link('admin/all_customer'); ?>" class="bg-white dark:bg-gray-700 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-300">
                         <div class="flex items-center gap-x-3 mb-3">
-                        <?php $customer = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' {$customer_branch_where}");
-              $male = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND gender = 'male' {$customer_branch_where}");
-              $female = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND gender = 'female' {$customer_branch_where}");
-              $active = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'open' {$customer_branch_where}");
-              $pendin = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'pending' {$customer_branch_where}");
-              $closed = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'close' {$customer_branch_where}");
+                        <?php
+              if (is_array($customer_status_counts ?? null)) {
+                $active_count = (int) ($customer_status_counts['active'] ?? 0);
+                $pending_count = (int) ($customer_status_counts['pending'] ?? 0);
+                $closed_count = (int) ($customer_status_counts['closed'] ?? 0);
+              } else {
+                $active = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'open' {$customer_branch_where}");
+                $pendin = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'pending' {$customer_branch_where}");
+                $closed = $this->db->query("SELECT * FROM tbl_customer WHERE comp_id = '$comp_id' AND customer_status = 'close' {$customer_branch_where}");
+                $active_count = $active->num_rows();
+                $pending_count = $pendin->num_rows();
+                $closed_count = $closed->num_rows();
+              }
 							 ?>
                              <!-- <img src="</?php echo base_url('assets/img/users.png'); ?>" class="size-10" alt="Customers"> -->
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200"><?php echo $txt_customers; ?></h2>
                         </div>
                           <p class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1"><?php echo $all_customer_count ?? 0; ?> <span class="text-sm font-normal"><?php echo $txt_total; ?></span></p>
                         <div class="text-xs space-x-2"> 
-                            <span class="text-green-600 dark:text-green-400"><?php echo $txt_active; ?>: <?php echo $active->num_rows(); ?></span>
-                            <span class="text-orange-500 dark:text-orange-400"><?php echo $txt_pending; ?>: <?php echo $pendin->num_rows(); ?></span>
-                            <span class="text-red-600 dark:text-red-400"><?php echo $txt_closed; ?>: <?php echo $closed->num_rows(); ?></span>
+                            <span class="text-green-600 dark:text-green-400"><?php echo $txt_active; ?>: <?php echo $active_count; ?></span>
+                            <span class="text-orange-500 dark:text-orange-400"><?php echo $txt_pending; ?>: <?php echo $pending_count; ?></span>
+                            <span class="text-red-600 dark:text-red-400"><?php echo $txt_closed; ?>: <?php echo $closed_count; ?></span>
                         </div>
                     </a>
                     
@@ -1103,8 +1158,13 @@ echo htmlspecialchars($blanchs->blanch_name ?? '', ENT_QUOTES, 'UTF-8');
                              <!-- <img src="<//?php echo base_url('assets/img/hukumu.png'); ?>" class="size-10" alt="Loan Requests"> -->
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200"><?php echo $txt_loan_requests; ?></h2>
                         </div>
-                        <?php $new_loan = $this->db->query("SELECT * FROM tbl_loans WHERE comp_id = '$comp_id' AND loan_status = 'open' {$loan_branch_where}"); ?>
-                        <p class="text-2xl font-bold text-red-600 dark:text-red-400"><?php echo ($new_loan->num_rows());  ?></p>
+                        <?php
+                        if ($loan_request_count === null) {
+                          $new_loan = $this->db->query("SELECT * FROM tbl_loans WHERE comp_id = '$comp_id' AND loan_status = 'open' {$loan_branch_where}");
+                          $loan_request_count = $new_loan->num_rows();
+                        }
+                        ?>
+                        <p class="text-2xl font-bold text-red-600 dark:text-red-400"><?php echo (int) $loan_request_count; ?></p>
                           <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo $txt_new_loan_applications; ?></p>
                     </a>
 
@@ -1117,10 +1177,14 @@ echo htmlspecialchars($blanchs->blanch_name ?? '', ENT_QUOTES, 'UTF-8');
                             <!-- <img src="</?php echo base_url('assets/img/penart.png'); ?>" class="size-10" alt="Today Pending"> -->
                             <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-200"><?php echo $txt_today_loan_pending; ?></h2>
                         </div>
-                        <?php $laza = $this->db->query("SELECT * FROM tbl_pending_total WHERE comp_id = '$comp_id' AND total_pend IS NOT FALSE {$pending_branch_where}");
+                        <?php
+                        if ($today_pending_count === null) {
+                          $laza = $this->db->query("SELECT * FROM tbl_pending_total WHERE comp_id = '$comp_id' AND total_pend IS NOT FALSE {$pending_branch_where}");
+                          $today_pending_count = $laza->num_rows();
+                        }
                
 							 ?>
-                        <p class="text-2xl font-bold text-gray-800 dark:text-gray-200"><?php echo $laza->num_rows(); ?></p>
+                        <p class="text-2xl font-bold text-gray-800 dark:text-gray-200"><?php echo (int) $today_pending_count; ?></p>
                         <p class="text-xs text-gray-500 dark:text-gray-400"><?php echo $txt_loan_payments_due_yesterday; ?></p>
                     </a>
 

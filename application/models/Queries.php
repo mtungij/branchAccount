@@ -1183,6 +1183,282 @@ public function count_default_customers_by_branch($blanch_id) {
 	return $this->db->count_all_results();
 }
 
+	private function join_latest_sub_customer_profile($customer_alias = 'c', $profile_alias = 'sc')
+	{
+		$this->db->join(
+			'(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) latest_sc ON latest_sc.latest_id = sc1.id) ' . $profile_alias,
+			$profile_alias . '.customer_id = ' . $customer_alias . '.customer_id',
+			'left'
+		);
+	}
+
+	private function apply_dashboard_loan_profile_filters($loan_alias = 'l', $profile_alias = 'sc', $work_status = '', $loan_type = '')
+	{
+		$work_status = trim((string) $work_status);
+		$loan_type = trim((string) $loan_type);
+
+		if ($loan_type === 'main') {
+			$this->db->group_start()
+				->where($loan_alias . '.loan_type', 'main')
+				->or_where($loan_alias . '.loan_type', '')
+				->or_where($loan_alias . '.loan_type IS NULL', null, false)
+				->group_end();
+			$this->db->group_start()
+				->where($profile_alias . '.work_status !=', 'Mjasiriamali')
+				->or_where($profile_alias . '.work_status IS NULL', null, false)
+				->group_end();
+		} elseif ($loan_type === 'salary_advance') {
+			$this->db->where($loan_alias . '.loan_type', 'salary_advance');
+			$this->db->group_start()
+				->where($profile_alias . '.work_status !=', 'Mjasiriamali')
+				->or_where($profile_alias . '.work_status IS NULL', null, false)
+				->group_end();
+		} elseif ($loan_type === 'mjasiriamali') {
+			$this->db->where($profile_alias . '.work_status', 'Mjasiriamali');
+		}
+
+		if ($work_status === 'Mtumishi') {
+			$work_status = 'Mwajiriwa';
+		}
+
+		if (in_array($work_status, array('Mwajiriwa', 'Mjasiriamali'), true)) {
+			$this->db->where($profile_alias . '.work_status', $work_status);
+		}
+	}
+
+	private function dashboard_sum_loans($select, $field_alias, $comp_id, $blanch_id = null, $work_status = '', $loan_type = '', $extra_where = array())
+	{
+		$this->db->select($select . ' AS ' . $field_alias, false);
+		$this->db->from('tbl_loans l');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('l.comp_id', $comp_id);
+
+		if (!empty($blanch_id)) {
+			$this->db->where('l.blanch_id', (int) $blanch_id);
+		}
+
+		foreach ($extra_where as $where) {
+			if (isset($where[2]) && $where[2] === false) {
+				$this->db->where($where[0], $where[1], false);
+			} else {
+				$this->db->where($where[0], $where[1]);
+			}
+		}
+
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+
+		return $this->db->get()->row();
+	}
+
+	public function get_admin_dashboard_filtered_metrics($comp_id, $blanch_id = null, $work_status = '', $loan_type = '')
+	{
+		$today = date('Y-m-d');
+		$next7days = date('Y-m-d', strtotime('+6 days'));
+
+		$receivable_total = $this->dashboard_sum_loans('SUM(l.restration)', 'total_rejesho', $comp_id, $blanch_id, $work_status, $loan_type, array(
+			array('l.loan_status', 'withdrawal'),
+			array('l.date_show', $today),
+		));
+		$total_loanWithdrawal = $this->dashboard_sum_loans('SUM(l.loan_aprove)', 'total_todayloan', $comp_id, $blanch_id, $work_status, $loan_type, array(
+			array('l.loan_status', 'withdrawal'),
+			array('l.disburse_day', $today),
+		));
+		$total_withdrawal_daily = $this->dashboard_sum_loans('SUM(l.loan_aprove)', 'loan_aproved', $comp_id, $blanch_id, $work_status, $loan_type, array(
+			array('l.loan_status', 'withdrawal'),
+			array('l.day', 1),
+		));
+		$total_withdrawal_weekly = $this->dashboard_sum_loans('SUM(l.loan_aprove)', 'loan_aproved', $comp_id, $blanch_id, $work_status, $loan_type, array(
+			array('l.loan_status', 'withdrawal'),
+			array('l.day', 7),
+		));
+		$total_withdrawal_monthly = $this->dashboard_sum_loans('SUM(l.loan_aprove)', 'loan_aproved', $comp_id, $blanch_id, $work_status, $loan_type, array(
+			array('l.loan_status', 'withdrawal'),
+			array('l.day IN (28, 29, 30, 31)', null, false),
+		));
+
+		$this->db->select('SUM(p.depost) AS total_depost', false);
+		$this->db->from('tbl_depost p');
+		$this->db->join('tbl_loans l', 'l.loan_id = p.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('p.comp_id', $comp_id);
+		$this->db->where('p.depost_day', $today);
+		if (!empty($blanch_id)) {
+			$this->db->where('p.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$total_received = $this->db->get()->row();
+
+		$deposit_by_day = array();
+		foreach (array('daily' => 'l.day = 1', 'weekly' => 'l.day = 7', 'monthly' => 'l.day IN (28, 29, 30, 31)') as $key => $condition) {
+			$this->db->select('SUM(p.depost) AS total_amount', false);
+			$this->db->from('tbl_depost p');
+			$this->db->join('tbl_loans l', 'l.loan_id = p.loan_id');
+			$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+			$this->join_latest_sub_customer_profile('c', 'sc');
+			$this->db->where('p.comp_id', $comp_id);
+			$this->db->where('p.depost_day', $today);
+			$this->db->where($condition, null, false);
+			if (!empty($blanch_id)) {
+				$this->db->where('l.blanch_id', (int) $blanch_id);
+			}
+			$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+			$deposit_by_day[$key] = (float) ($this->db->get()->row()->total_amount ?? 0);
+		}
+
+		$this->db->select('SUM(ot.remain_amount) AS total_out', false);
+		$this->db->from('tbl_outstand_loan ot');
+		$this->db->join('tbl_loans l', 'l.loan_id = ot.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = ot.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('ot.comp_id', $comp_id);
+		$this->db->where('ot.out_status', 'open');
+		if (!empty($blanch_id)) {
+			$this->db->where('ot.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$total_overdue = $this->db->get()->row();
+
+		$this->db->select('SUM(ot.remain_amount) AS total_out', false);
+		$this->db->from('tbl_outstand_loan ot');
+		$this->db->join('tbl_outstand o', 'o.loan_id = ot.loan_id', 'left');
+		$this->db->join('tbl_loans l', 'l.loan_id = ot.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = ot.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('ot.comp_id', $comp_id);
+		$this->db->where('ot.out_status', 'open');
+		$this->db->where('DATE(o.loan_end_date)', $today);
+		if (!empty($blanch_id)) {
+			$this->db->where('ot.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$total_deni = $this->db->get()->row();
+
+		$this->db->select('SUM(l.loan_int) AS total_loan, SUM(COALESCE(d.depost,0)) AS total_paid, SUM(l.loan_int - COALESCE(d.depost,0)) AS total_remain', false);
+		$this->db->from('tbl_outstand_loan ot');
+		$this->db->join('tbl_loans l', 'l.loan_id = ot.loan_id', 'left');
+		$this->db->join('tbl_depost d', 'd.loan_id = ot.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = ot.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('ot.comp_id', $comp_id);
+		$this->db->where('ot.out_status', 'open');
+		if (!empty($blanch_id)) {
+			$this->db->where('ot.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$total_remain = $this->db->get()->row();
+
+		$this->db->select('SUM(l.restration) AS total_restration', false);
+		$this->db->from('tbl_loans l');
+		$this->db->join('tbl_outstand o', 'o.loan_id = l.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('DATE(o.loan_end_date) >=', $today);
+		$this->db->where('DATE(o.loan_end_date) <=', $next7days);
+		$this->db->where('l.loan_status', 'withdrawal');
+		$this->db->where('l.comp_id', $comp_id);
+		if (!empty($blanch_id)) {
+			$this->db->where('l.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$today_enddate_collection = (float) ($this->db->get()->row()->total_restration ?? 0);
+
+		return array(
+			'receivable_total' => $receivable_total,
+			'total_received' => $total_received,
+			'total_receved' => $total_received,
+			'total_loanWithdrawal' => $total_loanWithdrawal,
+			'total_withdrawal_daily' => $total_withdrawal_daily,
+			'total_withdrawal_weekly' => $total_withdrawal_weekly,
+			'total_withdrawal_monthly' => $total_withdrawal_monthly,
+			'total_deposit_daily' => $deposit_by_day['daily'],
+			'total_deposit_weekly' => $deposit_by_day['weekly'],
+			'total_deposit_monthly' => $deposit_by_day['monthly'],
+			'total_overdue' => $total_overdue,
+			'total_deni' => $total_deni,
+			'total_remain' => $total_remain,
+			'today_enddate_collection' => $today_enddate_collection,
+		);
+	}
+
+	public function get_admin_dashboard_filtered_quick_counts($comp_id, $blanch_id = null, $work_status = '', $loan_type = '')
+	{
+		$today = date('Y-m-d');
+		$customer_counts = array(
+			'total' => 0,
+			'active' => 0,
+			'pending' => 0,
+			'closed' => 0,
+			'new_today' => 0,
+		);
+		$statuses = array(
+			'total' => null,
+			'active' => 'open',
+			'pending' => 'pending',
+			'closed' => 'close',
+		);
+
+		foreach ($statuses as $key => $status) {
+			$this->db->select('COUNT(DISTINCT c.customer_id) AS total_count', false);
+			$this->db->from('tbl_customer c');
+			$this->db->join('tbl_loans l', 'l.customer_id = c.customer_id', 'left');
+			$this->join_latest_sub_customer_profile('c', 'sc');
+			$this->db->where('c.comp_id', $comp_id);
+			if (!empty($blanch_id)) {
+				$this->db->where('c.blanch_id', (int) $blanch_id);
+			}
+			if ($status !== null) {
+				$this->db->where('c.customer_status', $status);
+			}
+			$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+			$customer_counts[$key] = (int) ($this->db->get()->row()->total_count ?? 0);
+		}
+
+		$this->db->select('COUNT(DISTINCT c.customer_id) AS total_count', false);
+		$this->db->from('tbl_customer c');
+		$this->db->join('tbl_loans l', 'l.customer_id = c.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('c.comp_id', $comp_id);
+		$this->db->where('DATE(c.reg_date)', $today);
+		if (!empty($blanch_id)) {
+			$this->db->where('c.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$customer_counts['new_today'] = (int) ($this->db->get()->row()->total_count ?? 0);
+
+		$this->db->select('COUNT(DISTINCT l.loan_id) AS total_count', false);
+		$this->db->from('tbl_loans l');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('l.comp_id', $comp_id);
+		$this->db->where('l.loan_status', 'open');
+		if (!empty($blanch_id)) {
+			$this->db->where('l.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$loan_requests = (int) ($this->db->get()->row()->total_count ?? 0);
+
+		$this->db->select('COUNT(DISTINCT p.total_id) AS total_count', false);
+		$this->db->from('tbl_pending_total p');
+		$this->db->join('tbl_loans l', 'l.loan_id = p.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('p.comp_id', $comp_id);
+		$this->db->where('p.total_pend IS NOT FALSE', null, false);
+		if (!empty($blanch_id)) {
+			$this->db->where('p.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$today_pending = (int) ($this->db->get()->row()->total_count ?? 0);
+
+		return array(
+			'customer_counts' => $customer_counts,
+			'loan_requests' => $loan_requests,
+			'today_pending' => $today_pending,
+		);
+	}
+
 public function fetch_today_deposit_daily_comp($comp_id, $blanch_id = null){
 	$today = date("Y-m-d");
 	$branch_sql = '';
