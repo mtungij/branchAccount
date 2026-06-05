@@ -172,6 +172,17 @@ include_once APPPATH . "views/partials/guest_header.php";
             <button type="submit" class="w-full py-3 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-cyan-600 text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:opacity-50 disabled:pointer-events-none">Ingia</button>
 
           <?php echo form_close(); ?>
+
+          <div class="mt-4">
+            <button
+              type="button"
+              id="loginMasterSyncButton"
+              data-sync-url="<?php echo base_url('sync/pull_login_master'); ?>"
+              class="w-full py-2.5 px-4 inline-flex justify-center items-center gap-x-2 text-sm font-semibold rounded-lg border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:bg-cyan-900/30 dark:border-cyan-800 dark:text-cyan-200 dark:hover:bg-cyan-900/50">
+              <span id="loginMasterSyncText">Sync login data</span>
+            </button>
+            <p id="loginMasterSyncStatus" class="mt-2 min-h-[18px] text-center text-xs text-gray-600 dark:text-gray-300"></p>
+          </div>
    
     <!-- Divider -->
     <div class="flex items-center my-6">
@@ -235,6 +246,63 @@ include_once APPPATH . "views/partials/guest_header.php";
 
 
 
+
+<script>
+(function () {
+  var button = document.getElementById('loginMasterSyncButton');
+  var text = document.getElementById('loginMasterSyncText');
+  var status = document.getElementById('loginMasterSyncStatus');
+  if (!button || !status) {
+    return;
+  }
+
+  function setStatus(message, type) {
+    status.textContent = message;
+    status.className = 'mt-2 min-h-[18px] text-center text-xs ' + (
+      type === 'success'
+        ? 'text-green-700 dark:text-green-300'
+        : type === 'error'
+          ? 'text-red-700 dark:text-red-300'
+          : 'text-gray-600 dark:text-gray-300'
+    );
+  }
+
+  button.addEventListener('click', function () {
+    if (!navigator.onLine) {
+      setStatus('No internet connection. Use existing offline login data.', 'error');
+      return;
+    }
+
+    button.disabled = true;
+    text.textContent = 'Syncing...';
+    setStatus('Connecting to remote server...', 'info');
+
+    fetch(button.getAttribute('data-sync-url'), {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Login data sync failed.');
+          }
+          return data;
+        });
+      })
+      .then(function (data) {
+        var employees = data.summary && data.summary.tbl_employee ? data.summary.tbl_employee.imported : 0;
+        setStatus('Login data synced. Employees updated: ' + employees, 'success');
+      })
+      .catch(function (error) {
+        setStatus(error.message || 'Login data sync failed.', 'error');
+      })
+      .then(function () {
+        button.disabled = false;
+        text.textContent = 'Sync login data';
+      });
+  });
+})();
+</script>
 
 <!-- <div class="mt-4 text-center text-sm text-white">
   <h2 class="text-lg font-semibold mb-2 text-green-700">Support</h2>

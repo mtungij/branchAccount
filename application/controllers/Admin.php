@@ -4366,20 +4366,37 @@ $loan_aproveds = number_format($loan_aproved);
 	public function disburse_loan(){
 		$this->load->model('queries');
 		$comp_id = $this->session->userdata('comp_id');
-        $selected_blanch_id = $this->resolve_selected_branch_id();
-        $disburse = $this->queries->get_today_disbursed_loans($comp_id, $selected_blanch_id > 0 ? $selected_blanch_id : null);
-        $total_loanDis = $selected_blanch_id > 0
-            ? $this->queries->get_sum_loanDisbursedBlanch($selected_blanch_id)
-            : $this->queries->get_sum_loanDisbursed($comp_id);
-        $total_interest_loan = $selected_blanch_id > 0
-            ? $this->queries->get_sum_loanDisburse_interestBlanch($selected_blanch_id)
-            : $this->queries->get_sum_loanDisburse_interest($comp_id);
+        $selected_blanch_id = (int) $this->input->get('blanch_id', true);
+        $from_date = $this->input->get('from_date', true);
+        $to_date = $this->input->get('to_date', true);
+        $branch_filter = $selected_blanch_id > 0 ? $selected_blanch_id : null;
+
+        $disburse = $this->queries->get_today_disbursed_loans($comp_id, $branch_filter, $from_date, $to_date);
+        $total_loanDis = (object) [
+            'total_loan' => array_sum(array_map(function ($loan) {
+                return (float) ($loan->loan_aprove ?? 0);
+            }, $disburse))
+        ];
+        $total_interest_loan = (object) [
+            'total_interest' => array_sum(array_map(function ($loan) {
+                return (float) ($loan->loan_int ?? 0);
+            }, $disburse))
+        ];
+        $branches = $this->queries->get_branches_by_company($comp_id);
 
 		    // echo "<pre>";
 		    // print_r($disburse);
 		    // echo "</pre>";
 		    //     exit();
-        $this->load->view('admin/disburse_loan',['disburse'=>$disburse,'total_loanDis'=>$total_loanDis,'total_interest_loan'=>$total_interest_loan,'selected_blanch_id'=>$selected_blanch_id]);
+        $this->load->view('admin/disburse_loan',[
+            'disburse'=>$disburse,
+            'total_loanDis'=>$total_loanDis,
+            'total_interest_loan'=>$total_interest_loan,
+            'selected_blanch_id'=>$selected_blanch_id,
+            'branches'=>$branches,
+            'from_date'=>$from_date,
+            'to_date'=>$to_date
+        ]);
 	}
 
 
@@ -6070,6 +6087,7 @@ $this->db->query("INSERT INTO tbl_outstand (`comp_id`,`loan_id`,`blanch_id`,`loa
 public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id,$new_balance,$group_id,$trans_id,$restoration,$loan_aprove,$empl_id){
 	$day = date("Y-m-d");
     $this->db->query("INSERT INTO tbl_prev_lecod (`comp_id`,`customer_id`,`loan_id`,`blanch_id`,`withdraw`,`lecod_day`,`group_id`,`restrations`,`loan_aprov`,`with_trans`,`empl_id`) VALUES ('$comp_id','$customer_id','$loan_id','$blanch_id','$loan_aprove','$day','$group_id','$restoration','$loan_aprove','$trans_id','$empl_id')");
+    $this->queries->queue_prev_lecod_sync($this->db->insert_id(), 'withdraw');
   
 }
 
@@ -6618,6 +6636,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
       public function update_loan_lecordDataDeposit_data($comp_id,$customer_id,$loan_id,$blanch_id,$update_res,$dep_id,$group_id,$trans_id,$restoration,$loan_aproved,$deposit_date,$empl_id,$wakala_name){
       	$sqldata="UPDATE `tbl_prev_lecod` SET `depost`= '$update_res',`trans_id`='$trans_id' WHERE `pay_id`= '$dep_id'";
      $query = $this->db->query($sqldata);
+     $this->queries->queue_prev_lecod_sync_by_pay_id($dep_id, 'deposit_update');
      return true;
       }
 
@@ -6984,6 +7003,7 @@ $sqldata="UPDATE `tbl_depost` SET `depost`= '$remain_oldDepost',`sche_principal`
     	//$day = date("Y-m-d");
     	$time = date("H:i:s");
     	$this->db->query("INSERT INTO tbl_prev_lecod (`comp_id`,`customer_id`,`loan_id`,`blanch_id`,`depost`,`lecod_day`,`pay_id`,`time_rec`,`trans_id`,`restrations`,`loan_aprov`,`empl_id`,`group_id`) VALUES ('$comp_id','$customer_id','$loan_id','$blanch_id','$update_res','$deposit_date','$dep_id','$time','$trans_id','$restoration','$loan_aproved','$empl_id','$group_id')");
+    	$this->queries->queue_prev_lecod_sync($this->db->insert_id(), 'deposit');
     }
 
      public function insert_loan_lecorDeposit($comp_id,$customer_id,$loan_id,$blanch_id,$update_res,$p_method,$role,$day_int,$day_princ,$loan_status,$group_id,$deposit_date,$empl_id,$wakala_name){

@@ -77,7 +77,7 @@ $can_loan_delete = $is_super_admin || has_permission('Loans', 'can_delete') || h
                 </div>
 
                 <!-- Filter Form -->
-<form method="get" action="<?php echo base_url('admin/disbursed_loans'); ?>" class="flex flex-wrap gap-4 mb-4">
+<form method="get" action="<?php echo base_url('admin/disburse_loan'); ?>" class="flex flex-wrap gap-4 mb-4">
 
   <!-- Date From -->
   <div>
@@ -300,6 +300,18 @@ window.addEventListener('load', () => {
         }
       });
     });
+
+    const searchInput = document.getElementById('shareholder-table-search');
+    const table = document.getElementById('shareholder_table');
+    if (searchInput && table) {
+      const rows = Array.from(table.querySelectorAll('tbody tr'));
+      searchInput.addEventListener('input', function () {
+        const term = this.value.toLowerCase().trim();
+        rows.forEach((row) => {
+          row.classList.toggle('hidden', term !== '' && !row.textContent.toLowerCase().includes(term));
+        });
+      });
+    }
     // HSStaticMethods.autoInit(['select']); // If Preline selects need explicit init
   }, 500);
 });

@@ -33,6 +33,8 @@
       </div>
 
       <div class="flex flex-row items-center justify-end gap-2">
+        <?php $this->load->view('partials/sync_status', ['sync_status_container' => 'inline']); ?>
+
         <?php
           $ui_lang = $this->session->userdata('ui_lang') ?: 'english';
           $next_lang = ($ui_lang === 'swahili') ? 'english' : 'swahili';

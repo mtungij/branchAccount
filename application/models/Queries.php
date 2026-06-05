@@ -454,6 +454,383 @@ public function insert_customer($data){
 	 return $this->db->insert_id();
 }
 
+public function ensure_transaction_sync_schema(){
+	static $checked = false;
+	if ($checked) {
+		return true;
+	}
+
+	$columns = [
+		'sync_uuid' => "ALTER TABLE tbl_prev_lecod ADD COLUMN sync_uuid VARCHAR(36) NULL AFTER prev_id",
+		'sync_status' => "ALTER TABLE tbl_prev_lecod ADD COLUMN sync_status VARCHAR(20) NOT NULL DEFAULT 'synced'",
+		'sync_action' => "ALTER TABLE tbl_prev_lecod ADD COLUMN sync_action VARCHAR(20) NULL",
+		'sync_version' => "ALTER TABLE tbl_prev_lecod ADD COLUMN sync_version INT NOT NULL DEFAULT 1",
+		'sync_updated_at' => "ALTER TABLE tbl_prev_lecod ADD COLUMN sync_updated_at DATETIME NULL",
+		'synced_at' => "ALTER TABLE tbl_prev_lecod ADD COLUMN synced_at DATETIME NULL"
+	];
+
+	foreach ($columns as $column => $sql) {
+		$exists = $this->db->query("SHOW COLUMNS FROM tbl_prev_lecod LIKE " . $this->db->escape($column))->row();
+		if (empty($exists)) {
+			$this->db->query($sql);
+		}
+	}
+
+	$index_exists = $this->db->query("SHOW INDEX FROM tbl_prev_lecod WHERE Key_name = 'idx_tbl_prev_lecod_sync_uuid'")->row();
+	if (empty($index_exists)) {
+		$this->db->query("ALTER TABLE tbl_prev_lecod ADD UNIQUE KEY idx_tbl_prev_lecod_sync_uuid (sync_uuid)");
+	}
+
+	$this->ensure_sync_queue_schema();
+	$checked = true;
+	return true;
+}
+
+public function ensure_sync_queue_schema(){
+	$this->db->query("CREATE TABLE IF NOT EXISTS tbl_sync_queue (
+		sync_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		table_name VARCHAR(100) NOT NULL,
+		record_id BIGINT UNSIGNED NOT NULL,
+		record_uuid VARCHAR(36) NOT NULL,
+		action VARCHAR(20) NOT NULL,
+		payload LONGTEXT NOT NULL,
+		status VARCHAR(20) NOT NULL DEFAULT 'pending',
+		attempts INT NOT NULL DEFAULT 0,
+		last_error TEXT NULL,
+		created_at DATETIME NOT NULL,
+		updated_at DATETIME NOT NULL,
+		synced_at DATETIME NULL,
+		PRIMARY KEY (sync_id),
+		KEY idx_sync_queue_status (status),
+		KEY idx_sync_queue_record (table_name, record_uuid)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+public function generate_sync_uuid(){
+	if (function_exists('random_bytes')) {
+		$data = random_bytes(16);
+		$data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+		$data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+		return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
+	}
+
+	return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+		mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+		mt_rand(0, 0xffff),
+		mt_rand(0, 0x0fff) | 0x4000,
+		mt_rand(0, 0x3fff) | 0x8000,
+		mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+	);
+}
+
+public function queue_prev_lecod_sync($prev_id, $action = 'upsert'){
+	$this->ensure_transaction_sync_schema();
+	$record = $this->db->where('prev_id', (int) $prev_id)->get('tbl_prev_lecod')->row_array();
+	if (empty($record)) {
+		return false;
+	}
+
+	$now = date('Y-m-d H:i:s');
+	$sync_uuid = $record['sync_uuid'];
+	if (empty($sync_uuid)) {
+		$sync_uuid = $this->generate_sync_uuid();
+		$this->db->where('prev_id', (int) $prev_id)->update('tbl_prev_lecod', [
+			'sync_uuid' => $sync_uuid,
+			'sync_status' => 'pending',
+			'sync_action' => $action,
+			'sync_version' => 1,
+			'sync_updated_at' => $now
+		]);
+		$record = $this->db->where('prev_id', (int) $prev_id)->get('tbl_prev_lecod')->row_array();
+	} else {
+		$this->db->set('sync_version', 'sync_version + 1', false)
+			->where('prev_id', (int) $prev_id)
+			->update('tbl_prev_lecod', [
+				'sync_status' => 'pending',
+				'sync_action' => $action,
+				'sync_updated_at' => $now
+			]);
+		$record = $this->db->where('prev_id', (int) $prev_id)->get('tbl_prev_lecod')->row_array();
+	}
+
+	return $this->queue_sync_payload('tbl_prev_lecod', $prev_id, $sync_uuid, $action, $record);
+}
+
+public function queue_prev_lecod_sync_by_pay_id($pay_id, $action = 'upsert'){
+	$record = $this->db->where('pay_id', (int) $pay_id)->order_by('prev_id', 'DESC')->limit(1)->get('tbl_prev_lecod')->row();
+	if (empty($record)) {
+		return false;
+	}
+
+	return $this->queue_prev_lecod_sync($record->prev_id, $action);
+}
+
+public function queue_sync_payload($table_name, $record_id, $record_uuid, $action, array $payload){
+	$this->ensure_sync_queue_schema();
+	$now = date('Y-m-d H:i:s');
+	$existing = $this->db
+		->where('table_name', $table_name)
+		->where('record_uuid', $record_uuid)
+		->where('status', 'pending')
+		->order_by('sync_id', 'DESC')
+		->limit(1)
+		->get('tbl_sync_queue')
+		->row();
+
+	if (!empty($existing)) {
+		return $this->db->where('sync_id', (int) $existing->sync_id)->update('tbl_sync_queue', [
+			'record_id' => (int) $record_id,
+			'action' => $action,
+			'payload' => json_encode($payload),
+			'attempts' => 0,
+			'last_error' => null,
+			'updated_at' => $now
+		]);
+	}
+
+	return $this->db->insert('tbl_sync_queue', [
+		'table_name' => $table_name,
+		'record_id' => (int) $record_id,
+		'record_uuid' => $record_uuid,
+		'action' => $action,
+		'payload' => json_encode($payload),
+		'status' => 'pending',
+		'attempts' => 0,
+		'created_at' => $now,
+		'updated_at' => $now
+	]);
+}
+
+public function get_pending_sync_queue($table_name = 'tbl_prev_lecod', $limit = 50){
+	$this->ensure_transaction_sync_schema();
+	return $this->db
+		->where('table_name', $table_name)
+		->where('status', 'pending')
+		->order_by('sync_id', 'ASC')
+		->limit((int) $limit)
+		->get('tbl_sync_queue')
+		->result();
+}
+
+public function count_pending_sync_queue($table_name = 'tbl_prev_lecod'){
+	$this->ensure_transaction_sync_schema();
+	return (int) $this->db
+		->where('table_name', $table_name)
+		->where('status', 'pending')
+		->count_all_results('tbl_sync_queue');
+}
+
+public function queue_pending_prev_lecod_without_queue(){
+	$this->ensure_transaction_sync_schema();
+	$records = $this->db->query("
+		SELECT pr.prev_id
+		FROM tbl_prev_lecod pr
+		LEFT JOIN tbl_sync_queue q
+			ON q.table_name = 'tbl_prev_lecod'
+			AND q.record_uuid = pr.sync_uuid
+			AND q.status IN ('pending', 'synced')
+		WHERE pr.sync_status = 'pending'
+			AND q.sync_id IS NULL
+		LIMIT 50
+	")->result();
+
+	$queued = 0;
+	foreach ($records as $record) {
+		if ($this->queue_prev_lecod_sync($record->prev_id, 'upsert')) {
+			$queued++;
+		}
+	}
+
+	return $queued;
+}
+
+public function mark_sync_queue_synced($sync_id, $table_name, $record_uuid){
+	$now = date('Y-m-d H:i:s');
+	$this->db->where('sync_id', (int) $sync_id)->update('tbl_sync_queue', [
+		'status' => 'synced',
+		'updated_at' => $now,
+		'synced_at' => $now,
+		'last_error' => null
+	]);
+
+	if ($table_name === 'tbl_prev_lecod') {
+		$this->db->where('sync_uuid', $record_uuid)->update('tbl_prev_lecod', [
+			'sync_status' => 'synced',
+			'sync_action' => null,
+			'synced_at' => $now,
+			'sync_updated_at' => $now
+		]);
+	}
+
+	return true;
+}
+
+public function mark_sync_queue_failed($sync_id, $error){
+	$now = date('Y-m-d H:i:s');
+	$this->db->set('attempts', 'attempts + 1', false)
+		->where('sync_id', (int) $sync_id)
+		->update('tbl_sync_queue', [
+			'status' => 'pending',
+			'last_error' => substr((string) $error, 0, 1000),
+			'updated_at' => $now
+		]);
+}
+
+public function receive_prev_lecod_sync_payload($payload){
+	$this->ensure_transaction_sync_schema();
+	if (empty($payload['sync_uuid'])) {
+		return ['success' => false, 'error' => 'Missing sync_uuid'];
+	}
+
+	$sync_uuid = $payload['sync_uuid'];
+	unset($payload['prev_id']);
+	$payload['sync_status'] = 'synced';
+	$payload['sync_action'] = null;
+	$payload['synced_at'] = date('Y-m-d H:i:s');
+	$payload['sync_updated_at'] = date('Y-m-d H:i:s');
+
+	$existing = $this->db->where('sync_uuid', $sync_uuid)->get('tbl_prev_lecod')->row();
+	if (!empty($existing)) {
+		$this->db->where('sync_uuid', $sync_uuid)->update('tbl_prev_lecod', $payload);
+		return ['success' => true, 'mode' => 'updated', 'sync_uuid' => $sync_uuid];
+	}
+
+	$this->db->insert('tbl_prev_lecod', $payload);
+	return [
+		'success' => $this->db->affected_rows() > 0,
+		'mode' => 'inserted',
+		'sync_uuid' => $sync_uuid,
+		'prev_id' => $this->db->insert_id()
+	];
+}
+
+public function export_login_master_data($comp_id, $branch_id = null){
+	$comp_id = (int) $comp_id;
+	$branch_id = !empty($branch_id) ? (int) $branch_id : null;
+	$data = [];
+
+	$data['tbl_company'] = $this->sync_table_rows('tbl_company', ['comp_id' => $comp_id]);
+	$data['tbl_blanch'] = $this->sync_table_rows('tbl_blanch', ['comp_id' => $comp_id]);
+	$data['tbl_position'] = $this->sync_table_rows('tbl_position');
+	$data['system_links'] = $this->sync_table_rows('system_links');
+
+	$this->db->where('comp_id', $comp_id);
+	if (!empty($branch_id)) {
+		$this->db->group_start()
+			->where('blanch_id', $branch_id)
+			->or_where('position_id', 22)
+			->group_end();
+	}
+	$employees = $this->db->get('tbl_employee')->result_array();
+	$data['tbl_employee'] = $employees;
+
+	$employee_ids = array_values(array_filter(array_map(function ($row) {
+		return isset($row['empl_id']) ? (int) $row['empl_id'] : null;
+	}, $employees)));
+
+	if (!empty($employee_ids) && $this->db->table_exists('tbl_permission')) {
+		$data['tbl_permission'] = $this->db->where_in('employee_id', $employee_ids)->get('tbl_permission')->result_array();
+	} else {
+		$data['tbl_permission'] = [];
+	}
+
+	$data['tbl_privellage'] = $this->sync_table_rows('tbl_privellage', ['comp_id' => $comp_id]);
+
+	return [
+		'comp_id' => $comp_id,
+		'branch_id' => $branch_id,
+		'generated_at' => date('Y-m-d H:i:s'),
+		'tables' => $data
+	];
+}
+
+public function import_login_master_data(array $tables){
+	$allowed_tables = [
+		'tbl_company',
+		'tbl_blanch',
+		'tbl_position',
+		'system_links',
+		'tbl_employee',
+		'tbl_permission',
+		'tbl_privellage'
+	];
+	$summary = [];
+
+	$this->db->query('SET FOREIGN_KEY_CHECKS=0');
+	foreach ($allowed_tables as $table_name) {
+		$rows = isset($tables[$table_name]) && is_array($tables[$table_name]) ? $tables[$table_name] : [];
+		$summary[$table_name] = [
+			'received' => count($rows),
+			'imported' => 0,
+			'skipped' => 0
+		];
+
+		if (empty($rows) || !$this->db->table_exists($table_name)) {
+			$summary[$table_name]['skipped'] = count($rows);
+			continue;
+		}
+
+		$primary_key = $this->get_table_primary_key($table_name);
+		$table_columns = $this->get_table_columns($table_name);
+		if (empty($primary_key) || empty($table_columns)) {
+			$summary[$table_name]['skipped'] = count($rows);
+			continue;
+		}
+
+		foreach ($rows as $row) {
+			if (!is_array($row) || !isset($row[$primary_key])) {
+				$summary[$table_name]['skipped']++;
+				continue;
+			}
+
+			$clean_row = array_intersect_key($row, array_flip($table_columns));
+			if (empty($clean_row)) {
+				$summary[$table_name]['skipped']++;
+				continue;
+			}
+
+			$this->upsert_sync_row($table_name, $primary_key, $clean_row);
+			$summary[$table_name]['imported']++;
+		}
+	}
+	$this->db->query('SET FOREIGN_KEY_CHECKS=1');
+
+	return $summary;
+}
+
+private function sync_table_rows($table_name, array $where = []){
+	if (!$this->db->table_exists($table_name)) {
+		return [];
+	}
+
+	foreach ($where as $column => $value) {
+		$this->db->where($column, $value);
+	}
+
+	return $this->db->get($table_name)->result_array();
+}
+
+private function get_table_primary_key($table_name){
+	$row = $this->db->query("SHOW KEYS FROM `" . str_replace('`', '', $table_name) . "` WHERE Key_name = 'PRIMARY'")->row();
+	return !empty($row->Column_name) ? $row->Column_name : null;
+}
+
+private function get_table_columns($table_name){
+	$columns = $this->db->query("SHOW COLUMNS FROM `" . str_replace('`', '', $table_name) . "`")->result();
+	return array_map(function ($column) {
+		return $column->Field;
+	}, $columns);
+}
+
+private function upsert_sync_row($table_name, $primary_key, array $row){
+	$exists = $this->db->where($primary_key, $row[$primary_key])->get($table_name)->row();
+	if (!empty($exists)) {
+		return $this->db->where($primary_key, $row[$primary_key])->update($table_name, $row);
+	}
+
+	return $this->db->insert($table_name, $row);
+}
+
 public function get_admin_role($comp_id){
 	$data = $this->db->query("SELECT * FROM tbl_company WHERE comp_id = '$comp_id'");
 	 return $data->row();
@@ -2671,10 +3048,8 @@ public function get_totalLoanout($customer_id){
 }
 
 
-public function get_today_disbursed_loans($comp_id, $blanch_id = null)
+public function get_today_disbursed_loans($comp_id, $blanch_id = null, $from_date = null, $to_date = null)
 {
-    // $today = date('Y-m-d'); // Optional if you want only today's loans
-
     $this->db->select('
         l.*, 
         b.blanch_name, 
@@ -2691,14 +3066,19 @@ public function get_today_disbursed_loans($comp_id, $blanch_id = null)
     $this->db->join('tbl_customer c', 'c.customer_id = l.customer_id', 'left');
     $this->db->join('tbl_employee e', 'e.empl_id = l.empl_id', 'left');
 
-    // Optional: uncomment if you want today's loans only
     $this->db->where('l.loan_status', 'disbarsed');
-	// $this->db->where('DATE(l.disburse_day)', $today);
-    $this->db->where('l.comp_id', $comp_id);
+    $this->db->where('l.comp_id', (int) $comp_id);
 	if (!empty($blanch_id)) {
 		$this->db->where('l.blanch_id', (int) $blanch_id);
 	}
+    if (!empty($from_date)) {
+        $this->db->where('DATE(l.disburse_day) >=', $from_date);
+    }
+    if (!empty($to_date)) {
+        $this->db->where('DATE(l.disburse_day) <=', $to_date);
+    }
 
+    $this->db->order_by('l.disburse_day', 'DESC');
     return $this->db->get()->result();
 }
 
@@ -13592,4 +13972,3 @@ public function get_customer_all_loans($customer_id) {
     }
 
 }
-

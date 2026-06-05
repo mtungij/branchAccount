@@ -7420,6 +7420,7 @@ $massage = 'Ndugu ' . $first_name . ' ' . $last_name .
   public function update_loan_lecordDataDeposit_data($comp_id,$customer_id,$loan_id,$blanch_id,$update_res,$dep_id,$group_id,$trans_id,$restoration,$loan_aproved,$deposit_date,$empl_id,$wakala){
         $sqldata="UPDATE `tbl_prev_lecod` SET `depost`= '$update_res',`trans_id`='$trans_id' WHERE `pay_id`= '$dep_id'";
      $query = $this->db->query($sqldata);
+     $this->queries->queue_prev_lecod_sync_by_pay_id($dep_id, 'deposit_update');
      return true;
       }
 
@@ -7653,6 +7654,7 @@ public function insert_comp_balance($comp_id,$new_depost){
           //        exit();
         $time = date("Y-m-d H:i:s");
         $this->db->query("INSERT INTO tbl_prev_lecod (`comp_id`,`customer_id`,`loan_id`,`blanch_id`,`depost`,`lecod_day`,`pay_id`,`time_rec`,`group_id`,`empl_id`,`trans_id`,`restrations`,`loan_aprov`,`wakala`) VALUES ('$comp_id','$customer_id','$loan_id','$blanch_id','$update_res','$deposit_date','$dep_id','$time','$group_id','$empl_id','$trans_id','$restoration','$loan_aprove','$wakala')");
+        $this->queries->queue_prev_lecod_sync($this->db->insert_id(), 'deposit');
     }
 
     public function insert_loan_lecorDeposit($comp_id,$customer_id,$loan_id,$blanch_id,$update_res,$p_method,$role,$day_int,$day_princ,$loan_status,$group_id,$deposit_date,$empl_id,$wakala){
@@ -8051,6 +8053,7 @@ public function witdrow_balance($loan_id,$comp_id,$blanch_id,$customer_id,$new_b
       public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id,$new_balance,$group_id,$empl_id,$trans_id,$restoration,$loan_aprove){
     $day = date("Y-m-d");
     $this->db->query("INSERT INTO tbl_prev_lecod (`comp_id`,`customer_id`,`loan_id`,`blanch_id`,`withdraw`,`lecod_day`,`group_id`,`empl_id`,`time_rec`,`restrations`,`loan_aprov`,`with_trans`) VALUES ('$comp_id','$customer_id','$loan_id','$blanch_id','$loan_aprove','$day','$group_id','$empl_id','$day','$restoration','$loan_aprove','$trans_id')");
+    $this->queries->queue_prev_lecod_sync($this->db->insert_id(), 'withdraw');
   
 }
 
@@ -12029,4 +12032,3 @@ public function test_page(){
 }   
 
 }
-
