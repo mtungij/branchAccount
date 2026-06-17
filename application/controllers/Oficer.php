@@ -3677,24 +3677,24 @@ public function search_customer()
     /* ===============================
        8. Hakiki faini
     ================================*/
-    $latestLoan = $this->queries->get_latest_done_loan($customer_id);
+    // $latestLoan = $this->queries->get_latest_done_loan($customer_id);
 
-    if ($latestLoan) {
-        $total_penart = $this->queries->get_total_penart_loan($latestLoan->loan_id)->total_penart ?? 0;
-        $paid         = $this->queries->get_total_penart_paid_loan($latestLoan->loan_id)->total_PaidPenart ?? 0;
+    // if ($latestLoan) {
+    //     $total_penart = $this->queries->get_total_penart_loan($latestLoan->loan_id)->total_penart ?? 0;
+    //     $paid         = $this->queries->get_total_penart_paid_loan($latestLoan->loan_id)->total_PaidPenart ?? 0;
 
-        $msamaha = $this->queries->get_penart_check($latestLoan->loan_id);
-        $waived  = ($msamaha && $msamaha->status === 'checked');
+    //     $msamaha = $this->queries->get_penart_check($latestLoan->loan_id);
+    //     $waived  = ($msamaha && $msamaha->status === 'checked');
 
-        if (!$waived && ($total_penart > $paid)) {
-            return $this->load->view('officer/toast_message_view', [
-                'message' => "Habari, Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> anadaiwa faini TZS " .
-                    number_format($total_penart - $paid) .
-                    ". Tafadhali alipe au omba ahakikiwe.",
-                'type' => 'penalty'
-            ]);
-        }
-    }
+    //     if (!$waived && ($total_penart > $paid)) {
+    //         return $this->load->view('officer/toast_message_view', [
+    //             'message' => "Habari, Mteja <b>{$customer->f_name} {$customer->m_name} {$customer->l_name}</b> anadaiwa faini TZS " .
+    //                 number_format($total_penart - $paid) .
+    //                 ". Tafadhali alipe au omba ahakikiwe.",
+    //             'type' => 'penalty'
+    //         ]);
+    //     }
+    // }
 
     /* ===============================
        9. Sponsor info
