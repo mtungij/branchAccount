@@ -1161,7 +1161,8 @@ echo htmlspecialchars($blanchs->blanch_name ?? '', ENT_QUOTES, 'UTF-8');
                         <?php
                         if ($loan_request_count === null) {
                           $new_loan = $this->db->query("SELECT * FROM tbl_loans WHERE comp_id = '$comp_id' AND loan_status = 'open' {$loan_branch_where}");
-                          $loan_request_count = $new_loan->num_rows();
+                          $pending_topup_count = $this->db->query("SELECT * FROM tbl_loan_topup WHERE comp_id = '$comp_id' AND topup_status = 'pending' {$loan_branch_where}");
+                          $loan_request_count = $new_loan->num_rows() + $pending_topup_count->num_rows();
                         }
                         ?>
                         <p class="text-2xl font-bold text-red-600 dark:text-red-400"><?php echo (int) $loan_request_count; ?></p>

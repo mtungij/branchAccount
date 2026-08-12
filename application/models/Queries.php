@@ -1439,6 +1439,21 @@ public function count_default_customers_by_branch($blanch_id) {
 		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
 		$loan_requests = (int) ($this->db->get()->row()->total_count ?? 0);
 
+		// Pending top-up requests count toward "Loan Requests" too, same as they now list
+		// alongside new loan applications on admin/loan_pending.
+		$this->db->select('COUNT(DISTINCT t.topup_id) AS total_count', false);
+		$this->db->from('tbl_loan_topup t');
+		$this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+		$this->join_latest_sub_customer_profile('c', 'sc');
+		$this->db->where('t.comp_id', $comp_id);
+		$this->db->where('t.topup_status', 'pending');
+		if (!empty($blanch_id)) {
+			$this->db->where('t.blanch_id', (int) $blanch_id);
+		}
+		$this->apply_dashboard_loan_profile_filters('l', 'sc', $work_status, $loan_type);
+		$loan_requests += (int) ($this->db->get()->row()->total_count ?? 0);
+
 		$this->db->select('COUNT(DISTINCT p.total_id) AS total_count', false);
 		$this->db->from('tbl_pending_total p');
 		$this->db->join('tbl_loans l', 'l.loan_id = p.loan_id', 'left');
@@ -2678,6 +2693,40 @@ public function get_total_pay_description_acount_statement($loan_id)
 }
 
 
+// Top-ups withdrawn (disbursed) today at this branch, reshaped to the same columns
+// get_withdrawal_Loan() returns so both can list together on oficer/withdraw_transactions.
+// loan_aprove/loan_int are this top-up event's own principal and principal+interest
+// (new_loan_int - previous_loan_int is only populated once disbursed, see withdraw_loan_topup()).
+public function get_disbursed_topups_today($blanch_id){
+    $this->db->select("
+        t.topup_id, t.loan_id, t.customer_id, t.comp_id, t.blanch_id,
+        t.topup_amount AS loan_aprove,
+        (t.new_loan_int - t.previous_loan_int) AS loan_int,
+        t.day, t.session,
+        t.disbursed_at AS loan_stat_date,
+        c.f_name, c.m_name, c.l_name, c.phone_no,
+        b.blanch_name,
+        l.restration, l.loan_status,
+        ot.loan_end_date,
+        lt.loan_name,
+        at.account_name,
+        (SELECT COALESCE(SUM(d.depost), 0) FROM tbl_depost d WHERE d.loan_id = t.loan_id) AS total_paid
+    ", FALSE);
+    $this->db->from('tbl_loan_topup t');
+    $this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+    $this->db->join('tbl_blanch b', 'b.blanch_id = t.blanch_id', 'left');
+    $this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+    $this->db->join('tbl_loan_category lt', 'lt.category_id = l.category_id', 'left');
+    $this->db->join('tbl_outstand ot', 'ot.loan_id = t.loan_id', 'left');
+    $this->db->join('tbl_account_transaction at', 'at.trans_id = t.disburse_method', 'left');
+    $this->db->where('t.blanch_id', $blanch_id);
+    $this->db->where('t.topup_status', 'disbursed');
+    $this->db->where('DATE(t.disbursed_at)', date('Y-m-d'));
+    $this->db->order_by('t.topup_id', 'DESC');
+    return $this->db->get()->result();
+}
+
+
 
 
 
@@ -3043,6 +3092,28 @@ public function get_grouped_withdrawal_officertodayBlanch($blanch_id, $empl_id =
        	$loan = $this->db->query("SELECT * FROM tbl_loans l LEFT JOIN tbl_customer c ON c.customer_id = l.customer_id LEFT JOIN tbl_loan_category lt ON lt.category_id = l.category_id LEFT JOIN tbl_blanch b ON b.blanch_id = l.blanch_id LEFT JOIN tbl_sub_customer s ON s.customer_id = l.customer_id  WHERE l.blanch_id = '$blanch_id' AND l.loan_status = 'disbarsed'  ORDER BY l.loan_id DESC ");
        	   return $loan->result();
        }
+
+	// Admin-approved top-ups still awaiting this branch's officer to withdraw the cash. Raw fields
+	// only -- the caller (Oficer::disburse_loan()) projects loan_aprove/loan_int/restration the same
+	// way withdraw_loan_topup() will when it actually runs, via calculate_topup_totals(), since that
+	// math depends on the loan's current outstanding balance (not something SQL alone can give us).
+	public function get_pending_topup_withdrawals_for_disburse_list($blanch_id){
+		$this->db->select("
+			t.topup_id, t.loan_id, t.customer_id, t.comp_id, t.blanch_id,
+			t.topup_amount, t.day, t.session, t.rate,
+			t.approved_at AS loan_day,
+			c.f_name, c.m_name, c.l_name, c.phone_no,
+			l.loan_status
+		");
+		$this->db->from('tbl_loan_topup t');
+		$this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+		$this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+		$this->db->where('t.blanch_id', $blanch_id);
+		$this->db->where('t.topup_status', 'approved');
+		$this->db->where('t.disbursed_at', null);
+		$this->db->order_by('t.topup_id', 'DESC');
+		return $this->db->get()->result();
+	}
 
 
 public function get_DisbarsedLoanBlanch_today($blanch_id) {
@@ -4103,6 +4174,105 @@ public function update_guarantor($id, $data)
 			->where('loan_status !=', 'done')
 			->get('tbl_loans')
 			->num_rows() > 0;
+	}
+
+	public function insert_loan_topup_request($data){
+		return $this->db->insert('tbl_loan_topup', $data);
+	}
+
+	// "Open" means still somewhere in the pipeline: awaiting admin approval ('pending') or
+	// approved but not yet withdrawn by a loan officer ('approved'). Either blocks a new request.
+	public function has_pending_topup($loan_id)
+	{
+		return $this->db
+			->where('loan_id', $loan_id)
+			->where_in('topup_status', ['pending', 'approved'])
+			->get('tbl_loan_topup')
+			->num_rows() > 0;
+	}
+
+	public function get_pending_topup_for_loan($loan_id)
+	{
+		return $this->db
+			->where('loan_id', $loan_id)
+			->where_in('topup_status', ['pending', 'approved'])
+			->order_by('topup_id', 'DESC')
+			->limit(1)
+			->get('tbl_loan_topup')
+			->row();
+	}
+
+	// Pending top-ups reshaped to match the columns admin/loan_pending.php's table already reads
+	// (how_loan, loan_day, day, session, work_status, customer_id, comp_id, blanch_name...) so the
+	// two request types can be merged into a single list. topup_id/loan_id stay distinguishable so
+	// the caller can tell which route (view_loan_topup vs view_Dataloan) a row belongs to.
+	public function get_pending_loan_topups_for_loan_list($comp_id, $blanch_id = 0){
+		$this->db->select("
+			t.topup_id, t.loan_id, t.customer_id, t.comp_id, t.blanch_id,
+			t.topup_amount AS how_loan, t.requested_at AS loan_day, t.day, t.session,
+			c.f_name, c.m_name, c.l_name, c.phone_no,
+			b.blanch_name,
+			sc.work_status,
+			l.loan_code
+		");
+		$this->db->from('tbl_loan_topup t');
+		$this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+		$this->db->join('tbl_blanch b', 'b.blanch_id = t.blanch_id', 'left');
+		$this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+		$this->db->join(
+			'(SELECT sc1.customer_id, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) lsc ON lsc.latest_id = sc1.id) sc',
+			'sc.customer_id = t.customer_id',
+			'left'
+		);
+		$this->db->where('t.comp_id', $comp_id);
+		$this->db->where('t.topup_status', 'pending');
+		if (!empty($blanch_id)) {
+			$this->db->where('t.blanch_id', $blanch_id);
+		}
+		$this->db->order_by('t.topup_id', 'DESC');
+		return $this->db->get()->result();
+	}
+
+	public function get_loan_topup_by_id($topup_id){
+		return $this->db->where('topup_id', $topup_id)->get('tbl_loan_topup')->row();
+	}
+
+	// Admin-approved top-ups still awaiting the loan officer's withdrawal (disbursement).
+	public function get_pending_topup_withdrawals($comp_id, $blanch_id = null){
+		$this->db->select('t.*, l.loan_code, l.loan_int, l.restration, c.f_name, c.m_name, c.l_name, c.phone_no, b.blanch_name');
+		$this->db->from('tbl_loan_topup t');
+		$this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+		$this->db->join('tbl_blanch b', 'b.blanch_id = t.blanch_id', 'left');
+		$this->db->where('t.comp_id', $comp_id);
+		$this->db->where('t.topup_status', 'approved');
+		$this->db->where('t.disbursed_at', null);
+		if (!empty($blanch_id)) {
+			$this->db->where('t.blanch_id', $blanch_id);
+		}
+		$this->db->order_by('t.topup_id', 'DESC');
+		return $this->db->get()->result();
+	}
+
+	public function get_loan_topup_detail($topup_id){
+		// t.day/t.session/t.rate are the terms the officer requested for the top-up; aliased so they
+		// don't collide with l.day/l.session/l.rate, the loan's current (pre-top-up) terms.
+		$this->db->select('t.*, t.day AS requested_day, t.session AS requested_session, t.rate AS requested_rate, l.loan_code, l.loan_int, l.how_loan, l.day, l.session, l.rate, l.restration, l.loan_status, l.loan_type, c.customer_id, c.f_name, c.m_name, c.l_name, c.phone_no, b.blanch_name, sc.passport, sc.work_status');
+		$this->db->from('tbl_loan_topup t');
+		$this->db->join('tbl_loans l', 'l.loan_id = t.loan_id', 'left');
+		$this->db->join('tbl_customer c', 'c.customer_id = t.customer_id', 'left');
+		$this->db->join('tbl_blanch b', 'b.blanch_id = t.blanch_id', 'left');
+		$this->db->join(
+			'(SELECT sc1.customer_id, sc1.passport, sc1.work_status FROM tbl_sub_customer sc1 JOIN (SELECT customer_id, MAX(id) AS latest_id FROM tbl_sub_customer GROUP BY customer_id) lsc ON lsc.latest_id = sc1.id) sc',
+			'sc.customer_id = t.customer_id',
+			'left'
+		);
+		$this->db->where('t.topup_id', $topup_id);
+		return $this->db->get()->row();
+	}
+
+	public function update_loan_topup_status($topup_id, $data){
+		return $this->db->where('topup_id', $topup_id)->update('tbl_loan_topup', $data);
 	}
 
 	 public function get_loan_reminder($customer_id){
@@ -9987,6 +10157,78 @@ public function get_loanfee_category($comp_id){
 public function get_loanfee_categoryData($comp_id){
 	$data = $this->db->query("SELECT * FROM tbl_fee_category WHERE comp_id = '$comp_id'");
 	return $data->row();
+}
+
+// Pure calculation (no DB writes) of how much of a loan top-up gets eaten by loan fees, so it
+// can be shown as a preview before withdrawal (admin/officer views) and reused by the
+// withdrawal actions in Admin.php/Oficer.php to post the actual ledger entries. Mirrors the
+// GENERAL / LOAN PRODUCT fee branches used at initial loan disbursement (disburse()).
+public function compute_topup_fee_breakdown($comp_id, $fee_category_type, $fee_value, $topup_amount)
+{
+	$fee_category = $this->get_loanfee_categoryData($comp_id);
+	$category_fee = $fee_category->fee_category ?? '';
+	$fees = [];
+
+	if ($category_fee == 'GENERAL') {
+		$loan_fee_type = $this->get_loanfee_type($comp_id);
+		$loan_fee = $this->get_loanfee($comp_id);
+		$type = $loan_fee_type->type ?? '';
+
+		if ($type == 'PERCENTAGE VALUE') {
+			foreach ($loan_fee as $fee) {
+				$fees[] = [
+					'fee_id' => $fee->fee_id,
+					'description' => $fee->description,
+					'percentage' => $fee->fee_interest,
+					'symbol' => '%',
+					'amount' => $topup_amount * ($fee->fee_interest / 100),
+					'method' => 'percentage',
+				];
+			}
+		} elseif ($type == 'MONEY VALUE') {
+			foreach ($loan_fee as $fee) {
+				$fees[] = [
+					'fee_id' => $fee->fee_id,
+					'description' => $fee->description,
+					'percentage' => $fee->fee_interest,
+					'symbol' => 'Tsh',
+					'amount' => (float) $fee->fee_interest,
+					'method' => 'money',
+				];
+			}
+		}
+	} elseif ($category_fee == 'LOAN PRODUCT') {
+		$fee_value = (float) $fee_value;
+
+		if ($fee_category_type == 'PERCENTAGE' && $fee_value > 0) {
+			$fees[] = [
+				'fee_id' => '0',
+				'description' => 'Loan Processing Fee',
+				'percentage' => $fee_value,
+				'symbol' => '%',
+				'amount' => $topup_amount * ($fee_value / 100),
+				'method' => 'product',
+			];
+		} elseif ($fee_category_type == 'MONEY' && $fee_value > 0) {
+			$fees[] = [
+				'fee_id' => '0',
+				'description' => 'Loan Processing Fee',
+				'percentage' => $fee_value,
+				'symbol' => 'Tsh',
+				'amount' => $fee_value,
+				'method' => 'product',
+			];
+		}
+	}
+
+	$total_fees = array_sum(array_column($fees, 'amount'));
+
+	return [
+		'gross' => $topup_amount,
+		'fees' => $fees,
+		'total_fees' => $total_fees,
+		'net' => $topup_amount - $total_fees,
+	];
 }
 
 public function cleanup_duplicate_loanfee_categories($comp_id){

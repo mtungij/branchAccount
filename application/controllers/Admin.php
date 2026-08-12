@@ -3145,12 +3145,37 @@ $comp_phone = $compdata->comp_number;
             $selected_work_status = '';
         }
 
-        $loan_pending = $this->queries->get_loanPendingFiltered($comp_id, $selected_blanch_id, $loan_application_date, $selected_work_status);
-        $total_loan_amount = 0;
-        if (!empty($loan_pending) && is_array($loan_pending)) {
-            foreach ($loan_pending as $pending_item) {
-                $total_loan_amount += (float) ($pending_item->how_loan ?? 0);
+        $selected_request_type = trim((string) $this->input->get('request_type', true));
+        if (!in_array($selected_request_type, ['loan', 'topup'], true)) {
+            $selected_request_type = '';
+        }
+
+        $loan_pending = [];
+        if ($selected_request_type !== 'topup') {
+            foreach ($this->queries->get_loanPendingFiltered($comp_id, $selected_blanch_id, $loan_application_date, $selected_work_status) as $row) {
+                $row->is_topup = false;
+                $loan_pending[] = $row;
             }
+        }
+        if ($selected_request_type !== 'loan') {
+            foreach ($this->queries->get_pending_loan_topups_for_loan_list($comp_id, $selected_blanch_id) as $row) {
+                if (!empty($loan_application_date) && date('Y-m-d', strtotime($row->loan_day)) !== $loan_application_date) {
+                    continue;
+                }
+                if (!empty($selected_work_status) && ($row->work_status ?? '') !== $selected_work_status) {
+                    continue;
+                }
+                $row->is_topup = true;
+                $loan_pending[] = $row;
+            }
+        }
+        usort($loan_pending, function ($a, $b) {
+            return strtotime($b->loan_day ?? 'now') <=> strtotime($a->loan_day ?? 'now');
+        });
+
+        $total_loan_amount = 0;
+        foreach ($loan_pending as $pending_item) {
+            $total_loan_amount += (float) ($pending_item->how_loan ?? 0);
         }
         $blanch = $this->queries->get_blanch($comp_id);
             //     echo "<pre>";
@@ -3163,6 +3188,7 @@ $comp_phone = $compdata->comp_number;
             'selected_blanch_id' => $selected_blanch_id,
             'loan_application_date' => $loan_application_date,
             'selected_work_status' => $selected_work_status,
+            'selected_request_type' => $selected_request_type,
             'total_loan_amount' => $total_loan_amount
         ]);
     }
@@ -3825,6 +3851,282 @@ public function aprove_loan($loan_id)
         $this->session->set_flashdata('error', 'Data failed!!');
         return redirect('admin/loan_pending');
     }
+}
+
+
+// Admin-approved top-ups still awaiting a loan officer (or admin) to withdraw the funds.
+public function loan_topup_pending_withdraw()
+{
+    $this->load->model('queries');
+    $comp_id = $this->session->userdata('comp_id');
+    $pending_withdrawals = $this->queries->get_pending_topup_withdrawals($comp_id);
+    $this->load->view('admin/loan_topup_pending_withdraw', ['pending_withdrawals' => $pending_withdrawals]);
+}
+
+
+public function view_loan_topup($topup_id)
+{
+    $this->load->model('queries');
+    $topup = $this->queries->get_loan_topup_detail($topup_id);
+    if (empty($topup)) {
+        $this->session->set_flashdata('error', 'Ombi hili halipo.');
+        return redirect('admin/loan_pending?request_type=topup');
+    }
+    $loan_history = $this->queries->get_loan_history($topup->customer_id);
+    $repayment_statement = $this->queries->get_paycustomerNotfee_Statement($topup->customer_id, $topup->loan_id);
+
+    $acount = null;
+    $fee_breakdown = null;
+    if ($topup->topup_status === 'approved' && empty($topup->disbursed_at)) {
+        $acount = $this->queries->get_customer_account_verfied($topup->blanch_id);
+        $loan_data = $this->queries->get_loanInterest($topup->loan_id);
+        $fee_breakdown = $loan_data
+            ? $this->queries->compute_topup_fee_breakdown($topup->comp_id, $loan_data->fee_category_type ?? '', $loan_data->fee_value ?? 0, (float) $topup->topup_amount)
+            : null;
+    }
+
+    $this->load->view('admin/view_loan_topup', [
+        'topup' => $topup,
+        'loan_history' => $loan_history,
+        'repayment_statement' => $repayment_statement,
+        'acount' => $acount,
+        'fee_breakdown' => $fee_breakdown,
+    ]);
+}
+
+
+public function approve_loan_topup($topup_id)
+{
+    $this->load->model('queries');
+
+    $topup = $this->queries->get_loan_topup_by_id($topup_id);
+    if (empty($topup) || $topup->topup_status !== 'pending') {
+        $this->session->set_flashdata('error', 'Ombi hili halipo au tayari limeshughulikiwa.');
+        return redirect('admin/loan_pending?request_type=topup');
+    }
+
+    // Approval only marks the request as cleared for withdrawal. The loan's principal/interest/
+    // terms and the mini-statement are only updated once someone withdraws it (see
+    // withdraw_loan_topup()), mirroring how a brand-new loan stays 'aproved' until disburse()
+    // actually hands over the cash.
+    $approved_by = isset($_SESSION['empl_name']) ? $_SESSION['empl_name'] : 'Unknown';
+    $this->queries->update_loan_topup_status($topup_id, [
+        'topup_status' => 'approved',
+        'approved_by'  => $approved_by,
+        'approved_at'  => date('Y-m-d H:i:s'),
+    ]);
+
+    $this->session->set_flashdata('massage', 'Nyongeza ya mkopo imeidhinishwa. Inasubiri kutolewa na afisa mkopo.');
+    return redirect('admin/loan_pending?request_type=topup');
+}
+
+
+// Withdrawal step: only now does the loan's principal/interest/terms change and only now does
+// the top-up post to the customer's mini statement (tbl_pay), same as disburse() does for a
+// brand-new loan. The loan's day/session/rate are replaced with what the officer requested.
+public function withdraw_loan_topup($topup_id)
+{
+    $this->load->model('queries');
+
+    $topup = $this->queries->get_loan_topup_by_id($topup_id);
+    if (empty($topup) || $topup->topup_status !== 'approved' || !empty($topup->disbursed_at)) {
+        $this->session->set_flashdata('error', 'Ombi hili halipo au tayari limeshughulikiwa.');
+        return redirect('admin/loan_topup_pending_withdraw');
+    }
+
+    $this->form_validation->set_rules('method', 'Njia ya Malipo', 'required');
+    $this->form_validation->set_rules('with_date', 'Tarehe ya Kutoa', 'required');
+    if ($this->form_validation->run() === false) {
+        $this->session->set_flashdata('error', validation_errors());
+        return redirect("admin/view_loan_topup/{$topup_id}");
+    }
+
+    $method = $this->input->post('method');
+    $with_date = $this->input->post('with_date');
+
+    $loan_id = $topup->loan_id;
+    $loan_data = $this->queries->get_loanInterest($loan_id);
+    if (empty($loan_data)) {
+        $this->session->set_flashdata('error', 'Taarifa za mkopo hazikupatikana.');
+        return redirect('admin/loan_topup_pending_withdraw');
+    }
+
+    $paid_row = $this->db->select_sum('depost', 'total_depost')->where('loan_id', $loan_id)->get('tbl_depost')->row();
+    $total_paid_so_far = (float) ($paid_row->total_depost ?? 0);
+
+    $old_loan_int = (float) $loan_data->loan_int;
+    $remaining_before = $old_loan_int - $total_paid_so_far;
+    $topup_amount = (float) $topup->topup_amount;
+    $new_principal = $remaining_before + $topup_amount;
+
+    $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_amount, $topup->day, $topup->session, $topup->rate);
+    $new_loan_int = $total_paid_so_far + $totals['total_loan'];
+
+    $this->db->where('loan_id', $loan_id)->update('tbl_loans', [
+        'how_loan'    => $loan_data->how_loan + $topup->topup_amount,
+        'loan_aprove' => $new_principal,
+        'loan_int'    => $new_loan_int,
+        'restration'  => $totals['restoration'],
+        'day'         => $topup->day,
+        'session'     => $topup->session,
+        'rate'        => $topup->rate,
+    ]);
+
+    $end_date_days = $topup->day * $topup->session;
+    $new_end_date_obj = DateTime::createFromFormat('Y-m-d', $with_date);
+    $new_end_date_obj->add(new DateInterval('P' . $end_date_days . 'D'));
+
+    $this->db->where('loan_id', $loan_id)->update('tbl_outstand', [
+        'loan_stat_date' => $with_date,
+        'loan_end_date'  => $new_end_date_obj->format('Y-m-d 23:59'),
+    ]);
+
+    $disbursed_by = isset($_SESSION['empl_name']) ? $_SESSION['empl_name'] : 'Unknown';
+
+    // Record the top-up on the customer's mini statement (tbl_pay) so it shows up
+    // in "Min Statement" on both admin/search_loan_customer and officer/search_loan_customer,
+    // applying the same fee-deduction rules used at initial disbursement (see disburse()).
+    $this->record_loan_topup_statement($loan_data, $topup, $disbursed_by, $method);
+
+    // Deduct the gross top-up amount from the branch account the cash/mobile money was paid out
+    // of, same as create_withdrow_balance() does for a normal withdrawal.
+    $blanch_account = $this->queries->get_amount_remainAmountBlanch($loan_data->blanch_id, $method);
+    $blanch_capital = (float) ($blanch_account->blanch_capital ?? 0);
+    $this->withdrawal_blanch_capital($loan_data->blanch_id, $method, $blanch_capital - (float) $topup->topup_amount);
+
+    $this->queries->update_loan_topup_status($topup_id, [
+        'topup_status'      => 'disbursed',
+        'disburse_method'   => $method,
+        'disbursed_by'      => $disbursed_by,
+        'disbursed_at'      => date('Y-m-d H:i:s'),
+        'previous_loan_int' => $old_loan_int,
+        'new_loan_int'      => $new_loan_int,
+    ]);
+
+    $this->session->set_flashdata('massage', 'Nyongeza ya mkopo imetolewa kwa mteja.');
+    return redirect('admin/loan_topup_pending_withdraw');
+}
+
+
+// Recomputes a loan's interest/installment for the top-up using the officer-chosen day/session/rate,
+// reusing the same rate-branch math aprove_disbas_status() uses at real disbursement time. The
+// interest percentage itself ($loan_data->interest_formular) stays tied to the loan's product/category.
+// Interest accrues on the top-up amount only (not on the balance already owed from before the
+// top-up) -- $new_principal is just carried forward as-is and combined with that fresh interest.
+private function calculate_topup_totals($loan_data, $new_principal, $topup_amount, $day, $session, $rate)
+{
+    $interest_loan = $loan_data->interest_formular;
+    $end_date = $day * $session;
+
+    if ($rate === 'FLAT RATE') {
+        $months = floor($end_date / 30);
+        $loan_interest = $interest_loan / 100 * $topup_amount * $months;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
+    } elseif ($rate === 'SIMPLE') {
+        $loan_interest = $interest_loan / 100 * $topup_amount;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
+    } elseif ($rate === 'REDUCING') {
+        $months = $end_date / 30;
+        $interest = $interest_loan / 1200;
+        $amount = $interest * -$topup_amount * pow((1 + $interest), $months) / (1 - pow((1 + $interest), $months));
+        $topup_total = $amount * $months;
+        $loan_interest = $topup_total - $topup_amount;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? ($total_loan / $session) : $total_loan;
+    } else {
+        $loan_interest = 0;
+        $total_loan = $new_principal;
+        $restoration = $session > 0 ? ($total_loan / $session) : $total_loan;
+    }
+
+    return [
+        'loan_interest' => $loan_interest,
+        'total_loan' => $total_loan,
+        'restoration' => $restoration,
+    ];
+}
+
+
+// Records the withdrawn top-up on tbl_pay (the mini-statement ledger). Fee rows are inserted
+// FIRST (lower pay_id, so they show below the top-up row in the DESC-ordered Min Statement);
+// their balance counts down from the gross top-up amount itself. The top-up row is inserted
+// LAST (highest pay_id, shown on top) with balance = the gross top-up amount.
+private function record_loan_topup_statement($loan_data, $topup, $role, $p_method = null)
+{
+    $comp_id = $loan_data->comp_id;
+    $blanch_id = $loan_data->blanch_id;
+    $customer_id = $loan_data->customer_id;
+    $loan_id = $loan_data->loan_id;
+    $group_id = $loan_data->group_id;
+    $topup_amount = (float) $topup->topup_amount;
+
+    $balance = $topup_amount;
+
+    $breakdown = $this->queries->compute_topup_fee_breakdown($comp_id, $loan_data->fee_category_type ?? '', $loan_data->fee_value ?? 0, $topup_amount);
+
+    foreach ($breakdown['fees'] as $fee) {
+        $balance -= $fee['amount'];
+
+        if ($fee['method'] === 'percentage') {
+            $this->insert_loanfee($fee['fee_id'], $fee['percentage'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $fee['amount'], $group_id);
+        } elseif ($fee['method'] === 'money') {
+            $this->insert_loanfee_money($fee['fee_id'], $fee['percentage'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $fee['amount'], $group_id);
+        } else {
+            $this->insert_loanfee_money_feetype($fee['fee_id'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $group_id, $fee['symbol'], $fee['amount']);
+        }
+    }
+
+    $this->insert_loan_topup_pay($comp_id, $loan_id, $customer_id, $blanch_id, $topup_amount, $topup_amount, $role, $group_id, $p_method);
+
+    // Actual cash handed to the customer, net of fees -- the same `withdrow` column a normal
+    // disbursement's create_withdrow_balance()/witdrow_balance() writes to, so the top-up shows
+    // up in the Mini Statement's "Toka" column the same way a real withdrawal does.
+    return $this->insert_loan_topup_withdraw($comp_id, $loan_id, $customer_id, $blanch_id, 0, $balance, $role, $group_id, $p_method);
+}
+
+
+// Inserts the top-up "deposit" row: depost = the gross top-up amount, balance = the gross
+// top-up amount (the starting point the fee rows above count down from).
+private function insert_loan_topup_pay($comp_id, $loan_id, $customer_id, $blanch_id, $balance, $topup_amount, $role, $group_id, $p_method = null)
+{
+    $date = date('Y-m-d');
+    $this->db->query("INSERT INTO tbl_pay (`comp_id`,`loan_id`,`customer_id`,`blanch_id`,`balance`,`depost`,`emply`,`description`,`group_id`,`date_data`,`p_method`) VALUES ('$comp_id','$loan_id','$customer_id','$blanch_id','$balance','$topup_amount','$role','LOAN TOP-UP','$group_id','$date','$p_method')");
+    return $this->db->insert_id();
+}
+
+
+// Inserts the actual cash-out row for the top-up (net of fees), mirroring witdrow_balance().
+// balance = 0 since the whole net amount is handed over in this single withdrawal.
+private function insert_loan_topup_withdraw($comp_id, $loan_id, $customer_id, $blanch_id, $balance, $net_amount, $role, $group_id, $p_method = null)
+{
+    $date = date('Y-m-d');
+    $this->db->query("INSERT INTO tbl_pay (`comp_id`,`loan_id`,`customer_id`,`blanch_id`,`balance`,`withdrow`,`emply`,`description`,`group_id`,`date_data`,`p_method`) VALUES ('$comp_id','$loan_id','$customer_id','$blanch_id','$balance','$net_amount','$role','LOAN TOP-UP WITHDRAWAL','$group_id','$date','$p_method')");
+    return $this->db->insert_id();
+}
+
+
+public function reject_loan_topup($topup_id)
+{
+    $this->load->model('queries');
+
+    $topup = $this->queries->get_loan_topup_by_id($topup_id);
+    if (empty($topup) || $topup->topup_status !== 'pending') {
+        $this->session->set_flashdata('error', 'Ombi hili halipo au tayari limeshughulikiwa.');
+        return redirect('admin/loan_pending?request_type=topup');
+    }
+
+    $rejected_by = isset($_SESSION['empl_name']) ? $_SESSION['empl_name'] : 'Unknown';
+    $this->queries->update_loan_topup_status($topup_id, [
+        'topup_status'  => 'rejected',
+        'approved_by'   => $rejected_by,
+        'approved_at'   => date('Y-m-d H:i:s'),
+        'reject_reason' => $this->input->post('reject_reason'),
+    ]);
+
+    $this->session->set_flashdata('massage', 'Ombi la nyongeza limekataliwa.');
+    return redirect('admin/loan_pending?request_type=topup');
 }
 
 	

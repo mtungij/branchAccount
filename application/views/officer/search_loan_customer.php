@@ -126,12 +126,36 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
           $deposit = $total_deposit->total_Deposit ?? 0;
           $status_label = 'Not Active';
           $status_class = 'bg-blue-600 text-white';
+          $work_status_label = '-';
+          $work_status_class = 'bg-gray-500 text-white';
+          $loan_type_label = '-';
+          $loan_type_class = 'bg-cyan-600 text-white';
           if (!empty($customer_loan)) {
             switch ($customer_loan->loan_status) {
               case 'withdrawal': $status_label = 'Ndani ya Mkataba'; $status_class = 'bg-teal-500 text-white'; break;
               case 'done': $status_label = 'Done'; $status_class = 'bg-yellow-500 text-white'; break;
               case 'out': $status_label = 'Nje Mkataba'; $status_class = 'bg-red-500 text-white'; break;
             }
+
+            $raw_loan_type = (string) ($customer_loan->loan_type ?? 'main');
+            if ($raw_loan_type === 'salary_advance') {
+              $loan_type_label = 'Mkopo Mdogo';
+            } elseif ($raw_loan_type === 'main') {
+              $loan_type_label = 'Mkopo Mkubwa';
+            } elseif ($raw_loan_type !== '') {
+              $loan_type_label = $raw_loan_type;
+            }
+          }
+
+          $raw_work_status = trim((string) ($customer->work_status ?? ''));
+          if ($raw_work_status === 'Mwajiriwa') {
+            $work_status_label = 'Mtumishi';
+          } elseif ($raw_work_status !== '') {
+            $work_status_label = $raw_work_status;
+          }
+
+          if ($raw_work_status === 'Mjasiriamali') {
+            $loan_type_label = 'mkopo wa Mjasiriamali';
           }
 
           $gawa_tarehe = '';
@@ -167,30 +191,62 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
         </div>
         <?php endif; ?>
 
-        <div class="mt-4 text-center">
-  <a href="<?= base_url('oficer/send_payment/' . $customer->customer_id); ?>" 
+        <!-- <div class="mt-4 text-center">
+  <a href="<?= base_url('oficer/send_payment/' . $customer->customer_id); ?>"
      class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg shadow-md transition-all">
      📩 Tuma SMS ya Malipo
   </a>
-</div>
+</div> -->
+
+        <?php
+          $pending_topup = null;
+          $pending_topup_fee_breakdown = null;
+          $topup_eligible_status = !empty($customer_loan->loan_id) && in_array(($customer_loan->loan_status ?? ''), ['withdrawal', 'out'], true);
+          if ($topup_eligible_status) {
+            $pending_topup = $this->queries->get_pending_topup_for_loan($customer_loan->loan_id);
+            if (!empty($pending_topup) && $pending_topup->topup_status === 'approved') {
+              $pending_topup_loan_data = $this->queries->get_loanInterest($pending_topup->loan_id);
+              $pending_topup_fee_breakdown = $pending_topup_loan_data
+                ? $this->queries->compute_topup_fee_breakdown($pending_topup->comp_id, $pending_topup_loan_data->fee_category_type ?? '', $pending_topup_loan_data->fee_value ?? 0, (float) $pending_topup->topup_amount)
+                : ['gross' => (float) $pending_topup->topup_amount, 'fees' => [], 'total_fees' => 0, 'net' => (float) $pending_topup->topup_amount];
+            }
+          }
+        ?>
+        <?php if ($topup_eligible_status): ?>
+        <div class="mt-2 text-center">
+          <?php if (!empty($pending_topup) && $pending_topup->topup_status === 'approved'): ?>
+            <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-cyan-100 text-cyan-800">
+              Ombi la nyongeza limeidhinishwa, linasubiri kutolewa &uarr;
+            </span>
+          <?php elseif (!empty($pending_topup)): ?>
+            <span class="inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+              Ombi la nyongeza linasubiri idhini
+            </span>
+          <?php elseif ($work_status_label === 'Mtumishi' && $loan_type_label === 'Mkopo Mkubwa'): ?>
+            <button type="button"
+               class="inline-flex items-center px-4 py-2 bg-cyan-700 hover:bg-cyan-800 text-white text-sm font-semibold rounded-lg shadow-md transition-all"
+               data-hs-overlay="#loanTopupModal">
+               ➕ Top up
+            </button>
+          <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
         <ul class="mt-5 bg-gray-100 text-gray-700 divide-y divide-gray-300 rounded-lg shadow-sm text-sm">
           <li class="flex items-center justify-between py-2 px-3">
             <span class="font-bold text-base">Status</span>
             <span class="px-3 py-1 rounded-full text-xs font-medium <?= $status_class; ?>"><?= $status_label; ?></span>
           </li>
-          <li class="flex items-center justify-between py-2 px-3 font-bold text-base">
-            <span>Employee Status</span>
-            <span>
-              <?php
-                $display_work_status = trim((string) ($customer->work_status ?? ''));
-                if ($display_work_status === 'Mwajiriwa') {
-                  $display_work_status = 'Mtumishi';
-                }
-                echo $display_work_status !== '' ? htmlspecialchars($display_work_status, ENT_QUOTES, 'UTF-8') : '-';
-              ?>
-            </span>
+          <li class="flex items-center justify-between py-2 px-3">
+            <span class="font-bold text-base">Ajira</span>
+
+             <span class="px-3 py-1 rounded-full text-xs font-medium <?= $loan_type_class; ?>"><?= htmlspecialchars($work_status_label, ENT_QUOTES, 'UTF-8'); ?></span>
           </li>
-          <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Customer Code</span><span><?= $customer->code; ?></span></li>
+          <li class="flex items-center justify-between py-2 px-3">
+            <span class="font-bold text-base">Mkopo</span>
+            <span class="px-3 py-1 rounded-full text-xs font-medium <?= $loan_type_class; ?>"><?= htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8'); ?></span>
+          </li>
+          <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Code</span><span><?= $customer->code; ?></span></li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Gawa Tarehe</span><span><?= $gawa_tarehe !== '' ? $gawa_tarehe : '-'; ?></span></li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Mwisho Tarehe</span><span><?= $mwisho_tarehe !== '' ? $mwisho_tarehe : '-'; ?></span></li>
           <li class="flex items-center justify-between py-2 px-3 font-bold text-base"><span>Rejesho</span><span><?= safe_number_format($customer_loan->restration ?? 0); ?></span></li>
@@ -325,9 +381,23 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
         </form>
         <?php endif; ?>
 
+        <?php if (!empty($pending_topup) && $pending_topup->topup_status === 'approved'): ?>
+          <button type="button"
+             class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-cyan-700 text-white hover:bg-cyan-800 focus:outline-hidden focus:bg-cyan-800 disabled:opacity-50 disabled:pointer-events-none"
+             aria-haspopup="dialog" aria-expanded="false" aria-controls="topupWithdrawModal" data-hs-overlay="#topupWithdrawModal">
+            <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/>
+            </svg>
+            <?php echo $this->lang->line('topup_withdraw_button'); ?>
+          </button>
+        <?php endif; ?>
+
         <?php if (!empty($customer_loan->loan_status)): ?>
         <?php $status = $customer_loan->loan_status; ?>
-        <?php if ($status === 'withdrawal' || $status === 'out'): ?>
+        <?php $has_topup_ready_to_withdraw = !empty($pending_topup) && $pending_topup->topup_status === 'approved'; ?>
+        <?php if (($status === 'withdrawal' || $status === 'out') && !$has_topup_ready_to_withdraw): ?>
         <?php if (!$needs_loan_selection && !empty($customer_loan->loan_id)): ?>
           <button type="button" class="py-3 px-4 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-transparent bg-blue-600 text-white hover:bg-blue-700 focus:outline-hidden focus:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none" aria-haspopup="dialog" aria-expanded="false" aria-controls="hs-scale-animation-modal" data-hs-overlay="#hs-edit-deposit-modal">
             <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -837,6 +907,155 @@ $sponsor_passport_src = $resolve_image_src($customer->passport_path ?? '', 'asse
     </form>
   </div>
 </div>
+
+<?php if (!empty($customer_loan->loan_id) && ($customer_loan->loan_status ?? '') === 'withdrawal' && empty($pending_topup)): ?>
+<div id="loanTopupModal" class="hs-overlay hidden size-full fixed top-0 start-0 z-[80] overflow-x-hidden overflow-y-auto">
+  <div class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 mt-0 opacity-0 ease-out transition-all sm:max-w-lg sm:w-full m-3 sm:mx-auto">
+    <div class="flex flex-col bg-white border shadow-sm rounded-xl pointer-events-auto dark:bg-gray-800 dark:border-gray-700">
+      <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-white">Omba Nyongeza ya Mkopo</h3>
+        <button type="button" class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" data-hs-overlay="#loanTopupModal">
+          <span class="sr-only">Funga</span>
+          <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <?php echo form_open("oficer/request_loan_topup/{$customer_loan->loan_id}"); ?>
+      <div class="p-4 overflow-y-auto space-y-4">
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          Mteja: <span class="font-semibold uppercase"><?= htmlspecialchars($customer->f_name . ' ' . $customer->l_name, ENT_QUOTES, 'UTF-8'); ?></span>
+        </p>
+        <div>
+          <label class="block text-sm font-medium mb-2 dark:text-gray-300">Kiasi cha Nyongeza:</label>
+          <input type="number" name="topup_amount" min="1" step="0.01" required class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+        </div>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('loan_duration'); ?>:</label>
+            <select name="day" required class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+              <option value=""><?php echo $this->lang->line('loan_duration'); ?></option>
+              <option value="1" <?= (isset($customer_loan->day) && $customer_loan->day == 1) ? 'selected' : ''; ?>><?php echo $this->lang->line('day'); ?></option>
+              <option value="7" <?= (isset($customer_loan->day) && $customer_loan->day == 7) ? 'selected' : ''; ?>><?php echo $this->lang->line('week'); ?></option>
+              <option value="30" <?= (isset($customer_loan->day) && $customer_loan->day == 30) ? 'selected' : ''; ?>><?php echo $this->lang->line('month'); ?></option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('number_of_repayments'); ?>:</label>
+            <input type="number" name="session" min="1" required
+              value="<?= htmlspecialchars((string) ($customer_loan->session ?? ''), ENT_QUOTES, 'UTF-8'); ?>"
+              placeholder="<?php echo $this->lang->line('number_of_repayments_placeholder'); ?>"
+              class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('interest_formula'); ?>:</label>
+          <select name="rate" required class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+            <option value=""><?php echo $this->lang->line('select_interest_formula'); ?></option>
+            <?php if (!empty($formular)): ?>
+              <?php foreach ($formular as $formulars): ?>
+                <option value="<?php echo $formulars->formular_name; ?>" <?= (isset($customer_loan->rate) && $customer_loan->rate === $formulars->formular_name) ? 'selected' : ''; ?>>
+                  <?php
+                    if ($formulars->formular_name == 'SIMPLE') { echo 'SIMPLE FORMULAR'; }
+                    elseif ($formulars->formular_name == 'FLAT RATE') { echo 'FLAT RATE FORMULAR'; }
+                    elseif ($formulars->formular_name == 'REDUCING') { echo 'REDUCING FORMULAR'; }
+                  ?>
+                </option>
+              <?php endforeach; ?>
+            <?php endif; ?>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium mb-2 dark:text-gray-300">Sababu ya Kuomba Nyongeza:</label>
+          <textarea name="reason" rows="3" required class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300"></textarea>
+        </div>
+        <input type="hidden" name="customer_id" value="<?= htmlspecialchars($customer->customer_id, ENT_QUOTES, 'UTF-8'); ?>">
+        <input type="hidden" name="comp_id" value="<?= htmlspecialchars($customer->comp_id, ENT_QUOTES, 'UTF-8'); ?>">
+        <input type="hidden" name="blanch_id" value="<?= htmlspecialchars($customer->blanch_id, ENT_QUOTES, 'UTF-8'); ?>">
+      </div>
+      <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t dark:border-gray-700">
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600" data-hs-overlay="#loanTopupModal">Ghairi</button>
+        <button type="submit" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-cyan-600 text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500">Tuma Ombi</button>
+      </div>
+      <?php echo form_close(); ?>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($pending_topup) && $pending_topup->topup_status === 'approved'): ?>
+<div id="topupWithdrawModal" class="hs-overlay hidden size-full fixed top-0 start-0 z-[80] overflow-x-hidden overflow-y-auto">
+  <div class="hs-overlay-open:mt-7 hs-overlay-open:opacity-100 hs-overlay-open:duration-500 mt-0 opacity-0 ease-out transition-all sm:max-w-lg sm:w-full m-3 sm:mx-auto">
+    <div class="flex flex-col bg-white border shadow-sm rounded-xl pointer-events-auto dark:bg-gray-800 dark:border-gray-700">
+      <div class="flex justify-between items-center py-3 px-4 border-b dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-white"><?php echo $this->lang->line('withdraw_topup'); ?></h3>
+        <button type="button" class="flex justify-center items-center size-7 text-sm font-semibold rounded-full border border-transparent text-gray-800 hover:bg-gray-100 dark:text-white dark:hover:bg-gray-700" data-hs-overlay="#topupWithdrawModal">
+          <span class="sr-only"><?php echo $this->lang->line('close'); ?></span>
+          <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+
+      <?php if (!empty($pending_topup_fee_breakdown)): ?>
+      <div class="p-4 sm:p-6 pb-0">
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+          <div class="bg-gray-50 dark:bg-gray-700 px-4 py-2">
+            <h5 class="text-xs font-semibold uppercase text-gray-600 dark:text-gray-300"><?php echo $this->lang->line('fee_breakdown_title'); ?></h5>
+          </div>
+          <div class="p-4 text-sm space-y-2">
+            <div class="flex justify-between text-gray-700 dark:text-gray-300">
+              <span><?php echo $this->lang->line('gross_amount'); ?></span>
+              <span class="font-medium"><?php echo number_format($pending_topup_fee_breakdown['gross'], 2); ?></span>
+            </div>
+            <?php if (!empty($pending_topup_fee_breakdown['fees'])): ?>
+              <?php foreach ($pending_topup_fee_breakdown['fees'] as $fee): ?>
+              <div class="flex justify-between text-red-600 dark:text-red-400">
+                <span><?php echo htmlspecialchars($fee['description'], ENT_QUOTES, 'UTF-8'); ?> (<?php echo $fee['percentage']; ?><?php echo $fee['symbol'] === '%' ? '%' : ' ' . $fee['symbol']; ?>)</span>
+                <span>-<?php echo number_format($fee['amount'], 2); ?></span>
+              </div>
+              <?php endforeach; ?>
+            <?php else: ?>
+              <p class="text-xs text-gray-400 italic"><?php echo $this->lang->line('no_fees_apply'); ?></p>
+            <?php endif; ?>
+            <div class="flex justify-between font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-gray-700 pt-2">
+              <span><?php echo $this->lang->line('net_amount_to_customer'); ?></span>
+              <span><?php echo number_format($pending_topup_fee_breakdown['net'], 2); ?></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <?php endif; ?>
+
+      <?php echo form_open("oficer/withdraw_loan_topup/{$pending_topup->topup_id}"); ?>
+      <div class="p-4 sm:p-6">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('payment_method'); ?>:</label>
+            <select name="method" required class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+              <option value="" selected disabled><?php echo $this->lang->line('select_payment_method'); ?></option>
+              <?php if (!empty($acount)): ?>
+                <?php foreach ($acount as $acc): ?>
+                  <option value="<?php echo $acc->trans_id; ?>"><?php echo htmlspecialchars($acc->account_name, ENT_QUOTES, 'UTF-8'); ?> - Salio: <?php echo number_format(isset($acc->blanch_capital) ? $acc->blanch_capital : 0); ?></option>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </select>
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium mb-2 dark:text-gray-300">* <?php echo $this->lang->line('withdrawal_date'); ?>:</label>
+            <input type="date" name="with_date" required value="<?php echo date('Y-m-d'); ?>" class="py-2.5 px-4 block w-full border-gray-200 rounded-lg text-sm focus:border-cyan-500 focus:ring-cyan-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end items-center gap-x-2 py-3 px-4 border-t dark:border-gray-700">
+        <button type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-600" data-hs-overlay="#topupWithdrawModal"><?php echo $this->lang->line('close'); ?></button>
+        <button type="submit" onclick="return confirm('<?php echo htmlspecialchars($this->lang->line('withdraw_topup_confirm'), ENT_QUOTES, 'UTF-8'); ?>');" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-cyan-600 text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"><?php echo $this->lang->line('withdraw_topup'); ?></button>
+      </div>
+      <?php echo form_close(); ?>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <?php
 include_once APPPATH . "views/partials/footer.php";

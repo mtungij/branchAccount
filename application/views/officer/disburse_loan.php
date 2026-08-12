@@ -40,6 +40,7 @@ include_once APPPATH . "views/partials/officerheader.php";
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>
             <th scope="col" class="px-4 py-3">S/No</th>
+            <th scope="col" class="px-4 py-3">Aina</th>
             <th scope="col" class="px-4 py-3">Customer name</th>
             <th scope="col" class="px-4 py-3">Phone Number</th>
             <th scope="col" class="px-4 py-3">Principal</th>
@@ -58,6 +59,14 @@ include_once APPPATH . "views/partials/officerheader.php";
             <tr class="border-b dark:border-cyan-700">
                 <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     <?= $no++; ?>
+                </td>
+
+                <td class="px-4 py-3 whitespace-nowrap">
+                    <?php if (!empty($loan_aproveds->is_topup)): ?>
+                        <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-cyan-100 text-cyan-800 rounded-full dark:bg-cyan-500/10 dark:text-cyan-400">Top up Loan</span>
+                    <?php else: ?>
+                      
+                    <?php endif; ?>
                 </td>
 
                 <th scope="row" class="uppercase px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">

@@ -428,7 +428,9 @@ $can_staff_view_branch = $can_staff_view_all;
              <?php endif; ?>
          
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/loan_pending') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/loan_pending"); ?>"><?php echo $this->lang->line('loan_pending_approve'); ?></a></li>
-              
+
+                  <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/loan_topup_pending_withdraw') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/loan_topup_pending_withdraw"); ?>"><?php echo $this->lang->line('topup_pending_withdraw_title'); ?></a></li>
+
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/get_loan_aproved') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url("admin/get_loan_aproved"); ?>"><?php echo $this->lang->line('loan_approved_not_disbursed'); ?></a></li>
                   <li><a class="flex items-center gap-x-3.5 py-2 px-2.5 text-sm rounded-lg <?php echo is_active_link('admin/out_of_contract_payments') ? 'text-cyan-600 dark:text-cyan-500' : 'text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 dark:text-gray-400 dark:hover:text-gray-300'; ?>" href="<?php echo base_url('admin/out_of_contract_payments'); ?>"><?php echo $this->lang->line('today_defaulters_payments'); ?></a></li>
                   <?php if (has_permission('Ona  Mikopo Iliyoruhusiwa Malipo')): ?>

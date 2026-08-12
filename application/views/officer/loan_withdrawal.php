@@ -235,6 +235,7 @@ if ($position === 'LOAN OFFICER'): ?>
     <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-cyan-500 dark:text-gray-400">
       <tr>
         <th scope="col" class="px-4 py-3 dark:text-white">S/No</th>
+        <th scope="col" class="px-4 py-3 dark:text-white">Aina</th>
         <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('customer_name'); ?></th>
         <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('phone_number'); ?></th>
         <th scope="col" class="px-4 py-3 dark:text-white"><?php echo $this->lang->line('branch_name'); ?></th>
@@ -272,6 +273,13 @@ if ($position === 'LOAN OFFICER'): ?>
       ?>
       <tr class="border-b dark:border-gray-700">
         <th scope="row" class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white"><?= $no++ ?></th>
+        <td class="px-4 py-3 whitespace-nowrap">
+          <?php if (!empty($loan_aproveds->is_topup)): ?>
+            <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-cyan-100 text-cyan-800 rounded-full dark:bg-cyan-500/10 dark:text-cyan-400">Top up Loan</span>
+          <?php else: ?>
+
+          <?php endif; ?>
+        </td>
         <td class="uppercase px-4 py-3 dark:text-white"><?= $loan_aproveds->f_name; ?> <?= substr($loan_aproveds->m_name, 0,1); ?> <?= $loan_aproveds->l_name; ?></td>
         <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->phone_no; ?></td>
         <td class="px-4 py-3 dark:text-white"><?= $loan_aproveds->blanch_name; ?></td>
@@ -323,7 +331,7 @@ if ($position === 'LOAN OFFICER'): ?>
       <?php endforeach; ?>
 
       <tr class="bg-gray-200 dark:bg-gray-800 font-extrabold text-lg">
-        <td colspan="4" class="px-4 py-3 dark:text-white text-right"><?php echo $this->lang->line('total'); ?></td>
+        <td colspan="5" class="px-4 py-3 dark:text-white text-right"><?php echo $this->lang->line('total'); ?></td>
         <td class="px-4 py-3 text-green-700 dark:text-green-400"><?= number_format($total_loan_aprove); ?></td>
         <td class="px-4 py-3 text-blue-700 dark:text-blue-400"><?= number_format($total_loan_int); ?></td>
         <td></td>

@@ -1,0 +1,28 @@
+-- Loan top-up requests: officer-submitted requests to add funds to an active loan, pending admin approval.
+CREATE TABLE IF NOT EXISTS `tbl_loan_topup` (
+  `topup_id` INT(11) NOT NULL AUTO_INCREMENT,
+  `comp_id` INT(11) DEFAULT NULL,
+  `blanch_id` INT(11) DEFAULT NULL,
+  `loan_id` INT(11) DEFAULT NULL,
+  `customer_id` INT(11) DEFAULT NULL,
+  `empl_id` INT(11) DEFAULT NULL,
+  `topup_amount` DECIMAL(15,2) NOT NULL,
+  `reason` TEXT DEFAULT NULL,
+  `day` INT(11) DEFAULT NULL,
+  `session` INT(11) DEFAULT NULL,
+  `rate` VARCHAR(50) DEFAULT NULL,
+  `topup_status` VARCHAR(20) NOT NULL DEFAULT 'pending',
+  `requested_by` VARCHAR(255) DEFAULT NULL,
+  `requested_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `approved_by` VARCHAR(255) DEFAULT NULL,
+  `approved_at` TIMESTAMP NULL DEFAULT NULL,
+  `reject_reason` TEXT DEFAULT NULL,
+  `previous_loan_int` DECIMAL(15,2) DEFAULT NULL,
+  `new_loan_int` DECIMAL(15,2) DEFAULT NULL,
+  `disburse_method` INT(11) DEFAULT NULL,
+  `disbursed_by` VARCHAR(255) DEFAULT NULL,
+  `disbursed_at` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`topup_id`),
+  KEY `idx_loan_id` (`loan_id`),
+  KEY `idx_comp_status` (`comp_id`, `topup_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -18,16 +18,16 @@ mikoposoft/nackcredit:latest
 
 
 docker run -it -d \
-  --label traefik.http.routers.dnpmicrofinance.rule=Host\(\`dnpmicrofinance.com\`\) \
-  --label traefik.http.routers.dnpmicrofinance.tls.certresolver=lets-encrypt \
-  --label traefik.http.routers.dnpmicrofinance.tls=true \
-  --label traefik.http.routers.dnpmicrofinance.service=dnpmicrofinance-credit-http \
-  --label traefik.http.services.dnpmicrofinance-credit-http.loadbalancer.server.port=80 \
-  --name dnpmicrofinance \
+  --label traefik.http.routers.essamdigital.rule=Host\(\`essamdigital.co.tz\`\) \
+  --label traefik.http.routers.essamdigital.tls.certresolver=lets-encrypt \
+  --label traefik.http.routers.essamdigital.tls=true \
+  --label traefik.http.routers.essamdigital.service=essamdigital-credit-http \
+  --label traefik.http.services.essamdigital-credit-http.loadbalancer.server.port=80 \
+  --name essamdigital \
   --network web \
   --restart always \
   --expose 80 \
-mikoposoft/dnpmicrofinance:26may
+mikoposoft/essam:19_july_2026
 
 
 

@@ -3377,6 +3377,302 @@ public function loan_application(){
 }
 
 
+// "Mkopo Mdogo watumishi" sidebar link -- same customer-picker view as loan_application(), but
+// scoped to employed customers with an active loan (get_salary_advance_customers()) and flagged
+// so the view posts to salary_advance_loanForm instead of loan_guarantee_option.
+public function salary_advance_loan(){
+    $this->load->model('queries');
+    $blanch_id = $this->session->userdata('blanch_id');
+    $empl_id = $this->session->userdata('empl_id');
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    $comp_id = $manager_data->comp_id;
+    $company_data = $this->queries->get_companyData($comp_id);
+    $blanch_data = $this->queries->get_blanchData($blanch_id);
+    $empl_data = $this->queries->get_employee_data($empl_id);
+
+    $privillage = $this->queries->get_position_empl($empl_id);
+    $manager = $this->queries->get_position_manager($empl_id);
+    $customer = $this->queries->get_salary_advance_customers($blanch_id);
+
+    $this->load->view('officer/loan_application', [
+        'customer' => $customer,
+        'empl_data' => $empl_data,
+        'privillage' => $privillage,
+        'manager' => $manager,
+        'is_salary_advance' => true,
+    ]);
+}
+
+
+// Handles the customer_id posted from salary_advance_loan()'s picker, then shows the shared
+// loan_aplication_form view in salary-advance mode (mirrors loan_guarantee_option() + the
+// display half of loan_applicationForm(), but skips guarantee-type selection -- a salary advance
+// doesn't need a group/collateral guarantee since it's drawn against an existing active loan).
+// $customer_id_param: set when re-entering this form after a validation error (redirected here
+// as oficer/salary_advance_loanForm/{customer_id}); absent on the initial submit from the picker,
+// where the customer comes from the posted customer_id instead.
+public function salary_advance_loanForm($customer_id_param = null)
+{
+    $this->load->model('queries');
+
+    $empl_id = $this->session->userdata('empl_id');
+    if (!$empl_id) {
+        return redirect('welcome/employee_login');
+    }
+
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    if (!$manager_data) {
+        $this->session->set_flashdata('error', 'Taarifa za meneja hazijapatikana.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    $comp_id = (int) $manager_data->comp_id;
+    $customer_id = !empty($customer_id_param) ? (int) $customer_id_param : (int) $this->input->post('customer_id');
+
+    if ($customer_id <= 0) {
+        $this->session->set_flashdata('error', 'Tafadhali chagua mteja.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    $customer = $this->queries->search_CustomerID($customer_id, $comp_id);
+    if (!$customer) {
+        $this->session->set_flashdata('error', 'Mteja hakupatikana au hajaruhusiwa chini ya kampuni hii.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    // Salary advance is drawn against the customer's existing active (withdrawal/out) loan --
+    // same eligibility get_salary_advance_customers() already filtered the picker list on.
+    $active_loan = $this->queries->get_latest_active_loan_by_customer($customer_id);
+    if (empty($active_loan)) {
+        $this->session->set_flashdata('error', 'Mteja huyu hana mkopo hai kwa sasa.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    $existing_loan = $this->queries->get_open_salary_advance_loan_by_customer($customer_id);
+
+    if (!isset($_SESSION)) {
+        session_start();
+    }
+    $_SESSION['loan_form_token'] = bin2hex(random_bytes(32));
+
+    $blanch_id = $this->session->userdata('blanch_id');
+    $loan_category = $this->queries->get_loancategory($comp_id);
+    $group = $this->queries->get_groupDataBlanchData($blanch_id);
+    $region = $this->queries->get_region();
+    $blanch = $this->queries->get_blanch($comp_id);
+    $loan_form_request = $this->queries->get_customerDataLOANform($customer_id);
+    $loan_option = $this->queries->get_loan_done($customer_id);
+    $skip_next = $this->queries->get_loanOpen_skip($customer_id);
+    $reject_skip = $this->queries->get_loanOpen_skipReject($customer_id);
+    $privillage = $this->queries->get_position_empl($empl_id);
+    $manager = $this->queries->get_position_manager($empl_id);
+    $formular = $this->queries->get_interestFormular($comp_id);
+    $loan_fee_category = $this->queries->get_loanfee_categoryData($comp_id);
+    $empl_blanch = $this->queries->get_employee_blanch($blanch_id);
+
+    $this->load->view('officer/loan_aplication_form', [
+        'customer' => $customer,
+        'loan_category' => $loan_category,
+        'existing_loan' => $existing_loan,
+        'active_loan' => $active_loan,
+        'salary_advance_mode' => true,
+        'group' => $group,
+        'region' => $region,
+        'blanch' => $blanch,
+        'loan_form_request' => $loan_form_request,
+        'loan_option' => $loan_option,
+        'empl_data' => $this->queries->get_employee_data($empl_id),
+        'privillage' => $privillage,
+        'skip_next' => $skip_next,
+        'manager' => $manager,
+        'reject_skip' => $reject_skip,
+        'formular' => $formular,
+        'loan_fee_category' => $loan_fee_category,
+        'empl_blanch' => $empl_blanch,
+        'loan_form_token' => $_SESSION['loan_form_token'],
+        'loan_page_title' => 'Mkopo Mdogo watumishi',
+    ]);
+}
+
+
+// Salary-advance sibling of create_loanapplication(). Differs in three ways: (1) loan_type is
+// forced to 'salary_advance' since the form has no field for it, (2) the duplicate-application
+// guard checks for an existing OPEN salary-advance loan specifically rather than
+// has_pending_loans() -- that would always be true here, since every eligible customer already
+// has an active main loan by definition (get_salary_advance_customers()), and (3) it skips
+// collelateral_session entirely -- a salary advance doesn't carry its own group/collateral
+// guarantee, so it goes straight back to the picker once created.
+public function create_salary_advance_loanapplication($customer_id) {
+    $this->load->helper(['form', 'string']);
+    $this->load->library('form_validation');
+    $this->load->model('queries');
+
+    if (!isset($_SESSION)) {
+        session_start();
+    }
+
+    $post_token = $this->input->post('loan_form_token');
+    if (!$post_token || $post_token !== ($_SESSION['loan_form_token'] ?? null)) {
+        $this->session->set_flashdata('error', 'Invalid or duplicate loan form submission.');
+        return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+    }
+
+    unset($_SESSION['loan_form_token']);
+
+    $this->form_validation->set_rules('comp_id', 'Company', 'required');
+    $this->form_validation->set_rules('empl_id', 'Employee', 'required');
+    $this->form_validation->set_rules('blanch_id', 'Blanch', 'required');
+    $this->form_validation->set_rules('customer_id', 'Customer', 'required');
+    $this->form_validation->set_rules('category_id', 'Category', 'required');
+    $this->form_validation->set_rules('how_loan', 'How Loan', 'required');
+    $this->form_validation->set_rules('day', 'Day', 'required|integer');
+    $this->form_validation->set_rules('session', 'Session', 'required');
+    $this->form_validation->set_rules('rate', 'Rate', 'required');
+    $this->form_validation->set_rules('reason', 'Reason', 'required');
+
+    if ($this->form_validation->run() === FALSE) {
+        $this->session->set_flashdata('error', validation_errors());
+        return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+    }
+
+    $data = $this->input->post();
+    unset($data['loan_form_token']);
+
+    if (!empty($this->queries->get_open_salary_advance_loan_by_customer($customer_id))) {
+        $this->session->set_flashdata('error', 'Mteja huyu tayari ana ombi la mkopo mdogo linalosubiri.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    $data['loan_type'] = 'salary_advance';
+    $data['loan_code'] = random_string('numeric', 14);
+    $data['created_by'] = $this->session->userdata('user_id');
+
+    if (!$data['created_by']) {
+        $this->session->set_flashdata('error', 'Session expired. Please log in again.');
+        return redirect('login');
+    }
+
+    $category_id = $data['category_id'];
+    $how_loan = $data['how_loan'];
+    $cat = $this->queries->get_loancategoryData($category_id);
+    $loan_price = $cat->loan_price;
+    $loan_perday = $cat->loan_perday;
+
+    if ($how_loan < $loan_price) {
+        $this->session->set_flashdata('massage', 'Amount of Loan Is Less than minimum allowed');
+        return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+    }
+
+    if ($how_loan > $loan_perday) {
+        $this->session->set_flashdata('massage', 'Amount of Loan Is Greater than daily limit');
+        return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+    }
+
+    $loan_id = $this->queries->insert_loan($data);
+
+    $comp_id_val = $data['comp_id'];
+    $this->queries->link_sponsors_to_loan($customer_id, $comp_id_val, $loan_id);
+
+    $new_customer = $this->queries->get_loan_by_loan_id($loan_id);
+
+    $first_name   = $new_customer->f_name;
+    $middle_name  = $new_customer->m_name;
+    $last_name    = $new_customer->l_name;
+    $phone_number = $new_customer->phone_no;
+    $employee_name = $new_customer->empl_name;
+    $blanch_name  = $new_customer->blanch_name;
+
+    $message = "Habari! Kuna maombi ya mkopo mdogo (salary advance) katika tawi la $blanch_name.
+Jina la mteja ni $first_name $middle_name $last_name, nambari ya simu ni $phone_number.
+Afisa aliyesajili ni $employee_name. Kiasi cha mkopo kilichoombwa ni TZS " . number_format($how_loan, 0);
+
+    $admins_numbers = $this->queries->get_admin_numbers();
+    $phone_numbers = [];
+    foreach ($admins_numbers as $admin) {
+        $phone_numbers[] = $admin->phone_number;
+    }
+
+    foreach ($phone_numbers as $phone) {
+        $this->sendsms($phone, $message);
+    }
+
+    $this->session->set_flashdata('massage', 'Ombi la mkopo mdogo limetumwa, linasubiri idhini.');
+    return redirect('oficer/salary_advance_loan');
+}
+
+
+public function modify_salary_advance_loanapplication($customer_id, $loan_id) {
+    $this->load->helper('string');
+    $this->load->model('queries');
+
+    $this->form_validation->set_rules('comp_id', 'Company', 'required');
+    $this->form_validation->set_rules('blanch_id', 'Blanch', 'required');
+    $this->form_validation->set_rules('customer_id', 'Customer', 'required');
+    $this->form_validation->set_rules('category_id', 'Category', 'required');
+    $this->form_validation->set_rules('how_loan', 'How loan', 'required');
+    $this->form_validation->set_rules('day', 'Day', 'required');
+    $this->form_validation->set_rules('session', 'Session', 'required');
+    $this->form_validation->set_rules('rate', 'Rate', 'required');
+    $this->form_validation->set_rules('reason', 'Reason', 'required');
+
+    if ($this->form_validation->run()) {
+        $data = $this->input->post();
+        unset($data['loan_form_token']);
+        $data['loan_type'] = 'salary_advance';
+
+        $existing_loan = $this->queries->get_loan_by_id($loan_id);
+        $old_loan_amount = $existing_loan->how_loan;
+
+        $category_id = $data['category_id'];
+        $how_loan = $data['how_loan'];
+
+        $cat = $this->queries->get_loancategoryData($category_id);
+        $loan_price = $cat->loan_price;
+        $loan_perday = $cat->loan_perday;
+
+        if ($how_loan < $loan_price) {
+            $this->session->set_flashdata('massage', 'Amount of Loan Is Less');
+            return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        } elseif ($how_loan > $loan_perday) {
+            $this->session->set_flashdata('massage', 'Amount of Loan Is Greater');
+            return redirect('oficer/salary_advance_loanForm/' . $customer_id);
+        }
+
+        $this->queries->upadete_loan($data, $loan_id);
+
+        $new_customer = $this->queries->get_loan_by_loan_id($loan_id);
+
+        $first_name = $new_customer->f_name;
+        $middle_name = $new_customer->m_name;
+        $last_name = $new_customer->l_name;
+        $phone_number = $new_customer->phone_no;
+        $employee_name = $new_customer->empl_name;
+        $blanch_name = $new_customer->blanch_name;
+
+        $message = "Habari! Kuna mabadiliko ya maombi ya mkopo mdogo (salary advance) katika tawi la $blanch_name.
+Jina la mteja: $first_name $middle_name $last_name,
+Nambari ya simu: $phone_number.
+Kiasi kilichoombwa mwanzo: TZS " . number_format($old_loan_amount, 0) . ",
+Kilichobadilishwa sasa kuwa: TZS " . number_format($how_loan, 0) . ".";
+
+        $admins_numbers = $this->queries->get_admin_numbers();
+        $phone_numbers = [];
+        foreach ($admins_numbers as $admin) {
+            $phone_numbers[] = $admin->phone_number;
+        }
+
+        foreach ($phone_numbers as $phone) {
+            $this->sendsms($phone, $message);
+        }
+
+        $this->session->set_flashdata('massage', 'Ombi la mkopo mdogo limebadilishwa.');
+        return redirect('oficer/salary_advance_loan');
+    }
+
+    return $this->salary_advance_loanForm($customer_id);
+}
+
+
 public function manager_loanApplication(){
 $this->load->model('queries');
     $blanch_id = $this->session->userdata('blanch_id');
@@ -6030,6 +6326,34 @@ public function disburse($loan_id){
         $empl_data = $this->queries->get_employee_data($empl_id);
 
         $disburse = $this->queries->get_DisbarsedLoanBlanch($blanch_id);
+        foreach ($disburse as $row) {
+            $row->is_topup = false;
+        }
+
+        // Admin-approved top-ups still awaiting this branch's officer to withdraw the cash -- same
+        // "ready for withdrawal" queue as the loans above, so they're merged into the same list.
+        foreach ($this->queries->get_pending_topup_withdrawals_for_disburse_list($blanch_id) as $topup_row) {
+            $loan_data = $this->queries->get_loanInterest($topup_row->loan_id);
+            if (empty($loan_data)) {
+                continue;
+            }
+            $paid_row = $this->db->select_sum('depost', 'total_depost')->where('loan_id', $topup_row->loan_id)->get('tbl_depost')->row();
+            $total_paid_so_far = (float) ($paid_row->total_depost ?? 0);
+            $remaining_before = (float) $loan_data->loan_int - $total_paid_so_far;
+            $topup_amount = (float) $topup_row->topup_amount;
+            $new_principal = $remaining_before + $topup_amount;
+            $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_amount, $topup_row->day, $topup_row->session, $topup_row->rate);
+
+            $topup_row->loan_aprove = $topup_amount;
+            $topup_row->loan_int = $totals['total_loan'];
+            $topup_row->restration = $totals['restoration'];
+            $topup_row->is_topup = true;
+            $disburse[] = $topup_row;
+        }
+        usort($disburse, function ($a, $b) {
+            return strtotime($b->loan_day ?? 'now') <=> strtotime($a->loan_day ?? 'now');
+        });
+
         $total_loanDis = $this->queries->get_sum_loanDisbursedBlanch($blanch_id);
         $total_interest_loan = $this->queries->get_sum_loanDisburse_interestBlanch($blanch_id);
         $privillage = $this->queries->get_position_empl($empl_id);
@@ -6481,6 +6805,17 @@ public function disburse($loan_id){
     
     $customer_id = (int) ($this->input->get('customer_id', true) ?: $this->input->post('customer_id', true) ?: 0);
     $comp_id = $this->input->get('comp_id', true) ?: $this->input->post('comp_id', true);
+
+    // Save "Hali ya Ajira" (work_status) submitted from the workStatusPromptModal on
+    // teller_dashboard / search_loan_customer before the customer data is looked up.
+    $posted_work_status = $this->input->post('work_status', true);
+    if ($customer_id > 0 && in_array($posted_work_status, ['Mwajiriwa', 'Mjasiriamali'], true)) {
+        $this->queries->insert_customerData([
+            'customer_id' => $customer_id,
+            'work_status' => $posted_work_status,
+        ]);
+    }
+
     $customer = $this->queries->search_CustomerLoan($customer_id);
     @$customer_id = $customer->customer_id;
     @$blanch_id = $customer->blanch_id;
@@ -6489,6 +6824,12 @@ public function disburse($loan_id){
     $selected_loan_id = (int) ($this->input->get('loan_id', true) ?: $this->input->post('loan_id', true) ?: 0);
     $selected_loan = null;
 
+  // echo "<pre>";
+  //   print_r($loan_options);
+  //   echo "</pre>";
+  //   exit();
+
+  
     if (!empty($loan_options)) {
       foreach ($loan_options as $loan_option) {
         if ($selected_loan_id > 0 && (int) $loan_option->loan_id === $selected_loan_id) {
@@ -6510,20 +6851,23 @@ public function disburse($loan_id){
 
   //   if ($position === 'LOAN OFFICER') {
   //     $customery = $this->queries->get_allcutomerblanchData_by_officer($blanch_id, $empl_id);
-      
-  
+
+
   // } elseif ($position === 'BRANCH MANAGER') {
-    
+
     $customery = $this->queries->get_allcutomerblanchData($blanch_id);
-  
+
   // } else {
   //   $customery = [];
-    
+
   // }
 
+    // Interest formula options for the "Omba Nyongeza ya Mkopo" (request top-up) modal, same
+    // list used by the loan application form (day/session/rate the officer proposes for the top-up).
+    $formular = $this->queries->get_interestFormular($comp_id);
 
-   
-  $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id]);
+
+  $this->load->view('officer/search_loan_customer',['customer'=>$customer,'blanch_amount_balance'=>$blanch_amount_balance,'deposts'=>$deposts,'withdraw'=>$withdraw,'acount'=>$acount,'empl_data'=>$empl_data,'customery'=>$customery,'privillage'=>$privillage,'loan_options'=>$loan_options,'selected_loan'=>$selected_loan,'selected_loan_id'=>$selected_loan_id,'formular'=>$formular]);
 }
 
 
@@ -6601,6 +6945,298 @@ $latest_paid_day = isset($total_deposit_loan->latest_deposit_day)
    return redirect('oficer/data_with_depost/'.$customer_id);
 }
 
+
+public function request_loan_topup($loan_id)
+{
+    $this->load->model('Queries', 'queries');
+
+    $this->form_validation->set_rules('topup_amount', 'Kiasi', 'required|numeric|greater_than[0]');
+    $this->form_validation->set_rules('reason', 'Sababu', 'required');
+    $this->form_validation->set_rules('day', 'Muda wa Malipo', 'required|in_list[1,7,30]');
+    $this->form_validation->set_rules('session', 'Idadi ya Marejesho', 'required|numeric|greater_than[0]');
+    $this->form_validation->set_rules('rate', 'Fomula ya Riba', 'required|in_list[SIMPLE,FLAT RATE,REDUCING]');
+    $this->form_validation->set_error_delimiters('', '');
+
+    $customer_id = (int) $this->input->post('customer_id');
+    $comp_id = $this->input->post('comp_id');
+    $blanch_id = $this->input->post('blanch_id');
+
+    if (!$this->form_validation->run()) {
+        $this->session->set_flashdata('error', 'Tafadhali jaza kiasi, muda wa malipo, idadi ya marejesho, fomula ya riba na sababu ya nyongeza ya mkopo.');
+        return redirect('oficer/search_customerData?customer_id=' . $customer_id . '&loan_id=' . (int) $loan_id);
+    }
+
+    $loan = $this->queries->get_loan_by_id($loan_id);
+    if (empty($loan) || !in_array($loan->loan_status, ['withdrawal', 'out'], true)) {
+        $this->session->set_flashdata('error', 'Mkopo huu hauwezi kuongezewa kwa sasa.');
+        return redirect('oficer/search_customerData?customer_id=' . $customer_id . '&loan_id=' . (int) $loan_id);
+    }
+
+    // Same eligibility the "Omba Top up" button is gated on: Mtumishi (Mwajiriwa) with a
+    // Mkopo Mkubwa (main) loan only -- checked again here since the button is UI-only.
+    $topup_customer = $this->queries->search_CustomerLoan($customer_id);
+    $is_mtumishi = (($topup_customer->work_status ?? '') === 'Mwajiriwa');
+    $is_mkopo_mkubwa = (($loan->loan_type ?? 'main') === 'main');
+    if (!$is_mtumishi || !$is_mkopo_mkubwa) {
+        $this->session->set_flashdata('error', 'Nyongeza ya mkopo inaruhusiwa kwa Mtumishi mwenye Mkopo Mkubwa pekee.');
+        return redirect('oficer/search_customerData?customer_id=' . $customer_id . '&loan_id=' . (int) $loan_id);
+    }
+
+    if ($this->queries->has_pending_topup($loan_id)) {
+        $this->session->set_flashdata('error', 'Tayari kuna ombi la nyongeza linalosubiri idhini au kutolewa kwa mkopo huu.');
+        return redirect('oficer/search_customerData?customer_id=' . $customer_id . '&loan_id=' . (int) $loan_id);
+    }
+
+    $empl_id = $this->session->userdata('empl_id');
+    $empl_data = $this->queries->get_employee_data($empl_id);
+
+    $data = [
+        'comp_id'      => $comp_id,
+        'blanch_id'    => $blanch_id,
+        'loan_id'      => $loan_id,
+        'customer_id'  => $customer_id,
+        'empl_id'      => $empl_id,
+        'topup_amount' => (float) str_replace([',', ' '], '', (string) $this->input->post('topup_amount')),
+        'reason'       => $this->input->post('reason'),
+        // Loan terms the officer is proposing for the topped-up loan going forward; these replace
+        // the loan's current day/session/rate once the top-up is withdrawn (see withdraw_loan_topup()).
+        'day'          => (int) $this->input->post('day'),
+        'session'      => (int) $this->input->post('session'),
+        'rate'         => $this->input->post('rate'),
+        'topup_status' => 'pending',
+        'requested_by' => $empl_data->empl_name ?? '',
+    ];
+
+    if ($this->queries->insert_loan_topup_request($data)) {
+        $this->session->set_flashdata('massage', 'Ombi la nyongeza ya mkopo limetumwa, linasubiri idhini.');
+    } else {
+        $this->session->set_flashdata('error', 'Imeshindikana kutuma ombi. Jaribu tena.');
+    }
+
+    return redirect('oficer/search_customerData?customer_id=' . $customer_id . '&loan_id=' . (int) $loan_id);
+}
+
+
+// Admin-approved top-ups still awaiting this branch's loan officer to withdraw the funds.
+public function loan_topup_pending_withdraw()
+{
+    $this->load->model('Queries', 'queries');
+    $blanch_id = $this->session->userdata('blanch_id');
+    $empl_id = $this->session->userdata('empl_id');
+    $manager_data = $this->queries->get_manager_data($empl_id);
+    $comp_id = $manager_data->comp_id;
+
+    $pending_withdrawals = $this->queries->get_pending_topup_withdrawals($comp_id, $blanch_id);
+    $acount = $this->queries->get_customer_account_verfied($blanch_id);
+
+    // Preview the net amount (top-up minus loan fees) for each request so the officer knows
+    // how much cash to actually hand the customer before they withdraw it.
+    foreach ($pending_withdrawals as $t) {
+        $loan_data = $this->queries->get_loanInterest($t->loan_id);
+        $t->fee_breakdown = $loan_data
+            ? $this->queries->compute_topup_fee_breakdown($comp_id, $loan_data->fee_category_type ?? '', $loan_data->fee_value ?? 0, (float) $t->topup_amount)
+            : ['gross' => (float) $t->topup_amount, 'fees' => [], 'total_fees' => 0, 'net' => (float) $t->topup_amount];
+    }
+
+    $this->load->view('officer/loan_topup_pending_withdraw', [
+        'pending_withdrawals' => $pending_withdrawals,
+        'acount' => $acount,
+    ]);
+}
+
+
+// Loan officer withdrawal step: only now does the loan's principal/interest/terms change and only
+// now does the top-up post to the customer's mini statement (tbl_pay), same as disburse() does
+// for a brand-new loan. The loan's day/session/rate are replaced with what the officer requested.
+public function withdraw_loan_topup($topup_id)
+{
+    $this->load->model('Queries', 'queries');
+
+    $topup = $this->queries->get_loan_topup_by_id($topup_id);
+    if (empty($topup) || $topup->topup_status !== 'approved' || !empty($topup->disbursed_at)) {
+        $this->session->set_flashdata('error', 'Ombi hili halipo au tayari limeshughulikiwa.');
+        return redirect('oficer/loan_topup_pending_withdraw');
+    }
+
+    $blanch_id = $this->session->userdata('blanch_id');
+    if ((int) $topup->blanch_id !== (int) $blanch_id) {
+        $this->session->set_flashdata('error', 'Huna ruhusa ya kutoa nyongeza hii.');
+        return redirect('oficer/loan_topup_pending_withdraw');
+    }
+
+    $this->form_validation->set_rules('method', 'Njia ya Malipo', 'required');
+    $this->form_validation->set_rules('with_date', 'Tarehe ya Kutoa', 'required');
+    if ($this->form_validation->run() === false) {
+        $this->session->set_flashdata('error', validation_errors());
+        return redirect('oficer/loan_topup_pending_withdraw');
+    }
+
+    $method = $this->input->post('method');
+    $with_date = $this->input->post('with_date');
+
+    $loan_id = $topup->loan_id;
+    $loan_data = $this->queries->get_loanInterest($loan_id);
+    if (empty($loan_data)) {
+        $this->session->set_flashdata('error', 'Taarifa za mkopo hazikupatikana.');
+        return redirect('oficer/loan_topup_pending_withdraw');
+    }
+
+    $paid_row = $this->db->select_sum('depost', 'total_depost')->where('loan_id', $loan_id)->get('tbl_depost')->row();
+    $total_paid_so_far = (float) ($paid_row->total_depost ?? 0);
+
+    $old_loan_int = (float) $loan_data->loan_int;
+    $remaining_before = $old_loan_int - $total_paid_so_far;
+    $topup_amount = (float) $topup->topup_amount;
+    $new_principal = $remaining_before + $topup_amount;
+
+    $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_amount, $topup->day, $topup->session, $topup->rate);
+    $new_loan_int = $total_paid_so_far + $totals['total_loan'];
+
+    $this->db->where('loan_id', $loan_id)->update('tbl_loans', [
+        'how_loan'    => $loan_data->how_loan + $topup->topup_amount,
+        'loan_aprove' => $new_principal,
+        'loan_int'    => $new_loan_int,
+        'restration'  => $totals['restoration'],
+        'day'         => $topup->day,
+        'session'     => $topup->session,
+        'rate'        => $topup->rate,
+    ]);
+
+    $end_date_days = $topup->day * $topup->session;
+    $new_end_date_obj = DateTime::createFromFormat('Y-m-d', $with_date);
+    $new_end_date_obj->add(new DateInterval('P' . $end_date_days . 'D'));
+
+    $this->db->where('loan_id', $loan_id)->update('tbl_outstand', [
+        'loan_stat_date' => $with_date,
+        'loan_end_date'  => $new_end_date_obj->format('Y-m-d 23:59'),
+    ]);
+
+    $empl_id = $this->session->userdata('empl_id');
+    $empl_data = $this->queries->get_employee_data($empl_id);
+    $disbursed_by = $empl_data->empl_name ?? 'Unknown';
+
+    // Record the top-up on the customer's mini statement (tbl_pay) so it shows up in "Min
+    // Statement" on both admin/search_loan_customer and officer/search_loan_customer, applying
+    // the same fee-deduction rules used at initial disbursement (see disburse()).
+    $this->record_loan_topup_statement($loan_data, $topup, $disbursed_by, $method);
+
+    // Deduct the gross top-up amount from the branch account the cash/mobile money was paid out
+    // of, same as create_withdrow_balance() does for a normal withdrawal.
+    $blanch_account = $this->queries->get_amount_remainAmountBlanch($loan_data->blanch_id, $method);
+    $blanch_capital = (float) ($blanch_account->blanch_capital ?? 0);
+    $this->withdrawal_blanch_capital($loan_data->blanch_id, $method, $blanch_capital - (float) $topup->topup_amount);
+
+    $this->queries->update_loan_topup_status($topup_id, [
+        'topup_status'      => 'disbursed',
+        'disburse_method'   => $method,
+        'disbursed_by'      => $disbursed_by,
+        'disbursed_at'      => date('Y-m-d H:i:s'),
+        'previous_loan_int' => $old_loan_int,
+        'new_loan_int'      => $new_loan_int,
+    ]);
+
+    $this->session->set_flashdata('massage', 'Nyongeza ya mkopo imetolewa kwa mteja.');
+    return redirect('oficer/loan_topup_pending_withdraw');
+}
+
+
+// Recomputes a loan's interest/installment for the top-up using the officer-chosen day/session/rate,
+// reusing the same rate-branch math aprove_disbas_status() uses at real disbursement time. The
+// interest percentage itself ($loan_data->interest_formular) stays tied to the loan's product/category.
+// Interest accrues on the top-up amount only (not on the balance already owed from before the
+// top-up) -- $new_principal is just carried forward as-is and combined with that fresh interest.
+private function calculate_topup_totals($loan_data, $new_principal, $topup_amount, $day, $session, $rate)
+{
+    $interest_loan = $loan_data->interest_formular;
+    $end_date = $day * $session;
+
+    if ($rate === 'FLAT RATE') {
+        $months = floor($end_date / 30);
+        $loan_interest = $interest_loan / 100 * $topup_amount * $months;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
+    } elseif ($rate === 'SIMPLE') {
+        $loan_interest = $interest_loan / 100 * $topup_amount;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
+    } elseif ($rate === 'REDUCING') {
+        $months = $end_date / 30;
+        $interest = $interest_loan / 1200;
+        $amount = $interest * -$topup_amount * pow((1 + $interest), $months) / (1 - pow((1 + $interest), $months));
+        $topup_total = $amount * $months;
+        $loan_interest = $topup_total - $topup_amount;
+        $total_loan = $new_principal + $loan_interest;
+        $restoration = $session > 0 ? ($total_loan / $session) : $total_loan;
+    } else {
+        $loan_interest = 0;
+        $total_loan = $new_principal;
+        $restoration = $session > 0 ? ($total_loan / $session) : $total_loan;
+    }
+
+    return [
+        'loan_interest' => $loan_interest,
+        'total_loan' => $total_loan,
+        'restoration' => $restoration,
+    ];
+}
+
+
+// Records the withdrawn top-up on tbl_pay (the mini-statement ledger). Fee rows are inserted
+// FIRST (lower pay_id, so they show below the top-up row in the DESC-ordered Min Statement);
+// their balance counts down from the gross top-up amount itself. The top-up row is inserted
+// LAST (highest pay_id, shown on top) with balance = the gross top-up amount.
+private function record_loan_topup_statement($loan_data, $topup, $role, $p_method = null)
+{
+    $comp_id = $loan_data->comp_id;
+    $blanch_id = $loan_data->blanch_id;
+    $customer_id = $loan_data->customer_id;
+    $loan_id = $loan_data->loan_id;
+    $group_id = $loan_data->group_id;
+    $topup_amount = (float) $topup->topup_amount;
+
+    $balance = $topup_amount;
+
+    $breakdown = $this->queries->compute_topup_fee_breakdown($comp_id, $loan_data->fee_category_type ?? '', $loan_data->fee_value ?? 0, $topup_amount);
+
+    foreach ($breakdown['fees'] as $fee) {
+        $balance -= $fee['amount'];
+
+        if ($fee['method'] === 'percentage') {
+            $this->insert_loanfee($fee['fee_id'], $fee['percentage'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $fee['amount'], $group_id);
+        } elseif ($fee['method'] === 'money') {
+            $this->insert_loanfee_money($fee['fee_id'], $fee['percentage'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $fee['amount'], $group_id);
+        } else {
+            $this->insert_loanfee_money_feetype($fee['fee_id'], $fee['description'], $fee['percentage'], $loan_id, $blanch_id, $comp_id, $customer_id, $balance, $group_id, $fee['symbol'], $fee['amount']);
+        }
+    }
+
+    $this->insert_loan_topup_pay($comp_id, $loan_id, $customer_id, $blanch_id, $topup_amount, $topup_amount, $role, $group_id, $p_method);
+
+    // Actual cash handed to the customer, net of fees -- the same `withdrow` column a normal
+    // disbursement's create_withdrow_balance()/witdrow_balance() writes to, so the top-up shows
+    // up in the Mini Statement's "Toka" column the same way a real withdrawal does.
+    return $this->insert_loan_topup_withdraw($comp_id, $loan_id, $customer_id, $blanch_id, 0, $balance, $role, $group_id, $p_method);
+}
+
+
+// Inserts the top-up "deposit" row: depost = the gross top-up amount, balance = the gross
+// top-up amount (the starting point the fee rows above count down from).
+private function insert_loan_topup_pay($comp_id, $loan_id, $customer_id, $blanch_id, $balance, $topup_amount, $role, $group_id, $p_method = null)
+{
+    $date = date('Y-m-d');
+    $this->db->query("INSERT INTO tbl_pay (`comp_id`,`loan_id`,`customer_id`,`blanch_id`,`balance`,`depost`,`emply`,`description`,`group_id`,`date_data`,`p_method`) VALUES ('$comp_id','$loan_id','$customer_id','$blanch_id','$balance','$topup_amount','$role','LOAN TOP-UP','$group_id','$date','$p_method')");
+    return $this->db->insert_id();
+}
+
+
+// Inserts the actual cash-out row for the top-up (net of fees), mirroring witdrow_balance().
+// balance = 0 since the whole net amount is handed over in this single withdrawal.
+private function insert_loan_topup_withdraw($comp_id, $loan_id, $customer_id, $blanch_id, $balance, $net_amount, $role, $group_id, $p_method = null)
+{
+    $date = date('Y-m-d');
+    $this->db->query("INSERT INTO tbl_pay (`comp_id`,`loan_id`,`customer_id`,`blanch_id`,`balance`,`withdrow`,`emply`,`description`,`group_id`,`date_data`,`p_method`) VALUES ('$comp_id','$loan_id','$customer_id','$blanch_id','$balance','$net_amount','$role','LOAN TOP-UP WITHDRAWAL','$group_id','$date','$p_method')");
+    return $this->db->insert_id();
+}
 
 
 public function today_officer_transaction(){
@@ -8253,13 +8889,35 @@ $this->db->query("INSERT INTO tbl_outstand (`comp_id`,`loan_id`,`blanch_id`,`loa
     // } elseif ($position === 'BRANCH MANAGER') {
       
       $disburse_grouped = $this->queries->get_grouped_withdrawal_todayBlanch($blanch_id);
-        
-    
+
     // } else {
     //   $disburse_grouped=0;
     // }
-  
+
+      // The table below reads $disburse (a flat list), not $disburse_grouped -- today's withdrawn
+      // loans for this branch, same query the working oficer/loan_withdrawal route uses.
+      $today = date('Y-m-d');
+      $disburse = $this->queries->get_withdrawal_Loan($comp_id, [
+          'blanch_id' => $blanch_id,
+          'loan_status' => 'withdrawal',
+          'from' => $today,
+          'to' => $today,
+      ]);
+      foreach ($disburse as $row) {
+          $row->is_topup = false;
+      }
+
+      // Top-ups withdrawn (disbursed) today at this branch, merged into the same list.
+      foreach ($this->queries->get_disbursed_topups_today($blanch_id) as $topup_row) {
+          $topup_row->is_topup = true;
+          $disburse[] = $topup_row;
+      }
+      usort($disburse, function ($a, $b) {
+          return strtotime($b->loan_stat_date ?? 'now') <=> strtotime($a->loan_stat_date ?? 'now');
+      });
+
       $this->load->view('officer/loan_withdrawal', [
+          'disburse' => $disburse,
           'disburse_grouped' => $disburse_grouped,
           'total_loanDis' => $total_loanDis,
           'total_interest_loan' => $total_interest_loan,

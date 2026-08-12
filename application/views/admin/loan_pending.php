@@ -64,7 +64,16 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
             </div>
 
             <div class="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <form method="get" action="<?php echo base_url('admin/loan_pending'); ?>" class="grid w-full grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+                <form method="get" action="<?php echo base_url('admin/loan_pending'); ?>" class="grid w-full grid-cols-1 sm:grid-cols-2 xl:grid-cols-7 gap-3 items-end">
+                    <div class="w-full">
+                        <label for="filter_request_type" class="block text-sm font-medium mb-1 dark:text-gray-300">Aina ya Ombi</label>
+                        <select id="filter_request_type" name="request_type" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
+                            <option value="" <?php echo (($selected_request_type ?? '') === '') ? 'selected' : ''; ?>>Zote</option>
+                            <option value="loan" <?php echo (($selected_request_type ?? '') === 'loan') ? 'selected' : ''; ?>>Mkopo Mpya</option>
+                            <option value="topup" <?php echo (($selected_request_type ?? '') === 'topup') ? 'selected' : ''; ?>>Top up Loan</option>
+                        </select>
+                    </div>
+
                     <div class="w-full">
                         <label for="filter_blanch_id" class="block text-sm font-medium mb-1 dark:text-gray-300"><?php echo rtrim($this->lang->line('branch'), ':'); ?></label>
                         <select id="filter_blanch_id" name="blanch_id" class="py-2.5 px-3 block w-full border-gray-200 rounded-lg text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300">
@@ -199,6 +208,9 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->loan_day) ? date('d M Y', strtotime($loan_pendings->loan_day)) : '-'; ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200"><?php echo !empty($loan_pendings->work_status) ? htmlspecialchars(($loan_pendings->work_status === 'Mwajiriwa' ? 'Mtumishi' : $loan_pendings->work_status), ENT_QUOTES, 'UTF-8') : '-'; ?></td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                            <?php if (!empty($loan_pendings->is_topup)): ?>
+                                                <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-cyan-100 text-cyan-800 rounded-full dark:bg-cyan-500/10 dark:text-cyan-400">Top up Loan</span>
+                                            <?php else: ?>
                                             <?php
                                                 $loan_type_label = (string) ($loan_pendings->loan_type ?? 'main');
                                                 if ($loan_type_label === 'salary_advance') {
@@ -214,6 +226,7 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
                                                 }
                                                 echo htmlspecialchars($loan_type_label, ENT_QUOTES, 'UTF-8');
                                             ?>
+                                            <?php endif; ?>
                                         </td>
 	<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
     <?php if ($loan_pendings->day == 1): ?>
@@ -268,7 +281,9 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
 
                                             <!-- Verification Status -->
                                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                                <?php if (!empty($loan_pendings->verified_by)): ?>
+                                                <?php if (!empty($loan_pendings->is_topup)): ?>
+                                                <span class="text-gray-400">-</span>
+                                                <?php elseif (!empty($loan_pendings->verified_by)): ?>
                                                 <span class="py-1 px-2 inline-flex items-center gap-x-1 text-xs font-medium bg-green-100 text-green-800 rounded-full dark:bg-green-500/10 dark:text-green-500">
                                                     <svg class="shrink-0 size-3" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                                                     <?php echo ($this->lang->line('verified') ?? 'Verified') . ' - ' . htmlspecialchars($loan_pendings->verifier_name ?? '', ENT_QUOTES, 'UTF-8'); ?>
@@ -283,15 +298,23 @@ $is_super_admin = ($this->session->userdata('role') === 'admin');
 
 
                                             <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
+                                                <?php $row_dom_id = (!empty($loan_pendings->is_topup) ? 'topup-' . $loan_pendings->topup_id : 'loan-' . $loan_pendings->loan_id); ?>
                                                 <div class="hs-dropdown relative inline-flex [--placement:bottom-right]">
-                                                    <button id="hs-table-action-sh-<?php echo $loan_pendings->loan_id; ?>" type="button" class="hs-dropdown-toggle py-1.5 px-2.5 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"><?php echo $this->lang->line('action'); ?><svg class="hs-dropdown-open:rotate-180 size-2.5" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 5L8.16086 10.6869C8.35239 10.8637 8.64761 10.8637 8.83914 10.6869L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-                                                    <div class="hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-gray-700 dark:bg-gray-800 dark:border dark:border-gray-700" aria-labelledby="hs-table-action-sh-<?php echo $loan_pendings->loan_id; ?>">
+                                                    <button id="hs-table-action-sh-<?php echo $row_dom_id; ?>" type="button" class="hs-dropdown-toggle py-1.5 px-2.5 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:text-white dark:hover:bg-gray-700"><?php echo $this->lang->line('action'); ?><svg class="hs-dropdown-open:rotate-180 size-2.5" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 5L8.16086 10.6869C8.35239 10.8637 8.64761 10.8637 8.83914 10.6869L15 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+                                                    <div class="hs-dropdown-menu transition-[opacity,margin] duration hs-dropdown-open:opacity-100 opacity-0 hidden divide-y divide-gray-200 min-w-40 z-20 bg-white shadow-2xl rounded-lg p-2 mt-2 dark:divide-gray-700 dark:bg-gray-800 dark:border dark:border-gray-700" aria-labelledby="hs-table-action-sh-<?php echo $row_dom_id; ?>">
+                                                        <?php if (!empty($loan_pendings->is_topup)): ?>
+                                                        <div class="py-2 first:pt-0 last:pb-0">
+                                                            <span class="block py-2 px-3 text-xs font-medium uppercase text-gray-400 dark:text-gray-500"><?php echo $this->lang->line('choose_an_option'); ?></span>
+                                                            <a href="<?= base_url("admin/view_loan_topup/{$loan_pendings->topup_id}") ?>" class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"><svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>Angalia / Idhinisha</a>
+                                                        </div>
+                                                        <?php else: ?>
                                                         <div class="py-2 first:pt-0 last:pb-0">
                                                             <span class="block py-2 px-3 text-xs font-medium uppercase text-gray-400 dark:text-gray-500"><?php echo $this->lang->line('choose_an_option'); ?></span>
                                                             <a href="<?= base_url("admin/view_Dataloan/{$loan_pendings->customer_id}/{$loan_pendings->comp_id}") ?>" class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-gray-800 hover:bg-gray-100 focus:ring-2 focus:ring-cyan-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300" href="#" data-hs-overlay="#hs-edit-shareholder-modal-<?php echo $loan_pendings->loan_id; ?>"><svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg><?php echo $this->lang->line('approve_loan'); ?></a>
                                                         </div>
                                                             <a class="flex items-center gap-x-3 py-2 px-3 rounded-lg text-sm text-red-600 hover:bg-red-50 focus:ring-2 focus:ring-red-500 dark:text-red-500 dark:hover:bg-gray-700" href="<?php echo base_url("admin/delete_loan/{$loan_pendings->loan_id}"); ?>" onclick="return confirm('<?php echo $this->lang->line('are_you_sure'); ?>')"><svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg><?php echo $this->lang->line('delete'); ?></a>
                                                         </div>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </td>
