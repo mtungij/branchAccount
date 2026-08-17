@@ -6342,7 +6342,7 @@ public function disburse($loan_id){
             $remaining_before = (float) $loan_data->loan_int - $total_paid_so_far;
             $topup_amount = (float) $topup_row->topup_amount;
             $new_principal = $remaining_before + $topup_amount;
-            $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_amount, $topup_row->day, $topup_row->session, $topup_row->rate);
+            $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_row->day, $topup_row->session, $topup_row->rate);
 
             $topup_row->loan_aprove = $topup_amount;
             $topup_row->loan_int = $totals['total_loan'];
@@ -7089,7 +7089,7 @@ public function withdraw_loan_topup($topup_id)
     $topup_amount = (float) $topup->topup_amount;
     $new_principal = $remaining_before + $topup_amount;
 
-    $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup_amount, $topup->day, $topup->session, $topup->rate);
+    $totals = $this->calculate_topup_totals($loan_data, $new_principal, $topup->day, $topup->session, $topup->rate);
     $new_loan_int = $total_paid_so_far + $totals['total_loan'];
 
     $this->db->where('loan_id', $loan_id)->update('tbl_loans', [
@@ -7136,36 +7136,36 @@ public function withdraw_loan_topup($topup_id)
     ]);
 
     $this->session->set_flashdata('massage', 'Nyongeza ya mkopo imetolewa kwa mteja.');
-    return redirect('oficer/loan_topup_pending_withdraw');
+    return redirect('oficer/data_with_depost/' . $topup->customer_id);
 }
 
 
 // Recomputes a loan's interest/installment for the top-up using the officer-chosen day/session/rate,
 // reusing the same rate-branch math aprove_disbas_status() uses at real disbursement time. The
 // interest percentage itself ($loan_data->interest_formular) stays tied to the loan's product/category.
-// Interest accrues on the top-up amount only (not on the balance already owed from before the
-// top-up) -- $new_principal is just carried forward as-is and combined with that fresh interest.
-private function calculate_topup_totals($loan_data, $new_principal, $topup_amount, $day, $session, $rate)
+// Interest accrues on the whole new balance (remaining debt + top-up amount), not just the
+// fresh top-up portion -- matches disburse()/aprove_disbas_status()'s own principal-wide
+// interest math for a normal loan.
+private function calculate_topup_totals($loan_data, $new_principal, $day, $session, $rate)
 {
     $interest_loan = $loan_data->interest_formular;
     $end_date = $day * $session;
 
     if ($rate === 'FLAT RATE') {
         $months = floor($end_date / 30);
-        $loan_interest = $interest_loan / 100 * $topup_amount * $months;
+        $loan_interest = $interest_loan / 100 * $new_principal * $months;
         $total_loan = $new_principal + $loan_interest;
         $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
     } elseif ($rate === 'SIMPLE') {
-        $loan_interest = $interest_loan / 100 * $topup_amount;
+        $loan_interest = $interest_loan / 100 * $new_principal;
         $total_loan = $new_principal + $loan_interest;
         $restoration = $session > 0 ? (($loan_interest + $new_principal) / $session) : $total_loan;
     } elseif ($rate === 'REDUCING') {
         $months = $end_date / 30;
         $interest = $interest_loan / 1200;
-        $amount = $interest * -$topup_amount * pow((1 + $interest), $months) / (1 - pow((1 + $interest), $months));
-        $topup_total = $amount * $months;
-        $loan_interest = $topup_total - $topup_amount;
-        $total_loan = $new_principal + $loan_interest;
+        $amount = $interest * -$new_principal * pow((1 + $interest), $months) / (1 - pow((1 + $interest), $months));
+        $total_loan = $amount * $months;
+        $loan_interest = $total_loan - $new_principal;
         $restoration = $session > 0 ? ($total_loan / $session) : $total_loan;
     } else {
         $loan_interest = 0;
