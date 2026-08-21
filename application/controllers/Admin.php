@@ -6536,6 +6536,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 		//   print_r($phone);
 		//   exit();
 	      $admin_data = $this->queries->get_admin_role($comp_id);
+		      $branch_name = $customer_data->blanch_name;
 	      $remain_balance = @$data_depost->balance;
 
 		  
@@ -6553,6 +6554,10 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
                
 	      //admin role
 	      $role = $empl_data->empl_name;
+	      $whatsapp_receipt_path = $this->build_deposit_receipt_pdf(
+	        $comp_name, $branch_name, trim($first_name . ' ' . $last_name),
+	        $loan_codeID, $depost, ($method ? $method->account_name : $p_method), $role, $deposit_date
+	      );
           
 
 	      $out_data = $this->queries->getOutstand_loanData($loan_id);
@@ -6715,6 +6720,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 			  
 				  // Send SMS
 				  $this->sendsms($phone,$massage);
+				  $this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
 			  
 				
 	      	 $this->session->set_flashdata('massage','Deposit imefanyika');
@@ -6758,6 +6764,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
            '. Kiasi kilichobaki kulipwa kwa changamoto, fika ofisini.';
 
 			$this->sendsms($phone, $massage);
+			$this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
          
 
           $loan_ID = $loan_id;
@@ -6779,6 +6786,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
           if ($company_data->sms_status == 'YES'){
           	 
              $this->sendsms($phone,$massage);
+             $this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
              //echo "kitu kipo";
           }elseif($company_data->sms_status == 'NO'){
           	 //echo "Hakuna kitu hapa";
@@ -6839,6 +6847,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
            '. Kiasi kilichobaki kulipwa kwa changamoto, fika ofisini.';
 
 		  $this->sendsms($phone,$massage);
+		  $this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
 
 
            $loan_ID = $loan_id;
@@ -6892,6 +6901,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
 //                  exit();
 
 			$this->sendsms($phone,$massage);
+			$this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
 	      	
 	      }else{
 	      	$this->session->set_flashdata('massage','Deposit has made Sucessfully');
@@ -6974,6 +6984,7 @@ public function insert_loan_lecordData($comp_id,$customer_id,$loan_id,$blanch_id
              $this->insert_count_sms($comp_id,$sms_number);
              }
              $this->sendsms($phone,$massage);
+             $this->notify_whatsapp_deposit($phone, $massage, $whatsapp_receipt_path);
              //echo "kitu kipo";
           }elseif($company_data->sms_status == 'NO'){
           	 //echo "Hakuna kitu hapa";
@@ -14459,10 +14470,124 @@ public function update_customer_details($customer_id){
   
   $server_output = curl_exec($ch);
   curl_close ($ch);
-  
+
   //print_r($server_output);
   }
-  
+
+  private function normalize_phone_number($phone_no){
+    $phone_no = preg_replace('/\D+/', '', (string) $phone_no);
+
+    if ($phone_no === '') {
+      return '';
+    }
+
+    if (substr($phone_no, 0, 1) === '0') {
+      return '255' . substr($phone_no, 1);
+    }
+
+    return $phone_no;
+  }
+
+  /**
+   * Builds a simple deposit receipt PDF and returns its path, or null on failure.
+   * The file is scheduled for deletion once the response is sent.
+   */
+  /**
+   * log_message() is a no-op in this app (log_threshold = 0, and
+   * application/logs isn't writable by www-data anyway), so WhatsApp
+   * failures need a sink that's actually visible. Shared with whatsapp_notify.php.
+   */
+  private function wa_log($message){
+    @file_put_contents(APPPATH . 'tmp/whatsapp_errors.log', '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n", FILE_APPEND);
+  }
+
+  private function build_deposit_receipt_pdf($comp_name, $branch_name, $customer_name, $loan_codeID, $amount, $payment_method, $received_by, $deposit_date){
+    try {
+      $dir = APPPATH . 'tmp/mpdf';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+      }
+
+      $html = '<style>
+        body{font-family:sans-serif;font-size:13px;}
+        h2{margin-bottom:0;}
+        table{width:100%;border-collapse:collapse;margin-top:12px;}
+        td{padding:6px 4px;border-bottom:1px solid #ddd;}
+        td.label{color:#555;width:45%;}
+      </style>
+      <h2>' . htmlspecialchars($comp_name) . '</h2>
+      <div>' . htmlspecialchars($branch_name) . '</div>
+      <h3>Risiti ya Malipo / Deposit Receipt</h3>
+      <table>
+        <tr><td class="label">Mteja / Customer</td><td>' . htmlspecialchars($customer_name) . '</td></tr>
+        <tr><td class="label">Namba ya Mkopo / Loan Code</td><td>' . htmlspecialchars($loan_codeID) . '</td></tr>
+        <tr><td class="label">Kiasi Kilicholipwa / Amount Paid</td><td>TZS ' . number_format($amount) . '</td></tr>
+        <tr><td class="label">Njia ya Malipo / Payment Method</td><td>' . htmlspecialchars($payment_method) . '</td></tr>
+        <tr><td class="label">Tarehe / Date</td><td>' . htmlspecialchars($deposit_date) . '</td></tr>
+        <tr><td class="label">Aliyepokea / Received By</td><td>' . htmlspecialchars($received_by) . '</td></tr>
+      </table>';
+
+      $file_name = 'deposit_receipt_' . uniqid() . '.pdf';
+      $file_path = $dir . '/' . $file_name;
+
+      $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A6', 'tempDir' => $dir]);
+      $mpdf->SetFooter('Generated By Brainsoft Technology');
+      $mpdf->WriteHTML($html);
+      $mpdf->Output($file_path, \Mpdf\Output\Destination::FILE);
+
+      // Not deleted here: the background sender (whatsapp_notify.php) owns
+      // cleanup once it has actually sent the file.
+      return $file_path;
+    } catch (\Throwable $e) {
+      $this->wa_log('Receipt PDF failed: ' . $e->getMessage());
+      return null;
+    }
+  }
+
+  /**
+   * Best-effort WhatsApp notification for a deposit: same text as the SMS,
+   * plus the receipt PDF when one was generated. Dispatches to a detached
+   * background process so the deposit request never waits on the WhatsApp
+   * API (it can take several seconds, or time out).
+   */
+  private function notify_whatsapp_deposit($phone, $text, $receipt_path = null){
+    $cleanup_receipt = function () use ($receipt_path) {
+      if ($receipt_path && is_file($receipt_path)) {
+        @unlink($receipt_path);
+      }
+    };
+
+    try {
+      $wa_phone = $this->normalize_phone_number($phone);
+      if ($wa_phone === '') {
+        $cleanup_receipt();
+        return;
+      }
+
+      $dir = APPPATH . 'tmp/mpdf';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+      }
+
+      $payload_file = $dir . '/wa_payload_' . uniqid() . '.json';
+      file_put_contents($payload_file, json_encode([
+        'phone'        => $wa_phone,
+        'text'         => $text,
+        'receipt_path' => $receipt_path,
+      ]));
+
+      $php_bin = is_file('/usr/bin/php') ? '/usr/bin/php' : 'php';
+      $script  = APPPATH . 'cli/whatsapp_notify.php';
+      $cmd = escapeshellcmd($php_bin) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($payload_file)
+           . ' > /dev/null 2>&1 &';
+      exec($cmd);
+    } catch (\Throwable $e) {
+      $this->wa_log('Deposit notification dispatch failed: ' . $e->getMessage());
+      $cleanup_receipt();
+    }
+  }
+
+
 
     // Customer Notifications Management
     public function customer_notifications(){
